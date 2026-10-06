@@ -29,7 +29,7 @@ Grupo de 6 personas con el siguiente reparto inicial de roles:
 | Germán Delgado Fernández | Catalogador |
 | Jaime Montávez Ruiz | Moderador |
 | Ana Meca Cano | Presentador |
-| Javier Miñan Molina | Gestor de la calidad |
+| Javier Miñan Molina | Gestor de calidad |
 | Álvaro Sanabria Díaz | Gestor de usabilidad y accesibilidad |
 
 ## Metodología
