@@ -1,0 +1,410 @@
+% Propuesta técnica · Los Gantt-sters · DGP 2026-2027
+% Compila con pdfLaTeX, XeLaTeX o LuaLaTeX (en Overleaf vale el compilador por defecto).
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{tgheros}
+  \renewcommand{\familydefault}{\sfdefault}
+\else
+  \usepackage{fontspec}
+  \setmainfont{TeX Gyre Heros}
+\fi
+\usepackage[spanish,es-noshorthands,es-tabla]{babel}
+\usepackage[a4paper,top=2.9cm,bottom=2.4cm,left=2.5cm,right=2.5cm,headheight=20pt,headsep=0.8cm]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{needspace,graphicx,longtable,array,enumitem,titlesec,fancyhdr,caption}
+\usepackage{etoolbox,float}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Identidad visual común ----------
+\definecolor{gblue}{HTML}{1F4FB4}
+\definecolor{gnavy}{HTML}{1B2236}
+\definecolor{ggreen}{HTML}{2E9E5B}
+\definecolor{ggray}{HTML}{5F6B7A}
+\definecolor{gpale}{HTML}{8D919B}
+\definecolor{glight}{HTML}{E9EFFB}
+\definecolor{gline}{HTML}{B1C1E5}
+
+\newcommand{\proyecto}{Propuesta de solución}
+\newcommand{\hl}[1]{\textcolor{gblue}{\textbf{#1}}}
+\newcommand{\bloque}[1]{\par\medskip\noindent{\bfseries\color{gnavy}#1}\par\nopagebreak\smallskip}
+
+\color{gnavy}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\baselinestretch}{1.1}
+\hypersetup{pdftitle={Propuesta de solución – Los Gantt-sters},pdfauthor={Los Gantt-sters},pdfsubject={Propuesta de solución DGP}}
+
+% Títulos de sección: número en recuadro azul, texto azul y filete verde
+\titleformat{\section}{\Large\bfseries\color{gblue}}
+  {\colorbox{gblue}{\textcolor{white}{\thesection}}}{0.6em}{}[\vspace{-4pt}{\color{ggreen}\titlerule[0.8pt]}]
+\titlespacing*{\section}{0pt}{18pt}{10pt}
+\titleformat{\subsection}{\large\bfseries\color{ggreen}}{\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+
+\setlist[itemize]{label={\color{gblue}\textbullet},leftmargin=1.4em,itemsep=1pt,parsep=0pt,topsep=2pt}
+\captionsetup{font={small,it},labelfont={small,it},textfont={color=ggray},labelsep=period}
+\setlength{\LTpre}{6pt}\setlength{\LTpost}{8pt}
+\renewcommand{\arraystretch}{1.35}
+\arrayrulecolor{gline}
+
+% ---------- Objetivos específicos y requisitos ----------
+% \objetivo{identificador}{título}{descripción}{historias del Product Backlog}
+\newcommand{\objetivo}[4]{%
+  \needspace{11\baselineskip}\par\medskip
+  \noindent\colorbox{glight}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\raggedright\hl{#1. #2}}}\par\nopagebreak
+  #3\par\nopagebreak
+  {\small\color{ggray}\textit{Historias del Product Backlog relacionadas: #4.}}\par\nopagebreak}
+% \grupo{título del grupo de requisitos}
+\newcommand{\grupo}[1]{\needspace{3\baselineskip}\par\smallskip\noindent{\small\bfseries\color{ggreen}#1}\par\nopagebreak}
+% Lista de requisitos: identificador en azul a la izquierda y texto a la derecha
+\newlist{reqs}{description}{1}
+\setlist[reqs]{style=multiline,leftmargin=1.85cm,font=\normalfont\small\bfseries\color{gblue},itemsep=1.5pt,parsep=0pt,topsep=1pt,partopsep=0pt,before=\small}
+
+% Cabecera y pie
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{\raisebox{-0.25\height}{\includegraphics[height=0.55cm]{logo.png}}\hspace{0.5em}{\small\bfseries\color{gblue}LOS GANTT-STERS}}
+\fancyhead[R]{\small\color{ggray}\proyecto\ ·\ Curso 2026-2027}
+\fancyfoot[C]{{\color{gpale}\rule{2.5cm}{0.4pt}}\\[2pt]\small\color{ggray}\thepage}
+
+\begin{document}
+
+% ---------- Portada ----------
+\begin{titlepage}
+\centering
+\vspace*{0.2cm}
+{\fontsize{30}{34}\selectfont\bfseries\color{gblue}DGP\par}
+\vspace{4pt}
+{\small\bfseries\color{ggreen}Dirección y Gestión de Proyectos\par}
+\vspace{0.8cm}
+\includegraphics[width=4.2cm]{logo.png}\par
+\vspace{0.9cm}
+{\fontsize{24}{28}\selectfont\bfseries\color{gnavy}LOS GANTT-STERS\par}
+\vspace{8pt}
+{\color{ggreen}\rule{\linewidth}{1.2pt}\par}
+\vspace{0.8cm}
+{\fontsize{20}{24}\selectfont\bfseries\color{gblue}PROPUESTA DE SOLUCIÓN\par}
+\vspace{6pt}
+{\bfseries\color{gnavy}TUAGENDITA · AGENDA PERSONALIZADA ACCESIBLE\par}
+\vspace{1.1cm}
+{\footnotesize\bfseries\color{ggray}Integrantes\par}
+\vspace{4pt}
+{\color{gblue}\rule{\linewidth}{1.2pt}\par}
+\vspace{10pt}
+\begin{tabular}{c}
+Javier Miñán Molina\\[3pt]
+Germán Delgado Fernández\\[3pt]
+Ana Meca Cano\\[3pt]
+Jaime Montávez Ruiz\\[3pt]
+Álvaro Sanabria Díaz\\[3pt]
+Juan Luis Jiménez Urbano
+\end{tabular}\par
+\vspace{14pt}
+{\small\color{gpale}Universidad de Granada · Curso 2026-2027\par}
+\end{titlepage}
+
+% ---------- Ficha ----------
+\noindent\begin{tabular}{@{}>{\bfseries\leavevmode\color{gblue}}p{3.4cm}p{\dimexpr\linewidth-3.4cm-2\tabcolsep\relax}@{}}
+Proyecto & TuAgendita: agenda personalizada y accesible para estudiantes con discapacidad intelectual (PTVAL) \\ \hline
+Cliente & Colegio de Educación Especial Fundación Purísima Concepción (Granada) \\ \hline
+Grupo & Los Gantt-sters \\ \hline
+Fecha & 15/10/2026 \\ \hline
+\end{tabular}\par
+
+\subsection*{La solución de un vistazo}
+\rowcolors{1}{glight}{white}
+\noindent\begin{tabular}{@{}>{\bfseries\leavevmode\color{gblue}}p{4.2cm}p{\dimexpr\linewidth-4.2cm-2\tabcolsep\relax}@{}}
+Qué es & Una agenda visual y personalizable para que el alumnado del PTVAL organice y realice sus tareas con autonomía \\
+Destinatarios & Alumnado del PTVAL, tutores, familias y personal del Colegio \\
+Plataforma & Aplicación web que se usa desde el navegador: tabletas en horizontal, móviles y ordenador \\
+Arquitectura & Cliente-servidor por capas: front-end en Native publicado en Vercel y Supabase como backend \\
+Alcance & 16 objetivos de producto (OE1--OE16), 152 requisitos funcionales y 26 historias de usuario (86 SP) \\
+Planificación & Fase inicial y tres iteraciones (sprints en Jira), del 1 de octubre al 16 de diciembre de 2026 \\
+Hitos & H1 21/10 · H2 04/11 · H3 12/11 · H4 03/12 · H5 16/12 · H6 21/12 (entrega oficial) \\
+\end{tabular}\par
+\rowcolors{1}{}{}
+\clearpage
+
+\section{Contexto y objetivo}
+La dirección del Colegio de Educación Especial Fundación Purísima Concepción de Granada necesita una herramienta que ayude al alumnado del \hl{Programa de Transición a la Vida Adulta (PTVAL)} a organizar su tiempo y a realizar sus tareas con mayor autonomía. Hoy estas actividades se apoyan en agendas en papel, instrucciones verbales y el acompañamiento continuo del personal del centro.
+
+Las aplicaciones existentes no están adaptadas a la discapacidad cognitiva, su personalización es inexistente o costosa para los tutores y ninguna gestiona las \hl{tareas propias del Colegio}. La comparativa y el estudio etnográfico que lo justifican están en los apartados 6 y 7 de la Propuesta técnica.
+
+\hl{Objetivo de la solución:} desarrollar y entregar antes del \hl{16 de diciembre de 2026} una agenda digital personalizada y accesible que permita al alumnado del PTVAL organizar y realizar sus tareas diarias con la mayor autonomía posible, y que dé a los tutores las herramientas para configurarla y seguir el progreso de cada estudiante.
+
+\needspace{14\baselineskip}
+\section{Qué vamos a abordar}
+\subsection*{2.1. Descripción de la solución}
+TuAgendita se desarrollará como una \hl{aplicación web (webapp)} con el front-end en \hl{Native}. Se usará desde el navegador, sin instalar nada, y estará especialmente orientada a su utilización en tabletas en posición horizontal, aunque también podrá utilizarse en vertical, en dispositivos móviles y en el ordenador del aula.
+
+El equipo acordó este enfoque el 8 de octubre de 2026 (acta de reunión, acuerdos A-01 y A-02): Native sustituye al framework previsto al comienzo y, como la aplicación no se va a publicar en tiendas de aplicaciones, hacerla web permite probar y enseñar el resultado sin pagar licencias.
+
+La aplicación web contará con dos interfaces conectadas al mismo backend:
+
+\begin{itemize}
+\item \hl{Interfaz del estudiante:} permitirá consultar y realizar las tareas asignadas mediante una interfaz visual y accesible.
+\item \hl{Interfaz de tutores y administrador:} permitirá gestionar usuarios, configurar perfiles, crear y asignar tareas y consultar el progreso del alumnado. Los tutores trabajan habitualmente desde el ordenador del aula (Práctica 1), por lo que este panel se diseña en primer lugar para ese uso.
+\end{itemize}
+La aplicación se publicará en \hl{Vercel}. Vercel solo sirve los archivos de la interfaz; los datos de usuarios y tareas se guardan en el backend, \hl{Supabase}, por lo que el hosting no almacena datos personales del alumnado.
+
+Los cambios realizados por los tutores se sincronizarán con la interfaz del estudiante, y la aplicación informará al tutor de las tareas completadas.
+
+\needspace{10\baselineskip}
+\subsection*{2.2. Usuarios destinatarios}
+{\small\par\noindent\begin{tabular}{@{}>{\raggedright\arraybackslash}p{\dimexpr 0.2700\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.7300\linewidth-2\tabcolsep\relax}@{}}
+\rowcolor{gblue}\textcolor{white}{\textbf{Usuario}} & \textcolor{white}{\textbf{Qué hace con TuAgendita}} \\
+\hl{Estudiantes del PTVAL} & Consultan sus tareas y confirman inicio, pasos y finalización. Si su perfil lo permite, crean tareas propias y modifican sus preferencias. \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Tutores de aula} & Configuran los perfiles, crean y asignan tareas del centro, reciben avisos y consultan el progreso. \\ \arrayrulecolor{gline}\hline
+\hl{Tutor familiar} & Programa las tareas del hogar de su estudiante y consulta su realización. Cada estudiante tiene un único tutor familiar. \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Especialistas} & Consultan el progreso y las valoraciones de los estudiantes con los que están vinculados. \\ \arrayrulecolor{gline}\hline
+\hl{Administración del Colegio} & Da de alta usuarios y aulas y asigna las tareas del centro: reprografía, comedor, menú mensual y guía de visita. \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Personal de cocina y reprografía} & Recibe el parte del comedor y los encargos de reprografía. \\ \arrayrulecolor{gline}\hline
+\end{tabular}\par}\medskip
+
+\needspace{12\baselineskip}
+\subsection*{2.3. Alcance}
+\bloque{Dentro del alcance}
+\begin{itemize}
+\item Interfaz del estudiante: acceso adaptado, agenda, ejecución guiada con reloj visual, tareas del centro y personales, necesidades, urgencias y plan B.
+\item Panel de tutores y administrador: usuarios, aulas y vínculos, perfiles, creación y asignación de tareas, encargos y seguimiento.
+\item Integración con ARASAAC, sincronización en tiempo real y despliegue continuo en Vercel.
+\item Accesibilidad WCAG 2.1 AA y protección de datos conforme al RGPD y la LOPDGDD.
+\end{itemize}
+\bloque{Fuera del alcance}
+\begin{itemize}
+\item Las peticiones del apartado 2.5: presencia obligatoria, asistencia del profesorado, posición libre de los botones, chat, varios tutores familiares, Arawrite y publicación en tiendas.
+\item Mantenimiento y soporte después del 16 de diciembre de 2026.
+\end{itemize}
+
+\needspace{14\baselineskip}
+\subsection*{2.4. Requisitos que abordamos}
+Se abordan los 16 objetivos de producto y sus 152 requisitos funcionales, detallados en el apartado 4.3 de la Propuesta técnica. La prioridad es la de la clasificación MoSCoW del Product Backlog (Práctica 2): \hl{Must} (imprescindible), \hl{Should} (importante) y \hl{Could} (deseable).
+
+{\small\par\noindent\begin{tabular}{@{}>{\raggedright\arraybackslash}p{\dimexpr 0.0900\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.3000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.0600\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.2100\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.2000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.1400\linewidth-2\tabcolsep\relax}@{}}
+\rowcolor{gblue}\textcolor{white}{\textbf{OE}} & \textcolor{white}{\textbf{Funcionalidad}} & \textcolor{white}{\textbf{RF}} & \textcolor{white}{\textbf{Historias}} & \textcolor{white}{\textbf{Prioridad}} & \textcolor{white}{\textbf{Iteración}} \\
+\hl{OE1} & Acceso y autenticación adaptada & 9 & HU-01, HU-02 & Must & 1 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE2} & Usuarios, roles y vínculos & 13 & HU-03 & Must & 1 \\ \arrayrulecolor{gline}\hline
+\hl{OE3} & Personalización del perfil y de la interfaz & 17 & HU-04 / HU-05 & Must / Could (barrido) & 1 / 3 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE4} & Agenda y estructuración temporal & 9 & HU-06, HU-16 / HU-17 & Must / Could (vista semanal) & 1 / 3 \\ \arrayrulecolor{gline}\hline
+\hl{OE5} & Tareas personales y por pasos & 15 & HU-07, HU-10 & Should & 2 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE6} & Ejecución guiada y reloj visual & 10 & HU-08, HU-09 & Must & 1 \\ \arrayrulecolor{gline}\hline
+\hl{OE7} & Tarea del centro: reprografía & 8 & HU-14 & Should & 2 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE8} & Tarea del centro: comedor & 11 & HU-11, HU-12 & Should & 2 \\ \arrayrulecolor{gline}\hline
+\hl{OE9} & Tarea del centro: menú mensual & 7 & HU-13 & Should & 2 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE10} & Tarea del centro: guía de visita & 9 & HU-15 & Should & 2 \\ \arrayrulecolor{gline}\hline
+\hl{OE11} & Necesidades, urgencias y valoración & 10 & HU-18 / HU-19 / HU-21 & Must / Should / Could & 1 / 3 / 3 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE12} & Imprevistos: plan B, prioridad y bloqueo & 9 & HU-22, HU-23 & Should & 3 \\ \arrayrulecolor{gline}\hline
+\hl{OE13} & Seguimiento del progreso & 7 & HU-25 & Could & 2 y 3 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE14} & Accesibilidad y usabilidad & 7 & HUT-03 & Must (transversal) & 1, 2 y 3 \\ \arrayrulecolor{gline}\hline
+\hl{OE15} & Protección de datos y seguridad & 6 & HU-03 & Must (transversal) & 1, 2 y 3 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{OE16} & Plataforma web y despliegue & 5 & HUT-01, HUT-02 & Must & 1 \\ \arrayrulecolor{gline}\hline
+\hl{Total} &  & \textbf{152} & 26 historias &  &  \\ \arrayrulecolor{gline}\hline
+\end{tabular}\par}\medskip
+
+\bloque{Orden de prioridad}
+\begin{itemize}
+\item \hl{Iteración 1 (34 SP), lo imprescindible:} infraestructura, acceso, perfiles, agenda, reloj visual, avisos y botón de necesidades. Es lo mínimo para que un estudiante siga su día sin acompañante.
+\item \hl{Iteración 2 (29 SP), las tareas reales del centro:} tareas personales y por pasos, comedor, menú, reprografía y guía de visita.
+\item \hl{Iteración 3 (23 SP), imprevistos y accesibilidad avanzada:} plan B, bloqueo, urgencias, barrido, vista semanal, valoración y seguimiento semanal.
+\end{itemize}
+
+\needspace{12\baselineskip}
+\subsection*{2.5. Requisitos y peticiones que no abordamos}
+{\small\par\noindent\begin{tabular}{@{}>{\raggedright\arraybackslash}p{\dimexpr 0.3000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.2200\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.4800\linewidth-2\tabcolsep\relax}@{}}
+\rowcolor{gblue}\textcolor{white}{\textbf{Petición}} & \textcolor{white}{\textbf{Origen}} & \textcolor{white}{\textbf{Motivo}} \\
+\hl{Etiqueta de presencia obligatoria del tutor} & Entrevista con el cliente & Descartada por el equipo el 15/10/2026: no aporta función a la agenda y obliga a guardar un dato sensible más. \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Registro de asistencia del profesorado} & Entrevista con el cliente & Fuera del alcance de una agenda del alumnado (historia HU-24 retirada del Product Backlog). \\ \arrayrulecolor{gline}\hline
+\hl{Mover los botones a cualquier posición} & Pliego y entrevista & Complejo de implementar y de mantener accesible. Se ofrecen opciones cerradas de tamaño y forma, y el tutor puede pedir otra disposición al equipo (acta del 15/10/2026, A-01). \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Chat entre tutor y estudiante} & Pliego («sería interesante») & Descartado (historia HU-20 retirada). Las peticiones, la urgencia y la valoración cubren la comunicación básica. \\ \arrayrulecolor{gline}\hline
+\hl{Más de un tutor familiar por estudiante} & Acta del 15/10/2026, A-02 & La propuesta mantiene un único tutor familiar (RF2.9), por decisión del equipo posterior al acta. \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Pictogramas de Arawrite} & Entrevista con el cliente & Solo se integra ARASAAC, que el pliego indica y tiene API pública. \\ \arrayrulecolor{gline}\hline
+\hl{Publicación en tiendas y aplicación nativa} & Pliego («aplicación móvil») & La solución es una aplicación web: funciona en móviles y tabletas desde el navegador sin licencias de tienda (acta del 08/10/2026). \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Mantenimiento tras el 16/12/2026} & -- & Fuera de la duración del proyecto. \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Mensajes de voz entre estudiante y tutor (RF11.9 y RF11.10)} & Propuesta técnica, requisitos «Deseable» & Sin historia en el Product Backlog; solo se harán si sobra capacidad en la iteración 3. \\ \arrayrulecolor{gline}\hline
+\end{tabular}\par}\medskip
+
+
+\subsection*{2.6. Módulos funcionales}
+Cada módulo agrupa los requisitos de los objetivos específicos que se indican (apartado 4.3 de la Propuesta técnica).
+
+\bloque{Acceso, usuarios y perfiles (OE1, OE2 y OE3)}
+\begin{itemize}
+\item Acceso adaptado por fotografía o pictograma y acceso con credenciales.
+\item Alta y gestión de administradores, tutores, familias, especialistas y estudiantes.
+\item Vinculación de cada estudiante con su tutor de aula y con un tutor familiar, y organización por aulas.
+\item Configuración de preferencias de visualización y del modo de barrido.
+\end{itemize}
+\bloque{Agenda del estudiante (OE4 y OE6)}
+\begin{itemize}
+\item Vista diaria «Hecho, Ahora, Después» y vista semanal.
+\item Tarjetas de tareas con pictogramas y avisos anticipatorios.
+\item Confirmación del inicio, realización de pasos y finalización.
+\item Reloj visual configurable.
+\end{itemize}
+\bloque{Tareas del centro (OE7, OE8, OE9 y OE10)}
+\begin{itemize}
+\item Reprografía en tres fases guiadas.
+\item Comedor por aula y dieta, con envío del parte a cocina.
+\item Reparto del menú mensual con lista de comprobación.
+\item Guía de visita mediante itinerarios, fotografías y códigos QR.
+\end{itemize}
+\bloque{Tareas personales (OE5)}
+\begin{itemize}
+\item Creación de tareas mediante imágenes, audios, vídeos o secuencias de pasos.
+\item Selección del día y horario.
+\item Creación por parte del tutor o del estudiante cuando su perfil lo permita.
+\end{itemize}
+\bloque{Comunicación e imprevistos (OE11 y OE12)}
+\begin{itemize}
+\item Botón permanente de necesidades básicas y aviso de urgencia al tutor.
+\item Plan B, prioridad de las tareas y bloqueo de las que no se pueden realizar.
+\end{itemize}
+\bloque{Seguimiento (OE13)}
+\begin{itemize}
+\item Consulta del progreso de cada estudiante y de su cumplimiento semanal.
+\item Aviso al tutor cuando el estudiante completa una tarea.
+\end{itemize}
+
+\needspace{14\baselineskip}
+\section{Arquitectura de software}
+\subsection*{3.1. Visión general}
+La aplicación sigue una \hl{arquitectura cliente-servidor por capas}. El navegador descarga la aplicación desde Vercel; a partir de ahí, la interfaz habla directamente con Supabase, que hace de backend (autenticación, base de datos, archivos y tiempo real). Las reglas de acceso por fila de PostgreSQL garantizan que cada usuario solo lee los datos que le corresponden por su rol y sus vínculos (RF15.1).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{arquitectura.png}
+\caption{Esquema general de la arquitectura del sistema propuesto}
+\end{figure}
+
+\needspace{8\baselineskip}
+\subsection*{3.2. Vista por capas}
+Cada capa solo usa la inmediatamente inferior. El acceso a datos está aislado en su propia capa (RNF16.6), de modo que un cambio de backend no afecta a las pantallas.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{capas.png}
+\caption{Arquitectura lógica por capas}
+\end{figure}
+
+\needspace{8\baselineskip}
+\subsection*{3.3. Vista de despliegue}
+El código vive en GitHub; cada cambio pasa por GitHub Actions (compilación, pruebas, ESLint y Prettier) y se publica en Vercel de forma automática (RF16.4 y RF16.5). Las historias y los sprints se gestionan en Jira.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{despliegue.png}
+\caption{Despliegue y flujo de integración continua}
+\end{figure}
+
+\needspace{8\baselineskip}
+\subsection*{3.4. Modelo de datos}
+El diagrama muestra las entidades principales y sus relaciones; el detalle de los atributos está en los requisitos de información (RI) del apartado 4.3 de la Propuesta técnica. Es un modelo preliminar que se completará en el documento de análisis y diseño de la iteración 2.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{datos.png}
+\caption{Modelo de datos simplificado}
+\end{figure}
+
+\needspace{8\baselineskip}
+\subsection*{3.5. Ejemplo de funcionamiento: terminar una tarea}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{secuencia.png}
+\caption{Diagrama de secuencia: el estudiante termina una tarea y el tutor recibe el aviso}
+\end{figure}
+
+\subsection*{3.6. Tecnologías}
+La tabla distingue lo que indica el pliego y lo que ha decidido el equipo. Las decisiones sobre el front-end, el hosting y el backend constan en el acta del 8 de octubre de 2026.
+
+\par\noindent\begin{tabular}{@{}>{\raggedright\arraybackslash}p{\dimexpr 0.2000\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.2375\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.2875\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.2750\linewidth-2\tabcolsep\relax}@{}}
+\rowcolor{gblue}\textcolor{white}{\textbf{Capa}} & \textcolor{white}{\textbf{Tecnología}} & \textcolor{white}{\textbf{Finalidad}} & \textcolor{white}{\textbf{Carácter}} \\
+\hl{Front-end de la aplicación web} & Native & Desarrollo de una única aplicación web con la interfaz del estudiante y el panel de tutores y administrador. & Decisión del equipo (acta del 08/10/2026, A-01 y A-02) \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Hosting} & Vercel (plan gratuito) & Publicar la aplicación web para usarla desde el navegador. & Decisión del equipo (acta del 08/10/2026, A-01) \\ \arrayrulecolor{gline}\hline
+\hl{Backend} & Supabase: PostgreSQL, autenticación, almacenamiento y tiempo real & Gestión de datos, usuarios, archivos y sincronización. & Decisión del equipo (acta del 08/10/2026, A-01), a validar con un prototipo en la fase inicial \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Pictogramas} & API pública de ARASAAC & Incorporación de pictogramas y recursos accesibles. & Indicado en el pliego \\ \arrayrulecolor{gline}\hline
+\hl{Accesibilidad} & Propiedades de accesibilidad de Native; pruebas en el navegador con lector de pantalla y teclado & Implementar la accesibilidad y validarla antes de cada entrega. & Requisito a implementar y validar \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Calidad} & ESLint, Prettier, GitHub Actions y revisión de ramas en GitHub & Mantener la calidad y consistencia del código. & Decisión del equipo (Manual de coordinación y Práctica 2) \\ \arrayrulecolor{gline}\hline
+\hl{Organización de los sprints} & Jira & Product Backlog, planificación y seguimiento de cada sprint. & Decisión del equipo \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Desarrollo y \mbox{documentación}} & VSCode, GitHub, Google Drive y LaTeX & Desarrollo, control de versiones y documentación del proyecto. & Decisión del equipo (Manual de coordinación) \\ \arrayrulecolor{gline}\hline
+\end{tabular}\par\medskip
+Si el prototipo de la fase inicial muestra que Supabase no se ajusta al proyecto, el equipo lo sustituirá por otra opción de software libre o con licencia universitaria. Ese cambio solo afectaría a la capa de backend.
+
+
+\needspace{14\baselineskip}
+\section{Planificación}
+El trabajo se organiza en una fase inicial y tres iteraciones, cada una con un sprint en \hl{Jira} y un incremento funcional que el profesorado y el cliente pueden probar en el navegador.
+
+\subsection*{4.1. Entregables}
+{\small\par\noindent\begin{tabular}{@{}>{\raggedright\arraybackslash}p{\dimexpr 0.2600\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.4400\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.3000\linewidth-2\tabcolsep\relax}@{}}
+\rowcolor{gblue}\textcolor{white}{\textbf{Entregable}} & \textcolor{white}{\textbf{Contenido}} & \textcolor{white}{\textbf{Etapa y fecha}} \\
+\hl{Documentos de la fase inicial} & Propuesta técnica, manual de coordinación, presupuesto, planificación, personajes y escenarios, Product Backlog & Fase inicial, 21/10/2026 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Bocetos de baja fidelidad} & Agenda, acceso por foto, reloj visual, botón de necesidades y panel del tutor, en papel o en una herramienta de diseño & Iteración 1, 28/10/2026 \\ \arrayrulecolor{gline}\hline
+\hl{Prototipo navegable} & Prototipo interactivo de las pantallas de la iteración 1, validado con el profesorado antes de programarlas & Iteración 1, 04/11/2026 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Incremento 1 (v0.1)} & Aplicación web publicada con las 12 historias Must; especificación de requisitos, criterios de aceptación e informes de evaluación y retrospectiva & Iteración 1, 12/11/2026 \\ \arrayrulecolor{gline}\hline
+\hl{Bocetos de las tareas del centro} & Comedor, menú, reprografía y guía de visita, revisados con el profesorado & Iteración 2, 17/11/2026 \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{Incremento 2 (v0.2)} & Tareas personales y tareas del centro; documento de análisis y diseño con la arquitectura; presentación al cliente & Iteración 2, 03/12/2026 \\ \arrayrulecolor{gline}\hline
+\hl{Incremento 3 (v1.0)} & Aplicación final, pruebas, informes de usabilidad y accesibilidad y de calidad, código documentado y presentación final & Iteración 3, 16/12/2026 (oficial: 21/12/2026) \\ \arrayrulecolor{gline}\hline
+\end{tabular}\par}\medskip
+
+Las fechas de los bocetos y del prototipo son una \hl{estimación del equipo}; las de las iteraciones son las del guion de prácticas.
+
+\needspace{12\baselineskip}
+\subsection*{4.2. Hitos}
+{\small\par\noindent\begin{tabular}{@{}>{\raggedright\arraybackslash}p{\dimexpr 0.0800\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.1700\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.7500\linewidth-2\tabcolsep\relax}@{}}
+\rowcolor{gblue}\textcolor{white}{\textbf{Hito}} & \textcolor{white}{\textbf{Fecha}} & \textcolor{white}{\textbf{Qué se considera cumplido}} \\
+\hl{H1} & 21/10/2026 & Documentación de la fase inicial entregada y Product Backlog cargado en Jira \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{H2} & 04/11/2026 & Prototipo navegable de la iteración 1 validado con el profesorado \\ \arrayrulecolor{gline}\hline
+\hl{H3} & 12/11/2026 & Incremento 1 publicado en Vercel y presentado \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{H4} & 03/12/2026 & Incremento 2 publicado y presentado al cliente \\ \arrayrulecolor{gline}\hline
+\hl{H5} & 16/12/2026 & Cierre interno: aplicación final e informes terminados \\ \arrayrulecolor{gline}\hline
+\rowcolor{glight}
+\hl{H6} & 21/12/2026 & Entrega oficial de la iteración 3 \\ \arrayrulecolor{gline}\hline
+\end{tabular}\par}\medskip
+
+\needspace{6\baselineskip}
+\subsection*{4.3. Cronograma visual}
+El diagrama de Gantt muestra las actividades A1--A16 de la Propuesta técnica (apartado 9), los entregables de diseño y los hitos. Las barras verdes son bocetos, prototipos y auditorías; las azules, desarrollo; las grises, gestión.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{gantt.png}
+\caption{Cronograma del proyecto (diagrama de Gantt)}
+\end{figure}
+
+\needspace{10\baselineskip}
+\section{Equipo y forma de trabajo}
+\hl{Los Gantt-sters} son seis estudiantes del Grado en Ingeniería Informática de la Universidad de Granada que desarrollan el proyecto en el marco de DGP, MDA y del proyecto de innovación docente AUTOVIDA. Trabajan con \hl{Scrum}, organizan los sprints en \hl{Jira} y revisan cada incremento funcional al final de cada iteración.
+
+Roles: \hl{Juan Luis Jiménez Urbano} (coordinador), \hl{Javier Miñán Molina} (gestor de calidad), \hl{Álvaro Sanabria Díaz} (gestor de usabilidad y accesibilidad), \hl{Germán Delgado Fernández} (catalogador), \hl{Jaime Montávez Ruiz} (moderador) y \hl{Ana Meca Cano} (presentadora). La coordinación rota en cada iteración entre dos integrantes.
+
+\end{document}
