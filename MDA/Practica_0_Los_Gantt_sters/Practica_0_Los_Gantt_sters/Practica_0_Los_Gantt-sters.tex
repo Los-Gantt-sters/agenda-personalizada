@@ -1,0 +1,108 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[top=2.8cm,bottom=2.4cm,left=2.4cm,right=2.4cm,headheight=1.3cm,headsep=0.5cm]{geometry}
+\usepackage{fontspec}
+% Tipografias incluidas en TeX Live (funcionan en Overleaf sin instalar nada)
+\setmainfont{TeX Gyre Heros}
+\setsansfont{TeX Gyre Heros}
+\setmonofont{Latin Modern Mono}
+\usepackage{xcolor}
+\definecolor{brandblue}{HTML}{1F4FB4}
+\definecolor{brandgreen}{HTML}{2E9E5B}
+\definecolor{ink}{HTML}{1B2236}
+\definecolor{tintblue}{HTML}{E9EFFB}
+\definecolor{tintgreen}{HTML}{E7F5EC}
+\definecolor{greytext}{HTML}{5F6B7A}
+% Alias de la identidad visual común (portada unificada)
+\colorlet{gblue}{brandblue}
+\colorlet{ggreen}{brandgreen}
+\colorlet{gnavy}{ink}
+\colorlet{ggray}{greytext}
+\definecolor{gpale}{HTML}{8D919B}
+\usepackage{graphicx,tikz,fancyhdr,titlesec,array,colortbl,setspace,needspace}
+\usepackage[colorlinks=true,linkcolor=brandblue,urlcolor=brandblue,pdftitle={Práctica 0 – Los Gantt-sters},pdfauthor={Los Gantt-sters},pdfsubject={Práctica 0: descripción del problema y organización del grupo de trabajo},pdflang={es}]{hyperref}
+
+\color{ink}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.7em}
+\linespread{1.12}
+\raggedright
+
+% ---------- Cabecera y pie ----------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\headrule}{{\color{brandblue}\hrule width\headwidth height\headrulewidth}}
+\fancyhead[L]{\raisebox{-0.25cm}{\includegraphics[height=0.95cm]{logo.png}}\hspace{0.3cm}{\small\bfseries\color{brandblue}LOS GANTT-STERS}}
+\fancyhead[R]{\small\color{greytext}Práctica 0 · MDA · Curso 2026-2027}
+\fancyfoot[C]{{\color{brandgreen}\rule{2.6cm}{0.9pt}}\\[3pt]{\small\color{greytext}\thepage}}
+
+% ---------- Títulos de sección ----------
+\newcommand{\sectionbadge}[1]{\tikz[baseline=(n.base)]\node[fill=brandblue,text=white,rounded corners=3pt,inner xsep=5pt,inner ysep=3pt,minimum width=0.95cm](n){\bfseries #1};}
+\titleformat{\section}{\Large\bfseries\color{brandblue}}{\sectionbadge{\thesection}}{0.7em}{}[\vspace{-0.1em}{\color{brandgreen}\titlerule[1.2pt]}]
+\titlespacing*{\section}{0pt}{1.5em}{0.9em}
+\newcommand{\sectionbreak}{\needspace{7\baselineskip}}
+
+% ---------- Utilidades ----------
+\newcommand{\hdrcell}[1]{\cellcolor{brandblue}\textcolor{white}{\bfseries #1}}
+
+\begin{document}
+
+% ================= PORTADA (formato de la Propuesta técnica) =================
+\begin{titlepage}
+\centering
+\vspace*{0.2cm}
+{\fontsize{30}{34}\selectfont\bfseries\color{gblue}MDA\par}
+\vspace{4pt}
+{\small\bfseries\color{ggreen}Metodologías de Desarrollo Ágil\par}
+\vspace{0.8cm}
+\includegraphics[width=4.2cm]{logo.png}\par
+\vspace{0.9cm}
+{\fontsize{24}{28}\selectfont\bfseries\color{gnavy}LOS GANTT-STERS\par}
+\vspace{8pt}
+{\color{ggreen}\rule{\linewidth}{1.2pt}\par}
+\vspace{0.8cm}
+{\fontsize{20}{24}\selectfont\bfseries\color{gblue}PRÁCTICA 0\par}
+\vspace{6pt}
+{\bfseries\color{gnavy}DESCRIPCIÓN DEL PROBLEMA Y ORGANIZACIÓN\\DEL GRUPO DE TRABAJO\par}
+\vspace{1.1cm}
+{\footnotesize\bfseries\color{ggray}Integrantes\par}
+\vspace{4pt}
+{\color{gblue}\rule{\linewidth}{1.2pt}\par}
+\vspace{10pt}
+\begin{tabular}{c}
+Javier Miñán Molina\\[3pt]
+Germán Delgado Fernández\\[3pt]
+Ana Meca Cano\\[3pt]
+Jaime Montávez Ruiz\\[3pt]
+Álvaro Sanabria Díaz\\[3pt]
+Juan Luis Jiménez Urbano
+\end{tabular}\par
+\vspace{14pt}
+{\small\color{gpale}Universidad de Granada · Curso 2026-2027\par}
+\end{titlepage}
+
+% ================= CONTENIDO =================
+\section{Asignación de roles}
+{\setlength{\parskip}{0pt}\renewcommand{\arraystretch}{1.7}\rowcolors{2}{tintblue}{white}\arrayrulecolor{white}
+\begin{tabular}{@{}>{\bfseries\color{brandblue}\hspace{8pt}}m{7.2cm}m{8.2cm}@{}}
+\rowcolor{brandblue}\hdrcell{Rol} & \hdrcell{Miembro del grupo} \\
+Coordinador & Juan Luis Jiménez Urbano \\
+Catalogador & Germán Delgado Fernández \\
+Moderador & Jaime Montávez Ruiz \\
+Presentador & Ana Meca Cano \\
+Gestor de la calidad & Javier Miñán Molina \\
+Gestor de usabilidad y accesibilidad & Álvaro Sanabria Díaz \\
+\end{tabular}}
+
+\section{Responsabilidades de cada rol}
+{\setlength{\parskip}{0pt}\renewcommand{\arraystretch}{1.5}\arrayrulecolor{brandblue!35}
+\begin{tabular}{@{}>{\bfseries\color{brandblue}}m{4.2cm}m{11.4cm}@{}}
+Coordinador & Responsable del cumplimiento de los objetivos grupales y de la gestión del grupo (comunicación, coordinación, planificación). \\ \hline
+Catalogador & Recopila, analiza y clasifica la información generada por el grupo en las tareas asociadas a las prácticas. \\ \hline
+Moderador & Plantea y modera los debates y selecciona las ideas y decisiones grupales. \\ \hline
+Presentador & Elabora y presenta resúmenes, resultados y presentaciones ante el profesor y compañeros de otros grupos. \\ \hline
+Gestor de la calidad & Asegura la calidad de los productos y del proceso de desarrollo; vela por que documentos y técnicas sigan los estándares presentados en clase. \\ \hline
+Gestor de usabilidad y accesibilidad & Planifica y asegura la usabilidad y accesibilidad del proyecto. \\ \hline
+\end{tabular}}
+
+\end{document}
