@@ -1,6 +1,6 @@
-# TuAgendita
+# Agensible
 
-Aplicación móvil de agenda personalizada y accesible para estudiantes con discapacidad intelectual, desarrollada para el Colegio de Educación Especial Fundación Purísima Concepción de Granada.
+Aplicación web de agenda personalizada y accesible para estudiantes con discapacidad intelectual, desarrollada para el Colegio de Educación Especial Fundación Purísima Concepción de Granada. Está pensada para usarse principalmente en tablets en formato horizontal.
 
 ## Contexto del proyecto
 
@@ -29,25 +29,59 @@ Grupo de 6 personas con el siguiente reparto inicial de roles:
 | Germán Delgado Fernández | Catalogador |
 | Jaime Montávez Ruiz | Moderador |
 | Ana Meca Cano | Presentador |
-| Javier Miñan Molina | Gestor de calidad |
+| Javier Miñán Molina | Gestor de calidad |
 | Álvaro Sanabria Díaz | Gestor de usabilidad y accesibilidad |
+
+Los roles pueden rotar entre iteraciones, salvo el de gestor de calidad y el de gestor de usabilidad y accesibilidad.
 
 ## Metodología
 
-El proyecto sigue un desarrollo iterativo en tres iteraciones, con gestión ágil del proyecto (Scrum), historias de usuario, prototipado y evaluación con usuarios siguiendo un diseño centrado en el usuario.
+El proyecto sigue un desarrollo iterativo en tres iteraciones, con gestión ágil del proyecto (Scrum), historias de usuario, prototipado y evaluación con usuarios siguiendo un diseño centrado en el usuario. Los sprints, el Product Backlog y las tareas se gestionan en Jira.
 
 ## Tecnologías
 
-[Lenguaje, framework, base de datos y herramientas, cuando se decidan]
+| Ámbito | Herramienta |
+|---|---|
+| Aplicación | Aplicación web (webapp), con prioridad para tablets en formato horizontal |
+| Front-end | Native |
+| Backend y base de datos | Supabase (base de datos PostgreSQL, autenticación, almacenamiento y tiempo real) |
+| Despliegue | Vercel |
+| Control de versiones | Git y GitHub, con `master` como rama del trabajo definitivo y una rama paralela por tarea |
+| Calidad de código | ESLint y Prettier |
+| Integración continua | GitHub Actions: compila, ejecuta las pruebas y comprueba ESLint y Prettier en cada pull request |
+| Editor | Visual Studio Code |
+| Pictogramas | ARASAAC |
+| Gestión del proyecto | Jira (Scrum) |
+| Documentación | LaTeX (Overleaf) y Google Drive |
+| Comunicación | WhatsApp, videollamadas y reuniones periódicas |
+
+La aplicación debe funcionar en Chrome, Edge, Firefox y Safari, y cumplir WCAG 2.1 nivel AA.
 
 ## Estructura del repositorio
 
-[Descripción de carpetas: código, documentación, entregas]
+El repositorio está en fase inicial. Esta es la estructura prevista y se actualizará a medida que se añadan carpetas:
+
+```
+.
+├── .github/workflows/   # Flujo de integración continua (compilación, pruebas, ESLint y Prettier)
+├── .vscode/             # Ajustes y extensiones recomendadas de Visual Studio Code
+├── docs/                # Documentación: PDF finales de propuestas, manual, plan de calidad y entregas
+├── src/                 # Código de la aplicación
+├── tests/               # Pruebas unitarias y de integración
+└── README.md
+```
 
 ## Documentación
 
-[Enlaces a la propuesta técnica, el manual de coordinación, JIRA y las entregas]
+| Recurso | Dónde |
+|---|---|
+| Tablero y Product Backlog en Jira | [Backlog](https://gantt-sters.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog) y [tablero de trabajo](https://gantt-sters.atlassian.net/jira/software/projects/SCRUM/boards/1) |
+| Documentación compartida del equipo | [Carpeta DGP-MDA en Google Drive](https://drive.google.com/drive/folders/1pVqvauxM2EXDeXHBzrr1V0hjfa7VoFjG) (acceso restringido al equipo y al profesorado) |
+| Propuesta técnica y Propuesta de solución | Carpeta `docs/` y carpeta correspondiente de Drive |
+| Manual de coordinación | Carpeta `docs/` y carpeta correspondiente de Drive |
+| Plan de calidad | Carpeta `docs/` y carpeta correspondiente de Drive |
+| Entregas de las prácticas y actas de reunión | Carpetas de cada práctica y de actas en Drive |
 
 ## Licencia
 
-[Licencia, tras consultarlo con el profesor]
+Pendiente de definir, tras consultarlo con el profesorado.
