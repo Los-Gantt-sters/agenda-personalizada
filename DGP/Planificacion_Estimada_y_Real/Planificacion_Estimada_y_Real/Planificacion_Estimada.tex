@@ -1,0 +1,345 @@
+% Planificación Estimada · Los Gantt-sters · MDA/DGP 2026-2027
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{iftex}
+\ifPDFTeX
+ \usepackage[T1]{fontenc}
+ \usepackage[utf8]{inputenc}
+ \usepackage{tgheros}
+ \renewcommand{\familydefault}{\sfdefault}
+\else
+ \usepackage{fontspec}
+ \setmainfont{TeX Gyre Heros}
+ \setmonofont{Latin Modern Mono}
+\fi
+\usepackage[spanish,es-noshorthands,es-tabla]{babel}
+\usepackage[a4paper,top=2.9cm,bottom=2.4cm,left=2.5cm,right=2.5cm,headheight=20pt,headsep=0.8cm]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{needspace,graphicx,longtable,array,enumitem,titlesec,fancyhdr,caption}
+\usepackage{etoolbox}
+\usepackage{amsmath}
+\usepackage[most]{tcolorbox}
+\usepackage[most]{tcolorbox}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Identidad visual común ----------
+\definecolor{gblue}{HTML}{1F4FB4}
+\definecolor{gnavy}{HTML}{1B2236}
+\definecolor{ggreen}{HTML}{2E9E5B}
+\definecolor{ggray}{HTML}{5F6B7A}
+\definecolor{gpale}{HTML}{8D919B}
+\definecolor{glight}{HTML}{E9EFFB}
+\definecolor{gline}{HTML}{B1C1E5}
+
+\newcommand{\proyecto}{Planificación Estimada · MDA}
+\newcommand{\hl}[1]{\textcolor{gblue}{\textbf{#1}}}
+
+\color{gnavy}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\baselinestretch}{1.1}
+\hypersetup{pdftitle={Planificación Semanal del Proyecto TUAG (Jira SCRUM) – Los Gantt-sters},pdfauthor={Los Gantt-sters},pdfsubject={Planificación Inicial y Estimación del Proyecto}}
+
+% Títulos de sección: número en recuadro azul, texto azul y filete verde
+\titleformat{\section}{\Large\bfseries\color{gblue}}
+ {\colorbox{gblue}{\textcolor{white}{\thesection}}}{0.6em}{}[\vspace{-4pt}{\color{ggreen}\titlerule[0.8pt]}]
+\titlespacing*{\section}{0pt}{18pt}{10pt}
+\titleformat{\subsection}{\large\bfseries\color{ggreen}}{\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+
+\setlist[itemize]{label={\color{gblue}\textbullet},leftmargin=1.4em,itemsep=1pt,parsep=0pt,topsep=2pt}
+\captionsetup{font={small,it},labelfont={small,it},textfont={color=ggray},labelsep=period}
+\setlength{\LTpre}{6pt}\setlength{\LTpost}{8pt}
+\renewcommand{\arraystretch}{1.35}
+\arrayrulecolor{gline}
+
+% ---------- Cajas ----------
+\newtcolorbox{verde}[1]{enhanced,colback=white,colframe=ggreen,boxrule=0.8pt,arc=2pt,
+ left=6pt,right=6pt,top=4pt,bottom=4pt,fonttitle=\small\bfseries\color{white},title={#1},before upper=\small}
+
+% Cabecera y pie
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{\raisebox{-0.25\height}{\includegraphics[height=0.55cm]{logo.png}}\hspace{0.5em}{\small\bfseries\color{gblue}LOS GANTT-STERS}}
+\fancyhead[R]{\small\color{ggray}\proyecto\ ·\ Curso 2026-2027}
+\fancyfoot[C]{{\color{gpale}\rule{2.5cm}{0.4pt}}\\[2pt]\small\color{ggray}\thepage}
+
+
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcommand{\cab}[1]{\textcolor{white}{\small\textbf{#1}}}
+\newtcolorbox{semana}[2]{enhanced,colback=glight,colframe=gblue,boxrule=0.8pt,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt,
+ fonttitle=\bfseries\color{white},title={#1: #2},before upper=\small,before skip=10pt,after skip=6pt}
+\setlength{\tabcolsep}{3.5pt}
+\begin{document}
+\sloppy
+
+% ---------- Portada ----------
+\begin{titlepage}
+\centering
+\vspace*{0.2cm}
+{\fontsize{30}{34}\selectfont\bfseries\color{gblue}MDA\par}
+\vspace{4pt}
+{\small\bfseries\color{ggreen}Metodologías de Desarrollo Ágil\par}
+\vspace{0.8cm}
+\includegraphics[width=4.2cm]{logo.png}\par
+\vspace{0.9cm}
+{\fontsize{24}{28}\selectfont\bfseries\color{gnavy}LOS GANTT-STERS\par}
+\vspace{8pt}
+{\color{ggreen}\rule{\linewidth}{1.2pt}\par}
+\vspace{0.8cm}
+{\fontsize{20}{24}\selectfont\bfseries\color{gblue}PLANIFICACIÓN ESTIMADA\par}
+\vspace{6pt}
+{\bfseries\color{gnavy}PLANIFICACIÓN SEMANAL DEL PROYECTO TUAG (TABLERO JIRA SCRUM)\par}
+\vspace{1.1cm}
+{\footnotesize\bfseries\color{ggray}Integrantes\par}
+\vspace{4pt}
+{\color{gblue}\rule{\linewidth}{1.2pt}\par}
+\vspace{10pt}
+\begin{tabular}{c}
+Javier Miñán Molina\\[3pt]
+Germán Delgado Fernández\\[3pt]
+Ana Meca Cano\\[3pt]
+Jaime Montávez Ruiz\\[3pt]
+Álvaro Sanabria Díaz\\[3pt]
+Juan Luis Jiménez Urbano
+\end{tabular}\par
+\vspace{14pt}
+{\small\color{gpale}Universidad de Granada · Curso 2026-2027\par}
+\end{titlepage}
+
+{\hypersetup{linkcolor=gnavy}\renewcommand{\contentsname}{\color{gblue}Índice de Contenidos}\tableofcontents}
+\clearpage
+
+
+\section{Metodología de Seguimiento Semanal (Núcleo: Clase de los Jueves)}
+\textbf{Planificación Semanal del Proyecto TUAG (Tablero Jira SCRUM).} Organización integral de Historias de Usuario, Tareas de Prototipado (Justinmind), Revisiones, Calidad y Accesibilidad con ciclo semanal de Jueves a Jueves.
+
+\begin{longtable}{|P{3.6cm}|P{3.6cm}|P{3.6cm}|P{3.6cm}|}
+\hline
+\rowcolor{gblue}\cab{Inicio oficial (núcleo)} & \cab{Cadencia de revisión} & \cab{Estructura ágil} & \cab{Alcance total en Jira} \\ \hline
+\rowcolor{glight}Jueves 22 de octubre de 2026 & Cada jueves en sesión de clase & 3 Sprints (9 semanas en total) & 40 Items (80 Subtareas) · 109 SP \\ \hline
+\end{longtable}
+
+\textbf{\color{gblue}Día núcleo (Jueves):} El proyecto arranca el jueves 22 de octubre de 2026. Cada semana de trabajo discurre de jueves a jueves, culminando en la sesión de clase de cada jueves donde el equipo realiza la revisión semanal de todo lo construido durante los últimos 7 días.
+
+\textbf{Estructura de cada Sprint (3 semanas por Sprint):}
+\begin{itemize}
+\item \textbf{Primera semana del Sprint:} Elaboración del boceto interactivo en Justinmind (incluyendo su subtarea de aprendizaje) para guiar el desarrollo visual de las historias del sprint, y en el Sprint 1 la definición formal de las plantillas de los Informes de Calidad y Accesibilidad.
+\item \textbf{Semanas centrales y finales:} Implementación progresiva de las Historias de Usuario (Frontend, Backend, Base de Datos y Testing) con entrega funcional incremental cada jueves.
+\item \textbf{Cierre del Sprint (3.er jueves de cada sprint):} Ejecución de la Revisión General del Sprint (Javier Miñan) y cumplimentación del Informe de Calidad (Javier Miñan) y del Informe de Accesibilidad (Álvaro Sanabria).
+\end{itemize}
+
+\section{Mapa General de Semanas e Hitos de Revisión (Los Jueves)}
+\begin{longtable}{|C{1.3cm}|C{1.2cm}|C{1.9cm}|P{3.3cm}|P{3.6cm}|C{1.3cm}|C{1.5cm}|}
+\hline
+\rowcolor{gblue}\cab{Semana} & \cab{Sprint} & \cab{Inicio de Semana} & \cab{Revisión en Clase (Jueves)} & \cab{Foco Principal de la Semana} & \cab{Tareas (Sub.)} & \cab{Esfuerzo} \\ \hline
+\endhead
+\small Semana 1 & 1 & 22/10/2026 & Jueves 29/10/2026 (Revisión Semanal 1 en clase) & Arranque, Prototipado en Justinmind, Marcos de Calidad/Accesibilidad e Infraestructura Base & 6 (10 sub.) & 15 SP \\ \hline
+\small Semana 2 & 1 & 29/10/2026 & Jueves 05/11/2026 (Revisión Semanal 2 en clase) & Autenticación Adaptada, Perfiles Multidireccionales y Personalización ARASAAC & 4 (15 sub.) & 11 SP \\ \hline
+\small Semana 3 & 1 & 05/11/2026 & Jueves 12/11/2026 (Revisión Semanal 3 y Cierre Sprint 1 en clase) & Agenda Estructurada, Time Timer, Necesidades Básicas y Cierre de Sprint 1 & 8 (16 sub.) & 19 SP \\ \hline
+\small Semana 4 & 2 & 12/11/2026 & Jueves 19/11/2026 (Revisión Semanal 4 en clase) & Bocetos Justinmind del Sprint 2, Tareas Personales y Pasos Multimedia & 3 (7 sub.) & 10 SP \\ \hline
+\small Semana 5 & 2 & 19/11/2026 & Jueves 26/11/2026 (Revisión Semanal 5 en clase) & Gestión Vocacional de Comedor Escolar y Reparto de Menús & 3 (8 sub.) & 11 SP \\ \hline
+\small Semana 6 & 2 & 26/11/2026 & Jueves 03/12/2026 (Revisión Semanal 6 y Cierre Sprint 2 en clase) & Taller de Reprografía, Rol de Embajador QR y Cierre de Sprint 2 & 5 (6 sub.) & 14 SP \\ \hline
+\small Semana 7 & 3 & 03/12/2026 & Jueves 10/12/2026 (Revisión Semanal 7 en clase) & Bocetos Justinmind del Sprint 3, Interacción por Pulsadores y Vista Semanal & 3 (6 sub.) & 9 SP \\ \hline
+\small Semana 8 & 3 & 10/12/2026 & Jueves 17/12/2026 (Revisión Semanal 8 en clase) & Alerta Inmediata de Urgencia, Feedback Emocional y Rutina Alternativa (Plan B) & 3 (8 sub.) & 10 SP \\ \hline
+\small Semana 9 & 3 & 17/12/2026 & Lunes 21/12/2026 (Entrega Final Release v1.0 tras revisión del Jueves 17/12) & Supervisión Docente, Analítica de Evolución y Cierre Global (Release v1.0) & 5 (4 sub.) & 10 SP \\ \hline
+\rowcolor{glight}\multicolumn{5}{|P{10.2cm}|}{\textbf{TOTAL PROYECTO TUAG (3 Sprints / 9 Semanas):}} & \textbf{40 (80 sub.)} & \textbf{109 SP} \\ \hline
+\end{longtable}
+
+\section{Equilibrio de Pesos: Calidad, Revisión General y Accesibilidad}
+\begin{longtable}{|P{1.8cm}|P{4.5cm}|C{1.9cm}|P{4.5cm}|C{1.9cm}|}
+\hline
+\rowcolor{gblue}\cab{Sprint} & \cab{Tareas de Javier Miñan (Calidad + Revisión General)} & \cab{Peso Javier} & \cab{Tareas de Álvaro Sanabria (Accesibilidad Universal y Cognitiva)} & \cab{Peso Álvaro} \\ \hline
+\endhead
+\small Sprint 1 (22 oct -- 12 nov) & \small $\bullet$ SCRUM-169: Elaborar plantilla/guía Informe de Calidad (2 SP, High)\newline $\bullet$ SCRUM-171: Revisión general del Sprint 1 (1 SP, High)\newline $\bullet$ SCRUM-172: Rellenar el informe de calidad S1 (1 SP, Medium) & 4 SP (+6 SP HUs = 10 SP) & \small $\bullet$ SCRUM-170: Elaborar plantilla/guía Informe de Accesibilidad (2 SP, High)\newline $\bullet$ SCRUM-173: Rellenar el informe de accesibilidad S1 (2 SP, Medium) & 4 SP (+6 SP HUs = 10 SP) \\ \hline
+\small Sprint 2 (12 nov -- 03 dic) & \small $\bullet$ SCRUM-176: Revisión general del Sprint 2 (1 SP, High)\newline $\bullet$ SCRUM-177: Rellenar el informe de calidad S2 (1 SP, Medium) & 2 SP (+3 SP HUs = 5 SP) & \small $\bullet$ SCRUM-178: Rellenar el informe de accesibilidad S2 (2 SP, Medium) & 2 SP (+3 SP HUs = 5 SP) \\ \hline
+\small Sprint 3 (03 dic -- 21 dic) & \small $\bullet$ SCRUM-181: Revisión general del Sprint 3 (1 SP, High)\newline $\bullet$ SCRUM-182: Rellenar el informe de calidad S3 (1 SP, Medium) & 2 SP (+3 SP HUs = 5 SP) & \small $\bullet$ SCRUM-183: Rellenar el informe de accesibilidad S3 (2 SP, Medium) & 2 SP (+3 SP HUs = 5 SP) \\ \hline
+\end{longtable}
+
+\section{Planificación Detallada por Semanas (Semanas 1 a 9)}
+\subsection{TUAG Sprint 1 (Iteración 1) — Release v0.1 Jueves 22 de octubre de 2026 – Jueves 12 de noviembre de 2026}
+\textbf{\color{gblue}Objetivo del Sprint:} Release v0.1: Autenticación, agenda visual, urgencias e infraestructura Supabase/Vercel + Bases de Prototipado, Calidad y Accesibilidad (43 SP totales)
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 1 (SPRINT 1)}{Semana 1: Arranque, Prototipado en Justinmind, Marcos de Calidad/Accesibilidad e Infraestructura Base}
+\textbf{Inicio:} Jueves 22/10/2026 (Inicio en clase) \hfill \textbf{Hito / Revisión en Clase:} Jueves 29/10/2026 (Revisión Semanal 1 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (29/10/2026):} Validar en la clase del jueves 29 oct: los bocetos interactivos en Justinmind del Sprint 1, las plantillas/guías oficiales de los Informes de Calidad y Accesibilidad, y la infraestructura cloud/CI-CD/arquitectura Native operativa.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\textbf{SCRUM-167}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 1] Hacer boceto interactivo en Justinmind (Autenticación y Agenda Visual)}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-168} Aprender a usar Justinmind y configurar el entorno de trabajo (1 SP) [Highest | Resp: mecacanoana]} & Highest & 3 SP & mecacanoana \\ \hline
+\textbf{SCRUM-169}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 1] Elaborar plantilla y guía del Informe de Calidad (funcionamiento, definición y comprobación)}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & High & 2 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-170}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 1] Elaborar plantilla y guía del Informe de Accesibilidad (funcionamiento, definición y comprobación)}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & High & 2 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\textbf{SCRUM-154}\par{\footnotesize\color{ggray}Historia} & \textbf{[HUT-01] Configuración del backend e infraestructura cloud con Supabase y Vercel}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-153 — ET: Infraestructura Técnica, Arquitectura Base y DevOps}\par\vspace{2pt}{\footnotesize\hl{SCRUM-155} T-T01.1 [Cloud/BaaS] Configuración de proyecto Supabase y despliegue continuo en Vercel [Highest | Resp: kskjuanlu]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-156} T-T01.2 [Base de Datos] Esquema relacional SQL y políticas RLS en PostgreSQL (Supabase) [Highest | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-157} T-T01.3 [Seguridad] Variables de entorno (.env), API keys y conexión con Supabase Auth [High | Resp: kskjuanlu]} & Highest & 3 SP & kskjuanlu \\ \hline
+\rowcolor{glight}\textbf{SCRUM-158}\par{\footnotesize\color{ggray}Historia} & \textbf{[HUT-02] Configuración del pipeline de Integración Continua (CI/CD) y calidad de código}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-153 — ET: Infraestructura Técnica, Arquitectura Base y DevOps}\par\vspace{2pt}{\footnotesize\hl{SCRUM-159} T-T02.1 [DevOps/CI] Workflow de GitHub Actions con jobs de build y tests unitarios [High | Resp: Javier Miñan]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-160} T-T02.2 [QA/Calidad] Configuración de ESLint, Prettier y reglas de accesibilidad a11y [High | Resp: Javier Miñan]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-161} T-T02.3 [DevOps] Automatización de despliegue continuo en entorno de staging [Medium | Resp: Javier Miñan]} & High & 2 SP & Javier Miñan \\ \hline
+\rowcolor{glight}\textbf{SCRUM-162}\par{\footnotesize\color{ggray}Historia} & \textbf{[HUT-03] Arquitectura base del cliente web en Native y motor de componentes accesibles}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-153 — ET: Infraestructura Técnica, Arquitectura Base y DevOps}\par\vspace{2pt}{\footnotesize\hl{SCRUM-163} T-T03.1 [Frontend/Native] Setup de aplicación web Native, enrutador y estado global [Highest | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-164} T-T03.2 [Accesibilidad/UI] Design System accesible con tokens de color, contrastes y tipografías [Highest | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-165} T-T03.3 [Audio/Frontend] Servicio wrapper de reproducción de sonidos y síntesis de voz [High | Resp: jaimontalvez]} & Highest & 3 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 1: 6 elementos principales y 10 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 15 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 2 (SPRINT 1)}{Semana 2: Autenticación Adaptada, Perfiles Multidireccionales y Personalización ARASAAC}
+\textbf{Inicio:} Jueves 29/10/2026 \hfill \textbf{Hito / Revisión en Clase:} Jueves 05/11/2026 (Revisión Semanal 2 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (05/11/2026):} Demostrar en la clase del jueves 5 nov: login visual por foto/pictograma para alumnos, login JWT con roles para tutores, CRUD de perfiles con permisos RGPD y personalización visual con catálogo ARASAAC y temas de alto contraste.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\rowcolor{glight}\textbf{SCRUM-49}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-01] Inicio de sesión accesible mediante fotografía o pictograma}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-43 — E1: Autenticación Adaptada y Accesibilidad Universal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-50} T-01.1 [UX/Frontend] Cuadrícula táctil accesible con fotos de rostro ($\geq$120x120px) [Highest | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-51} T-01.2 [Backend] Endpoint de login visual por identificador de alumno sin contraseña [Highest | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-52} T-01.3 [Frontend/Audio] Feedback sonoro amigable al pulsar y soporte modo tableta personal [High | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-53} T-01.4 [Testing] Pruebas de usabilidad cognitiva con perfiles no lectores [Medium | Resp: Javier Miñan]} & Highest & 3 SP & jaimontalvez \\ \hline
+\rowcolor{glight}\textbf{SCRUM-54}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-02] Inicio de sesión estándar para supervisores (Golden Story)}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-43 — E1: Autenticación Adaptada y Accesibilidad Universal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-55} T-02.1 [Frontend] Formulario de login para tutores/admin con validación [Highest | Resp: kskjuanlu]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-56} T-02.2 [Backend] Autenticación JWT, hash bcrypt y control de roles RBAC [Highest | Resp: kskjuanlu]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-57} T-02.3 [Testing] Pruebas de expiración de sesión y seguridad de acceso [High | Resp: Javier Miñan]} & Highest & 2 SP & kskjuanlu \\ \hline
+\rowcolor{glight}\textbf{SCRUM-58}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-03] Gestión de perfiles y vinculación multidireccional de tutores}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-43 — E1: Autenticación Adaptada y Accesibilidad Universal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-59} T-03.1 [Base de Datos] Esquema relacional de alumnos, tutores escolares y familiares [Highest | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-60} T-03.2 [Backend] API CRUD de alumnos con subida de fotos y etiqueta tutor obligatorio [Highest | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-61} T-03.3 [Frontend] Consola de administración para asignación de tutores y familias [High | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-62} T-03.4 [Backend] Segregación de permisos según ámbito escolar y doméstico (RGPD) [High | Resp: GERMAN DELGADO]} & Highest & 3 SP & GERMAN DELGADO \\ \hline
+\rowcolor{glight}\textbf{SCRUM-63}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-04] Personalización estética y sensorial de la interfaz (ARASAAC)}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-43 — E1: Autenticación Adaptada y Accesibilidad Universal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-64} T-04.1 [Frontend/CSS] Temas variables (alto contraste oscuro/claro y modo pastel) [High | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-65} T-04.2 [Integración] Catálogo oficial de pictogramas ARASAAC y consumo API [Highest | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-66} T-04.3 [Frontend] Panel de preferencias para tamaños de botón y tipografía lectura fácil [High | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-67} T-04.4 [Accesibilidad] Auditoría de contraste cromático WCAG 2.1 AA/AAA [High | Resp: Javier Miñan]} & Highest & 3 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 2: 4 elementos principales y 15 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 11 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 3 (SPRINT 1)}{Semana 3: Agenda Estructurada, Time Timer, Necesidades Básicas y Cierre de Sprint 1}
+\textbf{Inicio:} Jueves 05/11/2026 \hfill \textbf{Hito / Revisión en Clase:} Jueves 12/11/2026 (Revisión Semanal 3 y Cierre Sprint 1 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (12/11/2026):} Presentar en la clase del jueves 12 nov la Release v0.1 completa: vista Hecho-Ahora- Después, confirmación táctil, Time Timer, avisos anticipatorios, botón de necesidades fisiológicas, junto con la Revisión General de Javier y los Informes de Calidad y Accesibilidad del Sprint 1.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\rowcolor{glight}\textbf{SCRUM-68}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-06] Vista de agenda estructurada del día (Hecho - Ahora - Después)}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-44 — E2: Agenda Personal y Estructuración Temporal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-69} T-06.1 [Frontend] Componente de 3 bloques: HECHO, AHORA (60\%) y DESPUÉS [Highest | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-70} T-06.2 [Frontend] Lógica reactiva de avance automático de tareas al confirmar [Highest | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-71} T-06.3 [Backend] Endpoint de secuencia cronológica de tareas del día [Highest | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-72} T-06.4 [UX] Supresión de barras de scroll y elementos de distracción [High | Resp: mecacanoana]} & Highest & 5 SP & mecacanoana \\ \hline
+\rowcolor{glight}\textbf{SCRUM-73}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-08] Confirmación accesible de inicio y fin de tarea}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-44 — E2: Agenda Personal y Estructuración Temporal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-74} T-08.1 [Frontend] Botones táctiles gigantes EMPEZAR y TERMINAR con pictogramas [Highest | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-75} T-08.2 [Frontend/UX] Prevención de toques accidentales (pulsación sostenida 1.5s) [High | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-76} T-08.3 [Backend] Registro de marcas de tiempo reales y actualización de estado [High | Resp: GERMAN DELGADO]} & Highest & 2 SP & Javier Miñan \\ \hline
+\rowcolor{glight}\textbf{SCRUM-77}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-09] Temporizador visual accesible integrado (Time Timer)}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-44 — E2: Agenda Personal y Estructuración Temporal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-78} T-09.1 [Frontend/SVG] Componente gráfico interactivo de disco regresivo Time Timer [Highest | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-79} T-09.2 [Frontend] Rótulo opcional configurable con tiempo restante en lectura fácil [Medium | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-80} T-09.3 [Frontend/Audio] Alarma suave de fin de tiempo con parpadeo y sonido no estridente [High | Resp: jaimontalvez]} & Highest & 3 SP & jaimontalvez \\ \hline
+\rowcolor{glight}\textbf{SCRUM-81}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-16] Notificaciones sensoriales anticipatorias de cambio de actividad}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-46 — E4: Ejecución Asistida y Entorno Físico}\par\vspace{2pt}{\footnotesize\hl{SCRUM-82} T-16.1 [Frontend] Servicio temporizador que dispara evento 5 min antes de la tarea [High | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-83} T-16.2 [Frontend/UX] Ventana emergente con pictograma de la tarea inminente y vibración [High | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-84} T-16.3 [Testing] Verificación de disparo puntual con cambios de reloj [Medium | Resp: Javier Miñan]} & High & 2 SP & Javier Miñan \\ \hline
+\rowcolor{glight}\textbf{SCRUM-85}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-18] Botón directo permanente de necesidades fisiológicas básicas}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-47 — E5: Comunicación de Necesidades Básicas y Urgencias}\par\vspace{2pt}{\footnotesize\hl{SCRUM-86} T-18.1 [Frontend] Botón flotante accesible fijado en todas las pantallas [Highest | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-87} T-18.2 [Frontend/UX] Modal con 3 opciones gigantes ARASAAC: Baño, Agua, Descanso [Highest | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-88} T-18.3 [Supabase/Realtime] Alerta sonora instantánea al terminal del tutor con Supabase Realtime [Highest | Resp: kskjuanlu]} & Highest & 3 SP & GERMAN DELGADO \\ \hline
+\textbf{SCRUM-171}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 1] Revisión general del Sprint 1}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & High & 1 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-172}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 1] Rellenar el informe de calidad}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & Medium & 1 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-173}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 1] Rellenar el informe de accesibilidad}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & Medium & 2 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 3: 8 elementos principales y 16 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 19 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\subsection{TUAG Sprint 2 (Iteración 2) — Release v0.2 Jueves 12 de noviembre de 2026 – Jueves 3 de diciembre de 2026}
+\textbf{\color{gblue}Objetivo del Sprint:} Release v0.2: Tareas Vocacionales del Centro (PTVAL), Tareas Familiares y Desglose Multimedia + Prototipado y Auditorías (37 SP totales)
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 4 (SPRINT 2)}{Semana 4: Bocetos Justinmind del Sprint 2, Tareas Personales y Pasos Multimedia}
+\textbf{Inicio:} Jueves 12/11/2026 \hfill \textbf{Hito / Revisión en Clase:} Jueves 19/11/2026 (Revisión Semanal 4 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (19/11/2026):} Revisar en la clase del jueves 19 nov: prototipos en Justinmind de los flujos vocacionales/familiares, formulario de creación de tareas con recurrencia semanal y reproductor paso a paso con soporte de vídeo, audio y carrusel de pictogramas.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\textbf{SCRUM-174}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 2] Hacer boceto interactivo en Justinmind (Tareas Vocacionales y Familias)}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-175} Aprender a usar Justinmind (componentes dinámicos y flujos guiados) (1 SP) [High | Resp: kskjuanlu]} & High & 2 SP & kskjuanlu \\ \hline
+\rowcolor{glight}\textbf{SCRUM-89}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-07] Creación y programación de tareas personales por tutores}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-44 — E2: Agenda Personal y Estructuración Temporal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-90} T-07.1 [Frontend] Formulario de creación de tareas personales con buscador ARASAAC [High | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-91} T-07.2 [Backend] Modelo y API de tareas con recurrencia semanal y franjas horarias [High | Resp: kskjuanlu]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-92} T-07.3 [Lógica] Control de permisos diferenciados entre tutores escolares y familiares [Medium | Resp: Javier Miñan]} & High & 3 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\textbf{SCRUM-93}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-10] Desglose de tareas complejas en pasos multimedia}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-44 — E2: Agenda Personal y Estructuración Temporal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-94} T-10.1 [Base de Datos] Modelo relacional de pasos ordenados por tarea [High | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-95} T-10.2 [Frontend] Reproductor paso a paso con vídeo corto, audio o carrusel picto [High | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-96} T-10.3 [Backend] Almacenamiento seguro y compresión de archivos multimedia [Medium | Resp: kskjuanlu]} & High & 5 SP & mecacanoana \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 4: 3 elementos principales y 7 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 10 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 5 (SPRINT 2)}{Semana 5: Gestión Vocacional de Comedor Escolar y Reparto de Menús}
+\textbf{Inicio:} Jueves 19/11/2026 \hfill \textbf{Hito / Revisión en Clase:} Jueves 26/11/2026 (Revisión Semanal 5 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (26/11/2026):} Demostrar en la clase del jueves 26 nov: el flujo completo de comanda diaria de comedor por aulas y dietas, agregación y exportación PDF para cocina, y lista de control mensual de reparto de menús impresos a las familias.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\rowcolor{glight}\textbf{SCRUM-97}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-11] Registro interactivo diario de comanda de comedor y ausencias}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-45 — E3: Tareas Vocacionales del Centro Escolar (PTVAL)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-98} T-11.1 [Frontend] Cuadrícula táctil por clases inspirada en fichas reales del centro [High | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-99} T-11.2 [Frontend] Selector con fotos de alumnos y marcas de dietas especiales [High | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-100} T-11.3 [Backend] Registro diario de asistencia y ausencias de comensales [High | Resp: GERMAN DELGADO]} & High & 5 SP & GERMAN DELGADO \\ \hline
+\rowcolor{glight}\textbf{SCRUM-101}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-12] Emisión y envío automatizado del parte de comedor a cocina}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-45 — E3: Tareas Vocacionales del Centro Escolar (PTVAL)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-102} T-12.1 [Backend] Algoritmo de agregación que consolida menús diarios por dieta [High | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-103} T-12.2 [Frontend/Admin] Vista de recepción de comanda para cocina y exportación PDF [Medium | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-104} T-12.3 [UX] Confirmación visual de comanda completada para el alumno encargado [Medium | Resp: ALVARO SANABRIA DIAZ]} & Medium & 3 SP & jaimontalvez \\ \hline
+\rowcolor{glight}\textbf{SCRUM-105}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-13] Control de reparto de menús mensuales impresos a familias}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-45 — E3: Tareas Vocacionales del Centro Escolar (PTVAL)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-106} T-13.1 [Frontend] Lista de verificación de entrega de menú mensual con fotos por aula [Medium | Resp: Javier Miñan]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-107} T-13.2 [Backend] Registro histórico mensual de entregas a familias [Medium | Resp: GERMAN DELGADO]} & Medium & 3 SP & Javier Miñan \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 5: 3 elementos principales y 8 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 11 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 6 (SPRINT 2)}{Semana 6: Taller de Reprografía, Rol de Embajador QR y Cierre de Sprint 2}
+\textbf{Inicio:} Jueves 26/11/2026 \hfill \textbf{Hito / Revisión en Clase:} Jueves 03/12/2026 (Revisión Semanal 6 y Cierre Sprint 2 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (03/12/2026):} Presentar en la clase del jueves 3 dic la Release v0.2: flujo guiado de reprografía en 3 pasos, escáner QR con vídeos explicativos para el rol de embajador, Revisión General de Javier e Informes de Calidad y Accesibilidad del Sprint 2.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\rowcolor{glight}\textbf{SCRUM-108}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-14] Flujo guiado de la tarea de reprografía escolar (3 pasos)}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-45 — E3: Tareas Vocacionales del Centro Escolar (PTVAL)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-109} T-14.1 [Backend] Máquina de estados para Reprografía (Recogida $\rightarrow$ Taller $\rightarrow$ Reparto) [High | Resp: kskjuanlu]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-110} T-14.2 [Frontend] Interfaz guiada en 3 fases con botones grandes de confirmación [High | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-111} T-14.3 [Frontend/Docente] Formulario para solicitud de trabajos al taller de reprografía [High | Resp: Javier Miñan]} & High & 5 SP & kskjuanlu \\ \hline
+\rowcolor{glight}\textbf{SCRUM-112}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-15] Asistencia al rol de embajador con escaneo de código QR y vídeo}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-45 — E3: Tareas Vocacionales del Centro Escolar (PTVAL)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-113} T-15.1 [Frontend/Hardware] Módulo de cámara para escaneo rápido de códigos QR [High | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-114} T-15.2 [Lógica/Media] Vinculación de QR a salas y reproducción de vídeo explicativo [High | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-115} T-15.3 [Admin] Generador imprimible de códigos QR de espacios físicos del centro [Medium | Resp: kskjuanlu]} & High & 5 SP & jaimontalvez \\ \hline
+\textbf{SCRUM-176}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 2] Revisión general del Sprint 2}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & High & 1 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-177}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 2] Rellenar el informe de calidad}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & Medium & 1 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-178}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 2] Rellenar el informe de accesibilidad}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & Medium & 2 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 6: 5 elementos principales y 6 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 14 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\subsection{TUAG Sprint 3 (Iteración 3) — Release v1.0 Jueves 3 de diciembre de 2026 – Lunes 21 de diciembre de 2026}
+\textbf{\color{gblue}Objetivo del Sprint:} Release v1.0: Accesibilidad Motora por Pulsadores, Resiliencia (Plan B), Alertas de Urgencia, Analítica y Auditoría Final (29 SP totales)
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 7 (SPRINT 3)}{Semana 7: Bocetos Justinmind del Sprint 3, Interacción por Pulsadores y Vista Semanal}
+\textbf{Inicio:} Jueves 03/12/2026 \hfill \textbf{Hito / Revisión en Clase:} Jueves 10/12/2026 (Revisión Semanal 7 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (10/12/2026):} Revisar en la clase del jueves 10 dic: prototipos en Justinmind de barrido/contingencias, motor de barrido visual para movilidad reducida mediante pulsador único y conmutador de vista diaria/semanal según autonomía.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\textbf{SCRUM-179}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 3] Hacer boceto interactivo en Justinmind (Resiliencia, Plan B y Accesibilidad Motora)}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)}\par\vspace{2pt}{\footnotesize\hl{SCRUM-180} Aprender a usar Justinmind (simulación de barrido, estados de alerta y cierre de prototipo) (1 SP) [High | Resp: jaimontalvez]} & High & 2 SP & jaimontalvez \\ \hline
+\rowcolor{glight}\textbf{SCRUM-119}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-05] Modo de interacción para movilidad reducida mediante pulsadores}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-43 — E1: Autenticación Adaptada y Accesibilidad Universal}\par\vspace{2pt}{\footnotesize\hl{SCRUM-120} T-05.1 [Frontend/Accesibilidad] Motor de barrido visual automático y manual con foco grueso [Medium | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-121} T-05.2 [Frontend/Eventos] Captura de eventos de pulsador externo (switch/USB) [Medium | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-122} T-05.3 [Testing] Verificación de navegación completa con un único pulsador [Low | Resp: Javier Miñan]} & Low & 5 SP & mecacanoana \\ \hline
+\rowcolor{glight}\textbf{SCRUM-123}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-17] Selector de vista diaria o semanal según nivel de autonomía}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-46 — E4: Ejecución Asistida y Entorno Físico}\par\vspace{2pt}{\footnotesize\hl{SCRUM-124} T-17.1 [Frontend] Vista semanal en cuadrícula interactiva accesible [Low | Resp: jaimontalvez]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-125} T-17.2 [Frontend] Conmutador de vista diaria o semanal en preferencias de alumno [Low | Resp: jaimontalvez]} & Low & 2 SP & jaimontalvez \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 7: 3 elementos principales y 6 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 9 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 8 (SPRINT 3)}{Semana 8: Alerta Inmediata de Urgencia, Feedback Emocional y Rutina Alternativa (Plan B)}
+\textbf{Inicio:} Jueves 10/12/2026 \hfill \textbf{Hito / Revisión en Clase:} Jueves 17/12/2026 (Revisión Semanal 8 en clase)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (17/12/2026):} Demostrar en la clase del jueves 17 dic: botón de emergencia con alerta WebSockets en tiempo real, modal de registro emocional (3 caritas) al concluir tareas y conmutación suave a rutina alternativa (Plan B) ante imprevistos.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\rowcolor{glight}\textbf{SCRUM-126}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-19] Botón accesible de aviso de urgencia / alerta inmediata}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-47 — E5: Comunicación de Necesidades Básicas y Urgencias}\par\vspace{2pt}{\footnotesize\hl{SCRUM-127} T-19.1 [Frontend] Botón de auxilio de un solo toque con respuesta visual de emergencia [High | Resp: ALVARO SANABRIA DIAZ]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-128} T-19.2 [Backend/WebSockets] Notificación push prioritaria con alarma acústica persistente [High | Resp: kskjuanlu]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-129} T-19.3 [Lógica] Registro de última sala y tarea activa al emitir la alerta [Medium | Resp: GERMAN DELGADO]} & High & 3 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\textbf{SCRUM-134}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-21] Registro interactivo de feedback emocional al finalizar tareas}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-47 — E5: Comunicación de Necesidades Básicas y Urgencias}\par\vspace{2pt}{\footnotesize\hl{SCRUM-135} T-21.1 [Frontend] Modal con 3 caritas emocionales (contento, neutro, agobiado) [Medium | Resp: mecacanoana]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-136} T-21.2 [Backend] Registro analítico del estado anímico vinculado a la tarea [Low | Resp: kskjuanlu]} & Medium & 2 SP & kskjuanlu \\ \hline
+\rowcolor{glight}\textbf{SCRUM-137}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-22] Activación y conmutación a un Plan B (rutina alternativa)}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-48 — E6: Gestión de Contingencias (Plan B) y Supervisión}\par\vspace{2pt}{\footnotesize\hl{SCRUM-138} T-22.1 [Backend/Modelo] Configuración de tarea sustituta (Plan B) para imprevistos [High | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-139} T-22.2 [Frontend] Botón Activar Plan B accesible para alumno y tutor [High | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-140} T-22.3 [UX] Notificación visual tranquilizadora que explica el cambio de rutina [High | Resp: ALVARO SANABRIA DIAZ]} & High & 5 SP & GERMAN DELGADO \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 8: 3 elementos principales y 8 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 10 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\needspace{12\baselineskip}
+\begin{semana}{SEMANA 9 (SPRINT 3)}{Semana 9: Supervisión Docente, Analítica de Evolución y Cierre Global (Release v1.0)}
+\textbf{Inicio:} Jueves 17/12/2026 \hfill \textbf{Hito / Revisión en Clase:} Lunes 21/12/2026 (Entrega Final Release v1.0 tras revisión del Jueves 17/12)\par\smallskip
+\textbf{Objetivo de Revisión del Jueves (21/12/2026):} Completar el bloqueo/cancelación controlada de tareas por el tutor, panel estadístico de evolución para familias y tutores, Revisión General final de Javier y entrega de los Informes de Calidad y Accesibilidad consolidados de la Release v1.0.
+\end{semana}
+\begin{longtable}{|P{1.8cm}|P{7.5cm}|C{1.7cm}|C{1.1cm}|C{2.4cm}|}
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{gblue}\cab{Clave / Tipo} & \cab{Historia de Usuario / Tarea Principal y Subtareas Asociadas} & \cab{Prioridad} & \cab{Peso} & \cab{Responsable} \\ \hline
+\endhead
+\rowcolor{glight}\textbf{SCRUM-141}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-23] Bloqueo y cancelación controlada de tareas por el tutor}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-48 — E6: Gestión de Contingencias (Plan B) y Supervisión}\par\vspace{2pt}{\footnotesize\hl{SCRUM-142} T-23.1 [Backend/Lógica] Bloqueo de omisión/cambio en tareas de alta prioridad [Medium | Resp: kskjuanlu]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-143} T-23.2 [Frontend/Admin] Función docente para suspender tareas con icono de candado [Medium | Resp: Javier Miñan]} & Medium & 3 SP & kskjuanlu \\ \hline
+\rowcolor{glight}\textbf{SCRUM-144}\par{\footnotesize\color{ggray}Historia} & \textbf{[HU-25] Historial y analítica de tareas realizadas, pendientes y fallidas}\par{\footnotesize\itshape\color{ggray}Épica: SCRUM-48 — E6: Gestión de Contingencias (Plan B) y Supervisión}\par\vspace{2pt}{\footnotesize\hl{SCRUM-145} T-25.1 [Backend] Consolidación estadística de cumplimiento de tareas [Low | Resp: GERMAN DELGADO]}\par\vspace{2pt}{\footnotesize\hl{SCRUM-146} T-25.2 [Frontend/Admin] Gráficos de evolución semanal de autonomía para tutor y familia [Low | Resp: Javier Miñan]} & Low & 3 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-181}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 3] Revisión general del Sprint 3}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & High & 1 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-182}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 3] Rellenar el informe de calidad}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & Medium & 1 SP & Javier Miñan \\ \hline
+\textbf{SCRUM-183}\par{\footnotesize\color{ggray}Tarea} & \textbf{[Sprint 3] Rellenar el informe de accesibilidad}\par{\footnotesize\itshape\color{ggray}Épica: Transversal (Diseño / QA / Accesibilidad)} & Medium & 2 SP & ALVARO SANABRIA DIAZ \\ \hline
+\rowcolor{glight}\multicolumn{2}{|P{9.4cm}|}{\textbf{Total Semana 9: 5 elementos principales y 4 subtareas}} & \multicolumn{3}{P{5.6cm}|}{\textbf{Esfuerzo estimado de la semana: 10 Story Points (SP)}} \\ \hline
+\end{longtable}
+
+\end{document}
