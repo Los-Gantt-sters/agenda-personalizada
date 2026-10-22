@@ -112,7 +112,7 @@ Juan Luis Jiménez Urbano
 
 \section{Introducción y contexto del proyecto}
 \subsection{Origen y propósito del producto}
-En el marco del proyecto de Aprendizaje-Servicio \hl{AUTOVIDA} (\textit{Software Accesible para la Autonomía y la Transición a la Vida Adulta en Estudiantes NEAE}), desarrollado en colaboración directa con el \hl{Colegio de Educación Especial (CEE) Fundación Purísima Concepción} de Granada, se planifica y desarrolla el producto software \hl{TuAgendita}.
+En el marco del proyecto de Aprendizaje-Servicio \hl{AUTOVIDA} (\textit{Software Accesible para la Autonomía y la Transición a la Vida Adulta en Estudiantes NEAE}), desarrollado en colaboración directa con el \hl{Colegio de Educación Especial (CEE) Fundación Purísima Concepción} de Granada, se planifica y desarrolla el producto software \hl{Agensible}.
 
 La aplicación surge a partir de una necesidad pedagógica y psicológica clave transmitida por el centro educativo: \textbf{¿Y si no supieras qué pasa después?} Para el alumnado con discapacidad intelectual o del espectro autista, la incertidumbre respecto a las actividades siguientes genera nerviosismo, inseguridad, fatiga cognitiva y episodios agudos de bloqueo conductual. Anticipar estructuradamente la jornada proporciona calma, confianza y las bases necesarias para una autonomía real.
 
@@ -164,27 +164,27 @@ HUT-02 & ET & \textbf{Pipeline CI/CD y Calidad:} Como gestor de calidad, quiero 
 HUT-03 & ET & \textbf{Arquitectura UI y Design System:} Como arquitecto, quiero motor de componentes base accesibles y servicio de voz para acelerar pantallas. & Must & 3 \\ \hline
 HU-01 & E1 & \textbf{Login accesible por foto/pictograma:} Como estudiante, quiero entrar tocando mi fotografía para acceder de forma autónoma. & Must & 3 \\ \hline
 HU-02 & E1 & \textbf{Login estándar supervisores:} Como tutor/admin, quiero iniciar sesión con email/password para gestionar perfiles con seguridad. & Must & 2 \\ \hline
-HU-03 & E1 & \textbf{Gestión de perfiles y tutores:} Como admin, quiero dar de alta alumnos vinculando su tutor docente y un tutor familiar para coordinar rutinas. & Must & 3 \\ \hline
+HU-03 & E1 & \textbf{Gestión de perfiles y tutores:} Como admin, quiero dar de alta estudiantes vinculando su tutor docente y un tutor familiar para coordinar rutinas. & Must & 3 \\ \hline
 HU-04 & E1 & \textbf{Personalización estética (ARASAAC):} Como tutor, quiero ajustar tamaño de botones, colores y pictogramas para evitar sobreestimulación. & Must & 3 \\ \hline
-HU-05 & E1 & \textbf{Interacción con pulsador (switch):} Como alumno con movilidad reducida, quiero barrido visual y pulsador para usar la app autónomamente. & Could & 5 \\ \hline
-HU-06 & E2 & \textbf{Agenda diaria (``Ahora / Después''):} Como alumno, quiero ver qué hago ahora y qué viene después para anticipar el día y reducir la ansiedad. & Must & 5 \\ \hline
+HU-05 & E1 & \textbf{Interacción con pulsador (switch):} Como estudiantecon movilidad reducida, quiero barrido visual y pulsador para usar la app autónomamente. & Could & 5 \\ \hline
+HU-06 & E2 & \textbf{Agenda diaria (``Ahora / Después''):} Como estudiante, quiero ver qué hago ahora y qué viene después para anticipar el día y reducir la ansiedad. & Must & 5 \\ \hline
 HU-07 & E2 & \textbf{Creación de tareas personales:} Como tutor o familia, quiero programar tareas del hogar o escolares con horario y pictogramas. & Should & 3 \\ \hline
-HU-08 & E2 & \textbf{Confirmación de inicio y fin:} Como alumno, quiero botones gigantes para marcar cuándo empiezo y cuándo acabo una tarea. & Must & 2 \\ \hline
-HU-09 & E2 & \textbf{Temporizador visual (Time Timer):} Como alumno no lector de horas, quiero ver un disco visual decreciente para entender el tiempo restante. & Must & 3 \\ \hline
+HU-08 & E2 & \textbf{Confirmación de inicio y fin:} Como estudiante, quiero botones gigantes para marcar cuándo empiezo y cuándo acabo una tarea. & Must & 2 \\ \hline
+HU-09 & E2 & \textbf{Temporizador visual (Time Timer):} Como estudianteno lector de horas, quiero ver un disco visual decreciente para entender el tiempo restante. & Must & 3 \\ \hline
 HU-10 & E2 & \textbf{Desglose de tareas con pasos multimedia:} Como tutor, quiero secuenciar tareas con vídeos o audios para guiar procedimientos complejos. & Should & 5 \\ \hline
-HU-11 & E3 & \textbf{Comanda de comedor interactiva:} Como alumno encargado, quiero registrar las ausencias y tipos de dieta (túrmix, basal, etc.) por aulas. & Should & 5 \\ \hline
-HU-12 & E3 & \textbf{Envío de parte a cocina:} Como alumno o tutor, quiero enviar el resumen de menús a cocina con un toque para evitar errores en las comidas. & Should & 3 \\ \hline
-HU-13 & E3 & \textbf{Reparto de menús a familias:} Como alumno de reparto, quiero una lista con fotos por aula para marcar a quién he entregado el menú en papel. & Should & 3 \\ \hline
-HU-14 & E3 & \textbf{Reprografía en 3 fases:} Como alumno de reprografía, quiero un flujo guiado (recogida, taller, entrega) para cumplir encargos del centro. & Should & 5 \\ \hline
-HU-15 & E3 & \textbf{Embajador con QR y vídeo:} Como alumno guía, quiero escanear códigos QR en las salas del colegio para reproducir vídeos explicativos en visitas. & Should & 5 \\ \hline
-HU-16 & E4 & \textbf{Notificaciones anticipatorias:} Como alumno, quiero un aviso suave 5 minutos antes de la siguiente tarea para prepararme para la transición. & Must & 2 \\ \hline
-HU-17 & E4 & \textbf{Selector de vista día/semana:} Como tutor o alumno avanzado, quiero alternar entre vista diaria o semanal según capacidad cognitiva. & Could & 2 \\ \hline
-HU-18 & E5 & \textbf{Botón permanente de necesidades:} Como alumno no verbal, quiero un botón fijo para pedir ir al baño, agua o descanso de inmediato. & Must & 3 \\ \hline
-HU-19 & E5 & \textbf{Alerta de emergencia al tutor:} Como alumno en situación de crisis, quiero un botón de auxilio de un toque que emita alarma al tutor. & Should & 3 \\ \hline
-HU-21 & E5 & \textbf{Feedback emocional con caritas:} Como alumno, quiero indicar cómo me he sentido al terminar con 3 caritas para evaluar la actividad. & Could & 2 \\ \hline
-HU-22 & E6 & \textbf{Conmutación a ``Plan B'':} Como tutor o alumno ante un imprevisto, quiero activar una rutina alternativa predefinida evitando bloqueos. & Should & 5 \\ \hline
+HU-11 & E3 & \textbf{Comanda de comedor interactiva:} Como estudianteencargado, quiero registrar las ausencias y tipos de dieta (túrmix, basal, etc.) por aulas. & Should & 5 \\ \hline
+HU-12 & E3 & \textbf{Envío de parte a cocina:} Como estudianteo tutor, quiero enviar el resumen de menús a cocina con un toque para evitar errores en las comidas. & Should & 3 \\ \hline
+HU-13 & E3 & \textbf{Reparto de menús a familias:} Como estudiantede reparto, quiero una lista con fotos por aula para marcar a quién he entregado el menú en papel. & Should & 3 \\ \hline
+HU-14 & E3 & \textbf{Reprografía en 3 fases:} Como estudiantede reprografía, quiero un flujo guiado (recogida, taller, entrega) para cumplir encargos del centro. & Should & 5 \\ \hline
+HU-15 & E3 & \textbf{Embajador con QR y vídeo:} Como estudianteguía, quiero escanear códigos QR en las salas del colegio para reproducir vídeos explicativos en visitas. & Should & 5 \\ \hline
+HU-16 & E4 & \textbf{Notificaciones anticipatorias:} Como estudiante, quiero un aviso suave 5 minutos antes de la siguiente tarea para prepararme para la transición. & Must & 2 \\ \hline
+HU-17 & E4 & \textbf{Selector de vista día/semana:} Como tutor o estudianteavanzado, quiero alternar entre vista diaria o semanal según capacidad cognitiva. & Could & 2 \\ \hline
+HU-18 & E5 & \textbf{Botón permanente de necesidades:} Como estudianteno verbal, quiero un botón fijo para pedir ir al baño, agua o descanso de inmediato. & Must & 3 \\ \hline
+HU-19 & E5 & \textbf{Alerta de emergencia al tutor:} Como estudianteen situación de crisis, quiero un botón de auxilio de un toque que emita alarma al tutor. & Should & 3 \\ \hline
+HU-21 & E5 & \textbf{Feedback emocional con caritas:} Como estudiante, quiero indicar cómo me he sentido al terminar con 3 caritas para evaluar la actividad. & Could & 2 \\ \hline
+HU-22 & E6 & \textbf{Conmutación a ``Plan B'':} Como tutor o estudianteante un imprevisto, quiero activar una rutina alternativa predefinida evitando bloqueos. & Should & 5 \\ \hline
 HU-23 & E6 & \textbf{Bloqueo de tareas por prioridad:} Como tutor, quiero bloquear la cancelación de tareas prioritarias para preservar la disciplina escolar. & Should & 3 \\ \hline
-HU-25 & E6 & \textbf{Historial y analítica semanal:} Como tutor o familia, quiero ver el porcentaje de cumplimiento semanal para valorar la evolución del alumno. & Could & 3 \\ \hline
+HU-25 & E6 & \textbf{Historial y analítica semanal:} Como tutor o familia, quiero ver el porcentaje de cumplimiento semanal para valorar la evolución del estudiante. & Could & 3 \\ \hline
 \end{longtable}}
 
 \begin{verde}{Nota sobre la numeración}
@@ -290,8 +290,8 @@ Las 12 historias del primer sprint cuentan con criterios de aceptación formales
 \subsection{HU-01: Inicio de sesión accesible mediante foto o pictograma (3 SP)}
 \begin{criterios}{HU-01}
 \begin{itemize}
-\ca{CA-01.1 (Cuadrícula visual)}{Dado que el alumno abre la app, cuando accede a bienvenida, entonces visualiza las fotos de rostro del aula en tarjetas táctiles de mínimo $120 \times 120$ px con nombre en lectura fácil.}
-\ca{CA-01.2 (Confirmación amigable)}{Dado que el alumno toca su fotografía, cuando se valida el toque, entonces se emite un sonido alegre y accede a su agenda sin requerir contraseña escrita.}
+\ca{CA-01.1 (Cuadrícula visual)}{Dado que el estudianteabre la app, cuando accede a bienvenida, entonces visualiza las fotos de rostro del aula en tarjetas táctiles de mínimo $120 \times 120$ px con nombre en lectura fácil.}
+\ca{CA-01.2 (Confirmación amigable)}{Dado que el estudiantetoca su fotografía, cuando se valida el toque, entonces se emite un sonido alegre y accede a su agenda sin requerir contraseña escrita.}
 \ca{CA-01.3 (Tableta personal)}{Dado que un dispositivo está asignado a un único estudiante, cuando se inicia la aplicación, entonces salta directamente a su sesión personal.}
 \end{itemize}
 \end{criterios}
@@ -308,8 +308,8 @@ Las 12 historias del primer sprint cuentan con criterios de aceptación formales
 \subsection{HU-03: Gestión de perfiles y tutores multidireccionales (3 SP)}
 \begin{criterios}{HU-03}
 \begin{itemize}
-\ca{CA-03.1 (Alta de estudiante)}{Dado que el administrador crea un alumno, cuando rellena la ficha, entonces puede asignar nombre, aula y fotografía.}
-\ca{CA-03.2 (Vinculación de tutores)}{Dado que se configura el alumno, cuando se asignan supervisores, entonces puede asociarse a su tutor de aula y a un único tutor familiar externo.}
+\ca{CA-03.1 (Alta de estudiante)}{Dado que el administrador crea un estudiante, cuando rellena la ficha, entonces puede asignar nombre, aula y fotografía.}
+\ca{CA-03.2 (Vinculación de tutores)}{Dado que se configura el estudiante, cuando se asignan supervisores, entonces puede asociarse a su tutor de aula y a un único tutor familiar externo.}
 \ca{CA-03.3 (Segregación de permisos)}{Dado que un tutor familiar inicia sesión, cuando accede a la agenda, entonces solo puede editar rutinas domésticas sin alterar tareas escolares.}
 \end{itemize}
 \end{criterios}
@@ -319,15 +319,15 @@ Las 12 historias del primer sprint cuentan con criterios de aceptación formales
 \begin{itemize}
 \ca{CA-04.1 (Ajustes de visualización)}{Dado que el tutor entra a configuración, cuando selecciona opciones, entonces puede escoger entre 3 tamaños de botón y 3 paletas (oscuro, claro y pastel).}
 \ca{CA-04.2 (Repositorio ARASAAC)}{Dado que la app muestra pictogramas, cuando se cargan los recursos, entonces se emplean exclusivamente iconos homologados de ARASAAC con alto contraste.}
-\ca{CA-04.3 (Persistencia reactiva)}{Dado que el tutor guarda cambios de personalización, cuando el alumno tiene la sesión abierta, entonces la interfaz se actualiza de inmediato.}
+\ca{CA-04.3 (Persistencia reactiva)}{Dado que el tutor guarda cambios de personalización, cuando el estudiantetiene la sesión abierta, entonces la interfaz se actualiza de inmediato.}
 \end{itemize}
 \end{criterios}
 
 \subsection{HU-06: Vista de agenda estructurada del día (``Hecho - Ahora - Después'') (5 SP)}
 \begin{criterios}{HU-06}
 \begin{itemize}
-\ca{CA-06.1 (Disposición en 3 bloques)}{Dado que el alumno observa su jornada, cuando mira la pantalla, entonces ve tres columnas: HECHO (última completada atenuada), AHORA (ocupando el 60\,\% central) y DESPUÉS (siguiente actividad con hora e icono).}
-\ca{CA-06.2 (Avance automático)}{Dado que el alumno confirma el fin de la tarea en curso, cuando se registra, entonces la tarea actual pasa a HECHO y la de DESPUÉS pasa suavemente a AHORA.}
+\ca{CA-06.1 (Disposición en 3 bloques)}{Dado que el estudianteobserva su jornada, cuando mira la pantalla, entonces ve tres columnas: HECHO (última completada atenuada), AHORA (ocupando el 60\,\% central) y DESPUÉS (siguiente actividad con hora e icono).}
+\ca{CA-06.2 (Avance automático)}{Dado que el estudianteconfirma el fin de la tarea en curso, cuando se registra, entonces la tarea actual pasa a HECHO y la de DESPUÉS pasa suavemente a AHORA.}
 \ca{CA-06.3 (Foco atencional)}{Dado que la pantalla está activa, cuando se renderiza, entonces no se muestran barras de desplazamiento ni elementos que distraigan la atención.}
 \end{itemize}
 \end{criterios}
@@ -335,9 +335,9 @@ Las 12 historias del primer sprint cuentan con criterios de aceptación formales
 \subsection{HU-08: Confirmación accesible de inicio y fin de tarea (2 SP)}
 \begin{criterios}{HU-08}
 \begin{itemize}
-\ca{CA-08.1 (Botón EMPEZAR)}{Dado que una tarea está en el bloque AHORA, cuando el alumno pulsa el botón verde EMPEZAR, entonces pasa a estado ``En curso'' y activa el temporizador.}
+\ca{CA-08.1 (Botón EMPEZAR)}{Dado que una tarea está en el bloque AHORA, cuando el estudiantepulsa el botón verde EMPEZAR, entonces pasa a estado ``En curso'' y activa el temporizador.}
 \ca{CA-08.2 (Botón TERMINAR)}{Dado que la tarea está en curso, cuando se pulsa TERMINAR, entonces se muestra una animación de felicitación y se guarda la marca temporal exacta.}
-\ca{CA-08.3 (Seguridad antipulsación)}{Dado que el alumno puede pulsar por error, cuando interactúa, entonces se requiere una pulsación sostenida de 1.5 segundos o confirmación simple.}
+\ca{CA-08.3 (Seguridad antipulsación)}{Dado que el estudiantepuede pulsar por error, cuando interactúa, entonces se requiere una pulsación sostenida de 1.5 segundos o confirmación simple.}
 \end{itemize}
 \end{criterios}
 
@@ -354,8 +354,8 @@ Las 12 historias del primer sprint cuentan con criterios de aceptación formales
 \begin{criterios}{HU-16}
 \begin{itemize}
 \ca{CA-16.1 (Disparo a los 5 minutos)}{Dado que faltan 5 minutos para la siguiente tarea, cuando se alcanza ese hito, entonces la tablet emite una vibración leve y un sonido alegre.}
-\ca{CA-16.2 (Aviso flotante claro)}{Dado que se activa el aviso, cuando el alumno mira la tablet, entonces aparece una tarjeta emergente con el pictograma de la tarea que vendrá.}
-\ca{CA-16.3 (Cierre no bloqueante)}{Dado que se muestra el aviso, cuando el alumno lo toca o pasan 15 segundos, entonces se oculta sin interrumpir la actividad actual.}
+\ca{CA-16.2 (Aviso flotante claro)}{Dado que se activa el aviso, cuando el estudiantemira la tablet, entonces aparece una tarjeta emergente con el pictograma de la tarea que vendrá.}
+\ca{CA-16.3 (Cierre no bloqueante)}{Dado que se muestra el aviso, cuando el estudiantelo toca o pasan 15 segundos, entonces se oculta sin interrumpir la actividad actual.}
 \end{itemize}
 \end{criterios}
 
@@ -378,7 +378,7 @@ Para organizar la distribución técnica del trabajo entre los 6 integrantes, ca
 \item \textbf{HUT-03 (UI Accesible):} T-T03.1 [Arquitectura] Setup cliente, router y estado reactivo (Highest) · T-T03.2 [UI] Design System con contrastes y foco grueso (Highest) · T-T03.3 [Audio] Wrapper de síntesis de voz (High).
 \item \textbf{HU-01 (Login foto):} T-01.1 [UX/Front] Cuadrícula táctil accesible $\geq 120 \times 120$ px (Highest) · T-01.2 [Back] Endpoint de login visual sin password (Highest) · T-01.3 [Audio] Feedback acústico de confirmación (High) · T-01.4 [Testing] Pruebas de usabilidad cognitiva (Medium).
 \item \textbf{HU-02 (Login tutor):} T-02.1 [Front] Formulario email/password validado con mensaje de error en el campo que falla (Highest) · T-02.2 [Back] Supabase Auth (JWT) y políticas de acceso por rol (Highest) · T-02.3 [Testing] Pruebas de seguridad y expiración (High).
-\item \textbf{HU-03 (Perfiles):} T-03.1 [BD] Modelos relacionales alumnos y tutores (Highest) · T-03.2 [Back] CRUD de alumnos con foto (Highest) · T-03.3 [Front] Consola de asignación de tutor de aula y tutor familiar (High) · T-03.4 [Back] Políticas de segregación escolar/doméstica (High).
+\item \textbf{HU-03 (Perfiles):} T-03.1 [BD] Modelos relacionales estudiantes y tutores (Highest) · T-03.2 [Back] CRUD de estudiantes con foto (Highest) · T-03.3 [Front] Consola de asignación de tutor de aula y tutor familiar (High) · T-03.4 [Back] Políticas de segregación escolar/doméstica (High).
 \item \textbf{HU-04 (ARASAAC):} T-04.1 [CSS] Temas de alto contraste y pastel (High) · T-04.2 [API] Catálogo oficial ARASAAC (Highest) · T-04.3 [Front] Selector de tamaños de botón y tipografías (High) · T-04.4 [QA] Auditoría de contraste WCAG 2.1 AA/AAA (High).
 \item \textbf{HU-06 (Agenda Ahora/Después):} T-06.1 [Front] Componente de 3 bloques Hecho-Ahora-Después (Highest) · T-06.2 [Front] Lógica de avance reactivo (Highest) · T-06.3 [Back] Endpoint de secuencia cronológica diaria (Highest) · T-06.4 [UX] Supresión de barras de scroll (High).
 \item \textbf{HU-08 (Confirmación):} T-08.1 [Front] Botones gigantes EMPEZAR y TERMINAR (Highest) · T-08.2 [UX] Prevención de toques accidentales 1.5s (High) · T-08.3 [Back] Registro de marcas de tiempo reales (High).
@@ -392,7 +392,7 @@ Para organizar la distribución técnica del trabajo entre los 6 integrantes, ca
 \item \textbf{HU-07 (Tareas personales):} T-07.1 [Front] Formulario con buscador ARASAAC (High) · T-07.2 [Back] API de tareas recurrentes semanales (High) · T-07.3 [Lógica] Permisos tutores vs familia (Medium).
 \item \textbf{HU-10 (Pasos multimedia):} T-10.1 [BD] Modelo de subtareas ordenadas (High) · T-10.2 [Front] Reproductor paso a paso con vídeo/audio (High) · T-10.3 [Back] Almacenamiento multimedia comprimido (Medium).
 \item \textbf{HU-11 (Comanda comedor):} T-11.1 [Front] Cuadrícula táctil por clases reales (High) · T-11.2 [UX] Marcado de dietas basal, túrmix, texturizada (High) · T-11.3 [Back] Registro diario de comensales (High).
-\item \textbf{HU-12 (Parte a cocina):} T-12.1 [Back] Algoritmo de consolidación de menús por dieta (High) · T-12.2 [Front] Vista de recepción para cocina con exportación (Medium) · T-12.3 [UX] Animación de confirmación para el alumno (Medium).
+\item \textbf{HU-12 (Parte a cocina):} T-12.1 [Back] Algoritmo de consolidación de menús por dieta (High) · T-12.2 [Front] Vista de recepción para cocina con exportación (Medium) · T-12.3 [UX] Animación de confirmación para el estudiante(Medium).
 \item \textbf{HU-13 (Menús a familias):} T-13.1 [Front] Checklist con fotos por aula (Medium) · T-13.2 [Back] Historial mensual de entregas a familias (Medium).
 \item \textbf{HU-14 (Reprografía):} T-14.1 [Back] Máquina de estados: recogida-taller-reparto (High) · T-14.2 [Front] Interfaz interactiva en 3 fases (High) · T-14.3 [Front] Formulario de encargo docente (High).
 \item \textbf{HU-15 (Guía con QR):} T-15.1 [Hardware] Lector de cámara QR integrado (High) · T-15.2 [Media] Asociación de QR a salas y vídeo explicativo (High) · T-15.3 [Admin] Generador imprimible de códigos QR de salas (Medium).
@@ -401,8 +401,8 @@ Para organizar la distribución técnica del trabajo entre los 6 integrantes, ca
 \subsection{Sprint 3 (Iteración 3) — Resiliencia y Accesibilidad Avanzada (23 SP)}
 \begin{itemize}
 \item \textbf{HU-05 (Pulsadores):} T-05.1 [Accesibilidad] Motor de barrido visual con foco cromático (Medium) · T-05.2 [Hardware] Captura de pulsadores externos USB/switch (Medium) · T-05.3 [QA] Navegación completa con pulsador único (Low).
-\item \textbf{HU-17 (Vista semanal):} T-17.1 [Front] Cuadrícula semanal accesible (Low) · T-17.2 [Front] Conmutador de vista en perfil de alumno (Low).
-\item \textbf{HU-19 (Alerta emergencia):} T-19.1 [Front] Botón de auxilio de un solo toque (High) · T-19.2 [Back/Realtime] Notificación con alarma sonora prioritaria (High) · T-19.3 [Lógica] Registro de última sala del alumno al disparar (Medium).
+\item \textbf{HU-17 (Vista semanal):} T-17.1 [Front] Cuadrícula semanal accesible (Low) · T-17.2 [Front] Conmutador de vista en perfil de estudiante(Low).
+\item \textbf{HU-19 (Alerta emergencia):} T-19.1 [Front] Botón de auxilio de un solo toque (High) · T-19.2 [Back/Realtime] Notificación con alarma sonora prioritaria (High) · T-19.3 [Lógica] Registro de última sala del estudianteal disparar (Medium).
 \item \textbf{HU-21 (Feedback caritas):} T-21.1 [Front] Modal de 3 caritas emocionales al terminar (Medium) · T-21.2 [Back] Registro analítico del estado de ánimo (Low).
 \item \textbf{HU-22 (Plan B):} T-22.1 [BD] Configuración de tarea sustituta para imprevistos (High) · T-22.2 [Front] Botón de conmutación inmediata a Plan B (High) · T-22.3 [UX] Notificación tranquilizadora de cambio de plan (High).
 \item \textbf{HU-23 (Bloqueo de tareas):} T-23.1 [Lógica] Jerarquía de prioridades que impide cancelar tareas críticas (Medium) · T-23.2 [Front] Función docente para suspender tareas con candado (Medium).
@@ -448,7 +448,7 @@ En cumplimiento estricto del apartado 5 del guion de la práctica (\textit{``Doc
 Con la redacción de este documento y la parametrización en tiempo real de la herramienta JIRA Cloud, el subgrupo \hl{Los Gantt-sters} concluye satisfactoriamente la totalidad de los requisitos de la \textbf{Práctica 2}:
 
 \begin{enumerate}[leftmargin=1.6em,itemsep=2pt]
-\item Se ha estructurado un Product Backlog integral de \textbf{26 Historias de Usuario} (23 funcionales y 3 técnicas) alineadas con las necesidades reales de los alumnos y docentes del CEE Fundación Purísima Concepción.
+\item Se ha estructurado un Product Backlog integral de \textbf{26 Historias de Usuario} (23 funcionales y 3 técnicas) alineadas con las necesidades reales de los estudiantes y docentes del CEE Fundación Purísima Concepción.
 \item El Product Owner (\textbf{Jaime Montávez Ruiz}) ha priorizado el catálogo optimizando el valor educativo y la resiliencia psicológica frente al cambio.
 \item Se ha establecido una estimación matemática coherente mediante Planning Poker, vinculada a una velocidad realista de 31 Story Points por iteración (86 SP en total).
 \item Se han definido exhaustivamente las 12 historias del primer ciclo con criterios BDD y 77 tareas técnicas para su ejecución inmediata.
