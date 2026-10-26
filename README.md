@@ -14,7 +14,7 @@ Facilitar la organización y estructuración del tiempo de los estudiantes del P
 
 - Personalizar la lista de tareas y avisar del tiempo.
 - Asignar tareas del centro (reprografía, comedor, menú mensual y guía de visitas) y crear tareas personales con imagen, horario y descripción en un formato accesible.
-- Adaptar la interfaz a cada estudiante mediante perfiles (colores, tipografía, posición de botones, pictogramas de ARASAAC).
+- Adaptar la interfaz a cada estudiante mediante perfiles (colores, tipografía, pictogramas de ARASAAC).
 - Distinguir tres tipos de usuario: administrador, tutor y estudiante.
 
 La aplicación debe cumplir la normativa de accesibilidad y la ley de protección de datos.
