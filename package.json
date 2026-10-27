@@ -1,0 +1,18 @@
+{
+  "name": "agenda-personalizada",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agensible - App de agenda accesible para el Colegio Purísima Concepción",
+  "scripts": {
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-plugin-jsx-a11y": "^6.9.0",
+    "prettier": "^3.3.3",
+    "eslint-config-prettier": "^9.1.0"
+  }
+}
