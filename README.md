@@ -66,10 +66,20 @@ El repositorio está en fase inicial. Esta es la estructura prevista y se actual
 ├── .github/workflows/   # Flujo de integración continua (compilación, pruebas, ESLint y Prettier)
 ├── .vscode/             # Ajustes y extensiones recomendadas de Visual Studio Code
 ├── docs/                # Documentación en PDF (dgp/, mda/) y prototipo HTML; índice en docs/README.md
-├── src/                 # Código de la aplicación
-├── tests/               # Pruebas unitarias y de integración
+├── app/                 # Pantallas (Expo Router: cada archivo es una ruta)
+│   └── __tests__/       # Pruebas del front-end: pantallas, componentes y su lógica
+├── assets/              # Iconos, imágenes y sonidos
+├── src/                 # Código de la aplicación (componentes, servicios, tipos)
+│   └── services/__tests__/  # Pruebas del back-end: servicios de acceso a Supabase
 └── README.md
 ```
+
+### Dónde van las pruebas
+
+- **Front-end** (pantallas, componentes y su lógica): en `app/__tests__/`.
+- **Back-end** (servicios que hablan con Supabase): en `src/services/__tests__/`.
+
+Jest encuentra cualquier archivo `*.test.ts(x)` dentro de una carpeta `__tests__`. Se ejecutan con `npm test`.
 
 ## Documentación
 
