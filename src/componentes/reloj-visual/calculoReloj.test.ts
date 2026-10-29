@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { fraccionRestante, marcasReloj, trazadoSector } from "./calculoReloj";
+import { fraccionRestante, marcasReloj, seAcabaDeAgotar, trazadoSector } from "./calculoReloj";
 
 const MINUTO = 60 * 1000;
 
@@ -59,5 +59,19 @@ describe("marcasReloj", () => {
     const marcas = marcasReloj(92, 84);
     expect(marcas).toHaveLength(12);
     expect(marcas[0]).toEqual({ x1: 100, y1: 8, x2: 100, y2: 16 });
+  });
+});
+
+describe("seAcabaDeAgotar", () => {
+  it("avisa cuando el tiempo pasa de quedar algo a cero", () => {
+    expect(seAcabaDeAgotar(0.01, 0)).toBe(true);
+  });
+
+  it("no avisa mientras sigue quedando tiempo", () => {
+    expect(seAcabaDeAgotar(0.5, 0.4)).toBe(false);
+  });
+
+  it("no vuelve a avisar si ya estaba agotado (p. ej. al abrir una tarea terminada)", () => {
+    expect(seAcabaDeAgotar(0, 0)).toBe(false);
   });
 });

@@ -14,6 +14,14 @@ export function fraccionRestante(duracionMs: number, transcurridoMs: number): nu
   return Math.min(1, Math.max(0, fraccion));
 }
 
+/**
+ * Indica si el tiempo se acaba de agotar en este momento (pasa de quedar algo a no quedar nada).
+ * Sirve para avisar una sola vez y no al abrir una tarea que ya estaba terminada.
+ */
+export function seAcabaDeAgotar(fraccionAnterior: number, fraccionActual: number): boolean {
+  return fraccionAnterior > 0 && fraccionActual <= 0;
+}
+
 /** Punto de la circunferencia a `fraccion` de vuelta desde las 12, en sentido antihorario. */
 function puntoAntihorario(fraccion: number, radio: number): { x: number; y: number } {
   const angulo = fraccion * 2 * Math.PI;

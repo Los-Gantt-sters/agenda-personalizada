@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Path } from "react-native-svg";
 
 import {
@@ -9,6 +9,7 @@ import {
   trazadoSector,
 } from "./calculoReloj";
 import { textoTiempoRestante } from "./textoTiempo";
+import { useAlarmaSuave } from "./useAlarmaSuave";
 
 // Medidas del prototipo (pantallas 09-11): borde en r=96, disco en r=88 y marcas de r=92 a r=84
 const RADIO_BORDE = 96;
@@ -38,12 +39,18 @@ type Props = {
   colores?: Partial<ColoresReloj>;
   /** Muestra debajo el rótulo en Lectura Fácil («Quedan 3 minutos»). Se puede desactivar por alumno. */
   mostrarRotulo?: boolean;
+  /** Suena una campanita suave al acabarse el tiempo. */
+  sonidoAlTerminar?: boolean;
+  /** El reloj parpadea despacio tres veces al acabarse el tiempo (nunca con «reducir movimiento»). */
+  parpadeoAlTerminar?: boolean;
+  /** Se llama una vez en el momento en que se agota el tiempo. */
+  onTiempoAgotado?: () => void;
 };
 
 /**
  * Reloj visual tipo Time Timer (HU-09): un disco de color que se reduce en proporción
- * al tiempo que queda (T-09.1), con un rótulo opcional del tiempo restante (T-09.2).
- * Solo dibuja; la cuenta atrás y la alarma las gestiona quien lo usa.
+ * al tiempo que queda (T-09.1), con un rótulo opcional del tiempo restante (T-09.2)
+ * y un aviso suave al llegar a cero (T-09.3). La cuenta atrás la lleva quien lo usa.
  */
 export function RelojVisual({
   duracionMs,
@@ -51,11 +58,19 @@ export function RelojVisual({
   tamano = 240,
   colores,
   mostrarRotulo = true,
+  sonidoAlTerminar = true,
+  parpadeoAlTerminar = true,
+  onTiempoAgotado,
 }: Props) {
   const { disco, fondo, tinta } = { ...COLORES_TEMA_CLARO, ...colores };
   const fraccion = fraccionRestante(duracionMs, transcurridoMs);
   const sector = trazadoSector(fraccion, RADIO_DISCO);
   const rotulo = textoTiempoRestante(duracionMs - transcurridoMs);
+  const opacidad = useAlarmaSuave(fraccion, {
+    sonido: sonidoAlTerminar,
+    parpadeo: parpadeoAlTerminar,
+    onTiempoAgotado,
+  });
 
   return (
     <View
@@ -64,20 +79,22 @@ export function RelojVisual({
       accessibilityRole="image"
       accessibilityLabel={`Reloj visual: ${rotulo}`}
     >
-      <Svg width={tamano} height={tamano} viewBox={`0 0 ${LADO_RELOJ} ${LADO_RELOJ}`}>
-        <Circle
-          cx={CENTRO_RELOJ}
-          cy={CENTRO_RELOJ}
-          r={RADIO_BORDE}
-          fill={fondo}
-          stroke={tinta}
-          strokeWidth={4}
-        />
-        {sector && <Path d={sector} fill={disco} />}
-        {MARCAS.map((marca, i) => (
-          <Line key={i} {...marca} stroke={tinta} strokeWidth={3} />
-        ))}
-      </Svg>
+      <Animated.View style={{ opacity: opacidad }}>
+        <Svg width={tamano} height={tamano} viewBox={`0 0 ${LADO_RELOJ} ${LADO_RELOJ}`}>
+          <Circle
+            cx={CENTRO_RELOJ}
+            cy={CENTRO_RELOJ}
+            r={RADIO_BORDE}
+            fill={fondo}
+            stroke={tinta}
+            strokeWidth={4}
+          />
+          {sector && <Path d={sector} fill={disco} />}
+          {MARCAS.map((marca, i) => (
+            <Line key={i} {...marca} stroke={tinta} strokeWidth={3} />
+          ))}
+        </Svg>
+      </Animated.View>
       {mostrarRotulo && <Text style={[styles.rotulo, { color: tinta }]}>{rotulo}</Text>}
     </View>
   );
