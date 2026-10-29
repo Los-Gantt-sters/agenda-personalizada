@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Path } from "react-native-svg";
 
 import {
@@ -8,6 +8,7 @@ import {
   marcasReloj,
   trazadoSector,
 } from "./calculoReloj";
+import { textoTiempoRestante } from "./textoTiempo";
 
 // Medidas del prototipo (pantallas 09-11): borde en r=96, disco en r=88 y marcas de r=92 a r=84
 const RADIO_BORDE = 96;
@@ -32,27 +33,36 @@ type Props = {
   duracionMs: number;
   /** Tiempo que ha pasado desde que empezó la tarea, en milisegundos. */
   transcurridoMs: number;
-  /** Ancho y alto del reloj en píxeles. */
+  /** Ancho y alto del disco en píxeles. */
   tamano?: number;
   colores?: Partial<ColoresReloj>;
+  /** Muestra debajo el rótulo en Lectura Fácil («Quedan 3 minutos»). Se puede desactivar por alumno. */
+  mostrarRotulo?: boolean;
 };
 
 /**
- * Reloj visual tipo Time Timer (HU-09, T-09.1): un disco de color que se reduce
- * en proporción al tiempo que queda. Solo dibuja; la cuenta atrás, el rótulo
- * y la alarma los gestiona quien lo usa.
+ * Reloj visual tipo Time Timer (HU-09): un disco de color que se reduce en proporción
+ * al tiempo que queda (T-09.1), con un rótulo opcional del tiempo restante (T-09.2).
+ * Solo dibuja; la cuenta atrás y la alarma las gestiona quien lo usa.
  */
-export function RelojVisual({ duracionMs, transcurridoMs, tamano = 240, colores }: Props) {
+export function RelojVisual({
+  duracionMs,
+  transcurridoMs,
+  tamano = 240,
+  colores,
+  mostrarRotulo = true,
+}: Props) {
   const { disco, fondo, tinta } = { ...COLORES_TEMA_CLARO, ...colores };
   const fraccion = fraccionRestante(duracionMs, transcurridoMs);
   const sector = trazadoSector(fraccion, RADIO_DISCO);
+  const rotulo = textoTiempoRestante(duracionMs - transcurridoMs);
 
   return (
     <View
-      style={[styles.contenedor, { width: tamano, height: tamano }]}
+      style={[styles.contenedor, { width: tamano }]}
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`Reloj visual: queda ${Math.round(fraccion * 100)} % del tiempo`}
+      accessibilityLabel={`Reloj visual: ${rotulo}`}
     >
       <Svg width={tamano} height={tamano} viewBox={`0 0 ${LADO_RELOJ} ${LADO_RELOJ}`}>
         <Circle
@@ -68,10 +78,13 @@ export function RelojVisual({ duracionMs, transcurridoMs, tamano = 240, colores 
           <Line key={i} {...marca} stroke={tinta} strokeWidth={3} />
         ))}
       </Svg>
+      {mostrarRotulo && <Text style={[styles.rotulo, { color: tinta }]}>{rotulo}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  contenedor: { alignItems: "center", justifyContent: "center" },
+  contenedor: { alignItems: "center", justifyContent: "center", gap: 10 },
+  // Como el .lbl del prototipo: 1,3 veces el texto base y en negrita
+  rotulo: { fontSize: 21, fontWeight: "700", textAlign: "center" },
 });
