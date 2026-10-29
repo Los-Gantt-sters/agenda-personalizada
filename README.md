@@ -65,7 +65,7 @@ El repositorio está en fase inicial. Esta es la estructura prevista y se actual
 .
 ├── .github/workflows/   # Flujo de integración continua (compilación, pruebas, ESLint y Prettier)
 ├── .vscode/             # Ajustes y extensiones recomendadas de Visual Studio Code
-├── docs/                # Documentación: PDF finales de propuestas, manual, plan de calidad y entregas
+├── docs/                # Documentación en PDF (dgp/, mda/) y prototipo HTML; índice en docs/README.md
 ├── src/                 # Código de la aplicación
 ├── tests/               # Pruebas unitarias y de integración
 └── README.md
@@ -77,10 +77,8 @@ El repositorio está en fase inicial. Esta es la estructura prevista y se actual
 |---|---|
 | Tablero y Product Backlog en Jira | [Backlog](https://gantt-sters.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog) y [tablero de trabajo](https://gantt-sters.atlassian.net/jira/software/projects/SCRUM/boards/1) |
 | Documentación compartida del equipo | [Carpeta DGP-MDA en Google Drive](https://drive.google.com/drive/folders/1pVqvauxM2EXDeXHBzrr1V0hjfa7VoFjG) (acceso restringido al equipo y al profesorado) |
-| Propuesta técnica y Propuesta de solución | Carpeta `docs/` y carpeta correspondiente de Drive |
-| Manual de coordinación | Carpeta `docs/` y carpeta correspondiente de Drive |
-| Plan de calidad | Carpeta `docs/` y carpeta correspondiente de Drive |
-| Entregas de las prácticas y actas de reunión | Carpetas de cada práctica y de actas en Drive |
+| Propuestas, manual de coordinación, plan de calidad, accesibilidad, prácticas y planificación (PDF) | [`docs/`](docs/README.md) |
+| Fuentes LaTeX, actas de reunión y hojas de cálculo | Carpeta DGP-MDA de Drive |
 
 ## Licencia
 
