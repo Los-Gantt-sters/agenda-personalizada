@@ -4,4 +4,5 @@ android
 ios
 dist
 package-lock.json
+docs
 *.md
