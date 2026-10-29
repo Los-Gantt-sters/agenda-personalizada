@@ -71,7 +71,7 @@ El repositorio está en fase inicial. Esta es la estructura prevista y se actual
 ├── assets/              # Iconos, imágenes y sonidos
 ├── src/                 # Código de la aplicación
 │   ├── componentes/     # Componentes reutilizables, cada uno con su carpeta __tests__/
-│   └── services/        # Capa de acceso a Supabase (back-end), con su carpeta __tests__/
+│   └── servicios/        # Capa de acceso a Supabase (back-end), con su carpeta __tests__/
 └── README.md
 ```
 
@@ -83,7 +83,7 @@ Cada prueba va en una carpeta `__tests__/` **junto al código que prueba**:
 |---|---|---|
 | Una pantalla (integración de varios componentes) | `app/__tests__/` | `app/__tests__/login.test.tsx` |
 | Un componente y su lógica (unitarias) | `src/componentes/<componente>/__tests__/` | `src/componentes/reloj-visual/__tests__/RelojVisual.test.tsx` |
-| Un servicio del back-end (acceso a Supabase) | `src/services/__tests__/` | `src/services/__tests__/authService.test.ts` |
+| Un servicio del back-end (acceso a Supabase) | `src/servicios/__tests__/` | `src/servicios/__tests__/authService.test.ts` |
 
 Así nunca hay dudas de dónde va una prueba, los `import` son cortos (`../RelojVisual`) y la capa de back-end queda separada como pide el Plan de calidad (RNF16.6). Jest encuentra cualquier `*.test.ts(x)` dentro de una carpeta `__tests__`; se ejecutan todas con `npm test`.
 

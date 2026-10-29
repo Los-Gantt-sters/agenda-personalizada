@@ -6,7 +6,7 @@ import {
   normalizeRole,
 } from "../authService";
 import { supabase } from "../../lib/supabaseClient";
-import { AUTH_GENERIC_ERROR_MESSAGE } from "../../types/auth";
+import { AUTH_GENERIC_ERROR_MESSAGE } from "../../tipos/auth";
 
 jest.mock("../../lib/supabaseClient", () => {
   return {
