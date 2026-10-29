@@ -1,11 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import {
-  fraccionRestante,
-  marcasReloj,
-  seAcabaDeAgotar,
-  trazadoSector,
-} from "../../src/componentes/reloj-visual/calculoReloj";
+import { fraccionRestante, marcasReloj, seAcabaDeAgotar, trazadoSector } from "../calculoReloj";
 
 const MINUTO = 60 * 1000;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { textoTiempoRestante } from "../../src/componentes/reloj-visual/textoTiempo";
+import { textoTiempoRestante } from "../textoTiempo";
 
 const SEGUNDO = 1000;
 const MINUTO = 60 * SEGUNDO;

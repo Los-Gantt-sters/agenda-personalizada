@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react-native";
 
-import { RelojVisual } from "../../src/componentes/reloj-visual/RelojVisual";
-import { reproducirSonido } from "../../src/servicios/sonidos";
+import { RelojVisual } from "../RelojVisual";
+import { reproducirSonido } from "../../../servicios/sonidos";
 
 // Se sustituye el servicio de sonidos por una función falsa: así no se reproduce audio
 // de verdad y se puede comprobar cuántas veces se ha pedido sonar la campanita
-jest.mock("../../src/servicios/sonidos", () => ({
+jest.mock("../../../servicios/sonidos", () => ({
   reproducirSonido: jest.fn(),
 }));
 
