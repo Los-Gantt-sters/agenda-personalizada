@@ -1,32 +1,40 @@
-// Pantalla temporal para ver el reloj visual mientras se desarrolla HU-09. Borrar al integrarlo.
+// Pantalla temporal para ver el reloj visual (HU-09) en la revisión. Borrar al integrarlo en la tarea.
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { RelojVisual } from "../src/componentes/reloj-visual/RelojVisual";
 
-const DURACION_MS = 2 * 1000;
+const MINUTO = 60 * 1000;
+const DURACION_MS = 3 * MINUTO;
+// Acelerado x20 para no esperar: los 3 minutos pasan en 9 segundos
+const AVANCE_POR_TIC_MS = 5000;
 
 export default function DemoReloj() {
   const [transcurridoMs, setTranscurridoMs] = useState(0);
 
   useEffect(() => {
     const intervalo = setInterval(() => {
-      setTranscurridoMs((t) => Math.min(DURACION_MS, t + 250));
+      setTranscurridoMs((t) => Math.min(DURACION_MS, t + AVANCE_POR_TIC_MS));
     }, 250);
     return () => clearInterval(intervalo);
   }, []);
 
   return (
     <View style={styles.pantalla}>
-      <Text style={styles.titulo}>Demo del reloj visual (1 minuto)</Text>
+      <Text style={styles.titulo}>Reloj visual (3 minutos, acelerado)</Text>
+      <Text style={styles.ayuda}>
+        Pulsa «Reiniciar» al menos una vez: el navegador no deja sonar audio sin una interacción.
+      </Text>
       <View style={styles.fila}>
         <RelojVisual duracionMs={DURACION_MS} transcurridoMs={transcurridoMs} />
-        <RelojVisual duracionMs={30} transcurridoMs={15} tamano={160} />
+        {/* Criterio de aceptación: 30 min con 15 transcurridos = disco al 50 % */}
+        <RelojVisual duracionMs={30 * MINUTO} transcurridoMs={15 * MINUTO} tamano={160} />
         <RelojVisual
-          duracionMs={10}
-          transcurridoMs={4}
+          duracionMs={10 * MINUTO}
+          transcurridoMs={4 * MINUTO}
           tamano={160}
-          colores={{ disco: "#71ff4d", fondo: "#ff0000", tinta: "#ffffff" }}
+          mostrarRotulo={false}
+          colores={{ disco: "#ff4d4d", fondo: "#0b0b0b", tinta: "#ffffff" }}
         />
       </View>
       <Pressable
@@ -43,6 +51,7 @@ export default function DemoReloj() {
 const styles = StyleSheet.create({
   pantalla: { flex: 1, alignItems: "center", justifyContent: "center", gap: 24, padding: 16 },
   titulo: { fontSize: 22, fontWeight: "700" },
+  ayuda: { fontSize: 16, textAlign: "center" },
   fila: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 24 },
   boton: {
     minWidth: 48,
