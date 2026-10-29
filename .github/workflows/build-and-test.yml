@@ -1,0 +1,28 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Usar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm install --legacy-peer-deps
+
+      - name: Tests unitarios
+        run: npm test -- --ci
+
+      - name: Build (chequeo de tipos TypeScript)
+        run: npx tsc --noEmit
