@@ -1,19 +1,34 @@
-const expoConfig = require("eslint-config-expo/flat");
-const prettierConfig = require("eslint-config-prettier");
-const jsxA11y = require("eslint-plugin-jsx-a11y");
+import js from "@eslint/js";
+import react from "eslint-plugin-react";
+import jsxA11y from "eslint-plugin-jsx-a11y";
+import prettierConfig from "eslint-config-prettier";
+import globals from "globals";
 
-module.exports = [
-  ...expoConfig,
-  prettierConfig,
+export default [
+  js.configs.recommended,
   {
+    files: ["src/**/*.js", "src/**/*.jsx"],
     plugins: {
+      react: react,
       "jsx-a11y": jsxA11y,
     },
-    rules: {
-      ...jsxA11y.configs.recommended.rules,
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: globals.browser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
     },
+    settings: {
+      react: { version: "detect" },
+    },
+    rules: Object.assign({}, react.configs.recommended.rules, jsxA11y.configs.recommended.rules, {
+      "react/react-in-jsx-scope": "off",
+    }),
   },
+  prettierConfig,
   {
-    ignores: ["node_modules/**", ".expo/**", "android/**", "ios/**", "dist/**"],
+    ignores: ["node_modules/**", "dist/**", "build/**"],
   },
 ];

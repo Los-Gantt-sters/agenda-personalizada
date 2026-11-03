@@ -22,7 +22,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Tests unitarios
-        run: npm test -- --ci
+        run: npm test
 
-      - name: Build (chequeo de tipos TypeScript)
-        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build

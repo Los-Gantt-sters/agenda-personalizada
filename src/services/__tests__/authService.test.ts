@@ -7,14 +7,15 @@ import {
 } from "../authService";
 import { supabase } from "../../lib/supabaseClient";
 import { AUTH_GENERIC_ERROR_MESSAGE } from "../../types/auth";
+import { vi, describe, it, expect, afterEach, type Mock } from "vitest";
 
-jest.mock("../../lib/supabaseClient", () => {
+vi.mock("../../lib/supabaseClient", () => {
   return {
     supabase: {
       auth: {
-        signInWithPassword: jest.fn(),
-        signOut: jest.fn(),
-        getSession: jest.fn(),
+        signInWithPassword: vi.fn(),
+        signOut: vi.fn(),
+        getSession: vi.fn(),
       },
     },
   };
@@ -22,7 +23,7 @@ jest.mock("../../lib/supabaseClient", () => {
 
 describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("normalizeRole & getRoleHomeRoute (RBAC)", () => {
@@ -60,7 +61,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
         expires_at: 1761800000,
       };
 
-      (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+      (supabase.auth.signInWithPassword as Mock).mockResolvedValueOnce({
         data: { user: mockUser, session: mockSession },
         error: null,
       });
@@ -75,7 +76,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
     });
 
     it("emite un mensaje de error genérico cuando las credenciales son inválidas (RF1.8)", async () => {
-      (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+      (supabase.auth.signInWithPassword as Mock).mockResolvedValueOnce({
         data: { user: null, session: null },
         error: { message: "Invalid login credentials", status: 400 },
       });
@@ -95,9 +96,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
     });
 
     it("captura excepciones imprevistas y responde con el error genérico seguro", async () => {
-      (supabase.auth.signInWithPassword as jest.Mock).mockRejectedValueOnce(
-        new Error("Network error"),
-      );
+      (supabase.auth.signInWithPassword as Mock).mockRejectedValueOnce(new Error("Network error"));
 
       const result = await signInSupervisor("test@purisima.es", "pass");
       expect(result.success).toBe(false);
@@ -107,7 +106,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
 
   describe("signOutSupervisor", () => {
     it("cierra la sesión correctamente", async () => {
-      (supabase.auth.signOut as jest.Mock).mockResolvedValueOnce({ error: null });
+      (supabase.auth.signOut as Mock).mockResolvedValueOnce({ error: null });
 
       const result = await signOutSupervisor();
       expect(result.success).toBe(true);
@@ -115,7 +114,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
     });
 
     it("gestiona error de cierre de sesión", async () => {
-      (supabase.auth.signOut as jest.Mock).mockResolvedValueOnce({
+      (supabase.auth.signOut as Mock).mockResolvedValueOnce({
         error: { message: "Fallo de red al revocar token" },
       });
 
@@ -127,7 +126,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
 
   describe("getCurrentSession", () => {
     it("obtiene la sesión activa con perfil RBAC", async () => {
-      (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
+      (supabase.auth.getSession as Mock).mockResolvedValueOnce({
         data: {
           session: {
             access_token: "jwt-activo",
@@ -151,7 +150,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
     });
 
     it("retorna null si no hay sesión activa", async () => {
-      (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
+      (supabase.auth.getSession as Mock).mockResolvedValueOnce({
         data: { session: null },
         error: null,
       });
