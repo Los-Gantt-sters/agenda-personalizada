@@ -1,5 +1,10 @@
 import { Stack } from "expo-router";
+import { ProveedorNecesidades } from "../src/necesidades";
 
 export default function RootLayout() {
-  return <Stack />;
+  return (
+    <ProveedorNecesidades>
+      <Stack />
+    </ProveedorNecesidades>
+  );
 }
