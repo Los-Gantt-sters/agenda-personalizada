@@ -8,7 +8,20 @@ import {
   ModalConfirmacionEstudiante,
 } from "../src/componentes/autenticacion";
 
-export default function LoginEstudiantesScreen() {
+export interface LoginEstudiantesScreenProps {
+  /**
+   * Callback opcional para conectar con SCRUM-51 (Jaime / signInEstudianteConDibujos).
+   * Recibe el identificador del alumno y el array con los 3 dibujos seleccionados.
+   */
+  alCompletarCredencialVisual?: (
+    alumnoId: string,
+    secuenciaDibujos: string[],
+  ) => Promise<void> | void;
+}
+
+export default function LoginEstudiantesScreen({
+  alCompletarCredencialVisual,
+}: LoginEstudiantesScreenProps = {}) {
   const router = useRouter();
   const [claseSeleccionada, setClaseSeleccionada] = useState<Clase | null>(null);
   const [estudiantePendiente, setEstudiantePendiente] = useState<Estudiante | null>(null);
@@ -24,9 +37,13 @@ export default function LoginEstudiantesScreen() {
     setModalVisible(true);
   };
 
-  const handleConfirmarEstudiante = (_estudiante: Estudiante) => {
+  const handleConfirmarEstudiante = async (estudiante: Estudiante, secuenciaDibujos: string[]) => {
     setModalVisible(false);
-    // Simula acceso exitoso a la agenda del estudiante (o ruta de agenda según arquitectura)
+    if (alCompletarCredencialVisual) {
+      await alCompletarCredencialVisual(estudiante.id, secuenciaDibujos);
+      return;
+    }
+    // Acceso por defecto a la agenda del estudiante en modo prototipo
     router.push("/demo-reloj");
   };
 
@@ -113,7 +130,7 @@ export default function LoginEstudiantesScreen() {
           </View>
         )}
 
-        {/* Modal de confirmación al pulsar fotografía (RF1.7) */}
+        {/* Modal de credencial visual de 3 dibujos al pulsar fotografía (RF1.1, RF1.2, RF1.7) */}
         <ModalConfirmacionEstudiante
           estudiante={estudiantePendiente}
           visible={modalVisible}
