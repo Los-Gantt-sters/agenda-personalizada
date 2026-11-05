@@ -46,3 +46,24 @@ export interface BloquesAgenda {
   /** true si no queda ninguna tarea por hacer hoy. */
   diaTerminado: boolean;
 }
+
+/**
+ * Acceso a los datos de la agenda (T-06.2). La pantalla solo conoce esta interfaz: en la app la
+ * cumple src/servicios/agendaService.ts (Supabase) y en la demo y las pruebas, repositorioMemoria.
+ */
+export interface RepositorioAgenda {
+  /** RF4.1: tareas del día del estudiante (sin ordenar; ordena logica.ts). */
+  obtenerSecuenciaDia(estudianteId: string, fecha: string): Promise<EntradaAgenda[]>;
+  /** RF4.3: marca la entrada como hecha. */
+  marcarHecha(idEntrada: string): Promise<void>;
+  /**
+   * RF4.7: avisa cada vez que cambia algo de la agenda del estudiante (el tutor crea, modifica,
+   * bloquea o borra una tarea). Devuelve la función para darse de baja.
+   */
+  suscribir(
+    estudianteId: string,
+    fecha: string,
+    alCambiar: () => void,
+    idsVisibles: () => ReadonlySet<string>,
+  ): () => void;
+}

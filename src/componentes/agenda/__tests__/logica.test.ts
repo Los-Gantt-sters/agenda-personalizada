@@ -1,4 +1,4 @@
-import { dividirEnBloques, franjaHoraria, ordenarSecuencia } from "../logica";
+import { confirmarFin, dividirEnBloques, franjaHoraria, ordenarSecuencia } from "../logica";
 import type { EntradaAgenda } from "../tipos";
 import { calcularMedidas } from "../AgendaTresBloques";
 
@@ -98,5 +98,21 @@ describe("SCRUM-69 · RF4.2/RNF4.2 «Ahora» al 60 %", () => {
     expect(m.ahora[eje] / suma).toBeCloseTo(0.6);
     expect(suma + 16 * 4).toBeLessThanOrEqual((m.horizontal ? w : h) + 0.01);
     expect(m.maxLado).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("SCRUM-70 · RF4.3 avance al confirmar", () => {
+  it("BDD: con 3 tareas, al terminar la primera pasa a Hecho y la segunda a Ahora", () => {
+    const dia = [e("1", "09:00"), e("2", "10:00"), e("3", "11:00")];
+    const b = dividirEnBloques(confirmarFin(dia, "1"));
+    expect(b.hecho.map((x) => x.id)).toEqual(["1"]);
+    expect(b.ahora?.id).toBe("2");
+    expect(b.despues.map((x) => x.id)).toEqual(["3"]);
+  });
+
+  it("ignora la confirmación de una tarea que no es la de Ahora (doble toque)", () => {
+    const dia = [e("1", "09:00", "hecha"), e("2", "10:00"), e("3", "11:00")];
+    expect(confirmarFin(dia, "1")).toEqual(dia);
+    expect(confirmarFin(dia, "3")).toEqual(dia);
   });
 });

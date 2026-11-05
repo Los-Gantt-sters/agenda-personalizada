@@ -1,5 +1,6 @@
 // Lógica de la agenda del día (T-06.1, HU-06): ordena las tareas (RF4.1) y las reparte en
-// «Hecho», «Ahora» y «Después» (RF4.2). Sin React ni Supabase, para poder probarla aparte.
+// «Hecho», «Ahora» y «Después» (RF4.2). T-06.2 añade el avance al confirmar (RF4.3).
+// Sin React ni Supabase, para poder probarla aparte.
 import type { BloquesAgenda, EntradaAgenda } from "./tipos";
 
 /** Normaliza "09:00:00" o "9:00" a "09:00". */
@@ -92,4 +93,19 @@ export function dividirEnBloques(
     despues,
     diaTerminado: false,
   };
+}
+
+/**
+ * RF4.3: al confirmar el fin de la tarea actual, pasa a «Hecho». La siguiente
+ * queda automáticamente en «Ahora» porque es la primera pendiente.
+ * Si el id no es la tarea de «Ahora» (doble pulsación, dato viejo), no cambia nada.
+ */
+export function confirmarFin(
+  entradas: readonly EntradaAgenda[],
+  idEntrada: string,
+): EntradaAgenda[] {
+  const secuencia = ordenarSecuencia(entradas);
+  const actual = secuencia[indiceAhora(secuencia)];
+  if (!actual || actual.id !== idEntrada) return entradas.slice();
+  return entradas.map((e) => (e.id === idEntrada ? { ...e, estado: "hecha" } : e));
 }

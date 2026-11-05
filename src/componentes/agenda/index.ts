@@ -6,3 +6,6 @@ export * from "./BotonMantener";
 export * from "./DetalleTarea";
 export * from "./AgendaTresBloques";
 export * from "./datosDemo";
+export * from "./useAgendaDia";
+export * from "./repositorioMemoria";
+export * from "./AgendaDelDia";

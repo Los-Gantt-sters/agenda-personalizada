@@ -1,28 +1,42 @@
-// Pantalla «Mi agenda» del estudiante (T-06.1, HU-06). De momento con datos de ejemplo: la carga
-// desde Supabase y el avance al pulsar «He terminado» llegan con T-06.2 (SCRUM-70).
-import { useState } from "react";
+// Pantalla «Mi agenda» del estudiante (HU-06).
+// T-06.1: vista de tres bloques. T-06.2: la agenda se carga de Supabase, avanza al pulsar
+// «He terminado» y se actualiza sola con los cambios del tutor (Supabase Realtime).
+// Con /agenda?estudiante=<id> usa Supabase; sin ese parámetro abre la demo con datos de ejemplo
+// (hasta que el inicio de sesión del estudiante, HU-01, dé el id).
+import { useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import {
-  AgendaTresBloques,
-  DetalleTarea,
+  AgendaDelDia,
   agendaDemo,
+  ESTUDIANTE_DEMO,
   colores,
-  dividirEnBloques,
-  type EntradaAgenda,
+  crearRepositorioMemoria,
+  hoyISO,
 } from "../src/componentes/agenda";
+import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
 
 export default function PantallaAgenda() {
-  const [abierta, setAbierta] = useState<EntradaAgenda | null>(null);
-  const fecha = new Date().toISOString().slice(0, 10);
-  const bloques = dividirEnBloques(agendaDemo(fecha), { maxHecho: 3, maxDespues: 3 });
+  const { estudiante } = useLocalSearchParams<{ estudiante?: string }>();
+
+  const { repo, estudianteId, tutorDemo } = useMemo(() => {
+    if (estudiante) {
+      return { repo: repositorioAgendaSupabase, estudianteId: estudiante, tutorDemo: null };
+    }
+    const demo = crearRepositorioMemoria(agendaDemo(hoyISO()));
+    return { repo: demo.repo, estudianteId: ESTUDIANTE_DEMO, tutorDemo: demo.tutor };
+  }, [estudiante]);
+
+  // Demo: desde la consola del navegador se puede hacer de tutor, p. ej. __tutorDemo.bloquear("e3").
+  useEffect(() => {
+    if (tutorDemo) Object.assign(globalThis, { __tutorDemo: tutorDemo });
+  }, [tutorDemo]);
 
   return (
     <View style={estilos.raiz}>
       {/* Sin cabecera de navegación: en la vista del alumno distrae (RNF4.1). */}
       <Stack.Screen options={{ headerShown: false, title: "Mi agenda" }} />
-      <AgendaTresBloques bloques={bloques} onConfirmarFin={() => {}} onAbrir={setAbierta} />
-      <DetalleTarea entrada={abierta} onCerrar={() => setAbierta(null)} />
+      <AgendaDelDia repo={repo} estudianteId={estudianteId} />
     </View>
   );
 }
