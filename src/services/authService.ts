@@ -6,6 +6,7 @@ import {
   SupervisorProfile,
   AUTH_GENERIC_ERROR_MESSAGE,
 } from "../types/auth";
+import { isSessionExpired } from "./sessionGuard";
 
 /**
  * Normaliza y valida el rol recibido de la metadata o base de datos.
@@ -117,33 +118,62 @@ export async function signOutSupervisor(): Promise<{
   }
 }
 
+type SupabaseSessionLike = {
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  user: {
+    id: string;
+    email?: string;
+    created_at?: string;
+    user_metadata?: Record<string, any>;
+  };
+};
+
+function mapSupabaseSession(raw: SupabaseSessionLike): AuthSession {
+  const { user } = raw;
+  return {
+    accessToken: raw.access_token,
+    refreshToken: raw.refresh_token,
+    expiresAt: raw.expires_at,
+    user: {
+      id: user.id,
+      email: user.email ?? "",
+      fullName: user.user_metadata?.full_name || user.user_metadata?.name || "Supervisor Purísima",
+      role: normalizeRole(user.user_metadata?.role),
+      centroId: user.user_metadata?.centro_id,
+      createdAt: user.created_at,
+    },
+  };
+}
+
 /**
- * Recupera la sesión actual activa de Supabase.
+ * Recupera la sesión actual activa de Supabase (SCRUM-57).
+ * Si el token JWT ha expirado intenta renovarlo con el refresh token;
+ * si no es posible, cierra la sesión localmente y devuelve null (fail-closed).
  */
-export async function getCurrentSession(): Promise<AuthSession | null> {
+export async function getCurrentSession(nowMs: number = Date.now()): Promise<AuthSession | null> {
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) {
       return null;
     }
 
-    const { user } = data.session;
-    const role = normalizeRole(user.user_metadata?.role);
+    const session = mapSupabaseSession(data.session);
+    if (!isSessionExpired(session, nowMs)) {
+      return session;
+    }
 
-    return {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresAt: data.session.expires_at,
-      user: {
-        id: user.id,
-        email: user.email ?? "",
-        fullName:
-          user.user_metadata?.full_name || user.user_metadata?.name || "Supervisor Purísima",
-        role,
-        centroId: user.user_metadata?.centro_id,
-        createdAt: user.created_at,
-      },
-    };
+    const refreshed = await supabase.auth.refreshSession();
+    if (!refreshed.error && refreshed.data?.session) {
+      const renewed = mapSupabaseSession(refreshed.data.session);
+      if (!isSessionExpired(renewed, nowMs)) {
+        return renewed;
+      }
+    }
+
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    return null;
   } catch {
     return null;
   }
