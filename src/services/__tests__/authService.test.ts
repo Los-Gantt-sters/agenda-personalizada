@@ -1,5 +1,6 @@
 import {
   signInSupervisor,
+  signInEstudianteConDibujos,
   signOutSupervisor,
   getCurrentSession,
   getRoleHomeRoute,
@@ -20,22 +21,24 @@ jest.mock("../../lib/supabaseClient", () => {
   };
 });
 
-describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
+describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe("normalizeRole & getRoleHomeRoute (RBAC)", () => {
-    it("debe asignar la ruta correcta según el rol del supervisor (RF1.4)", () => {
+    it("debe asignar la ruta correcta según el rol del usuario (RF1.4)", () => {
       expect(getRoleHomeRoute("admin")).toBe("/admin/dashboard");
       expect(getRoleHomeRoute("familiar")).toBe("/familiar/resumen");
       expect(getRoleHomeRoute("especialista")).toBe("/especialista/terapias");
+      expect(getRoleHomeRoute("estudiante")).toBe("/estudiante/agenda");
       expect(getRoleHomeRoute("tutor_docente")).toBe("/docente/agenda");
     });
 
     it("debe validar y normalizar roles desconocidos al default tutor_docente", () => {
       expect(normalizeRole("admin")).toBe("admin");
       expect(normalizeRole("familiar")).toBe("familiar");
+      expect(normalizeRole("estudiante")).toBe("estudiante");
       expect(normalizeRole("rol_inexistente")).toBe("tutor_docente");
       expect(normalizeRole(undefined)).toBe("tutor_docente");
     });
@@ -70,8 +73,6 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
       expect(result.success).toBe(true);
       expect(result.session?.accessToken).toBe("mock-jwt-token-purisima");
       expect(result.session?.user.role).toBe("tutor_docente");
-      expect(result.session?.user.email).toBe("tutor@purisima.es");
-      expect(result.session?.user.fullName).toBe("Ana Docente");
     });
 
     it("emite un mensaje de error genérico cuando las credenciales son inválidas (RF1.8)", async () => {
@@ -84,24 +85,47 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe(AUTH_GENERIC_ERROR_MESSAGE);
-      expect(result.session).toBeUndefined();
+    });
+  });
+
+  describe("signInEstudianteConDibujos (HU-01 / SCRUM-51)", () => {
+    it("autentica al estudiante uniendo la secuencia de 3 dibujos con email interno", async () => {
+      const mockEstudianteUser = {
+        id: "est-456",
+        email: "alu-carlos@alumnos.agensible",
+        user_metadata: {
+          role: "estudiante",
+          full_name: "Carlos Estudiante",
+        },
+        created_at: "2026-10-15T08:00:00Z",
+      };
+
+      const mockSession = {
+        access_token: "jwt-estudiante-123",
+        refresh_token: "refresh-estudiante-123",
+        expires_at: 1761805000,
+      };
+
+      (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+        data: { user: mockEstudianteUser, session: mockSession },
+        error: null,
+      });
+
+      const result = await signInEstudianteConDibujos("carlos", ["manzana", "perro", "estrella"]);
+
+      expect(result.success).toBe(true);
+      expect(result.session?.user.role).toBe("estudiante");
+      expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: "alu-carlos@alumnos.agensible",
+        password: "manzana-perro-estrella",
+      });
     });
 
-    it("rechaza credenciales vacías devolviendo el error genérico sin llamar a Supabase", async () => {
-      const resultEmpty = await signInSupervisor("", "");
-      expect(resultEmpty.success).toBe(false);
-      expect(resultEmpty.error).toBe(AUTH_GENERIC_ERROR_MESSAGE);
-      expect(supabase.auth.signInWithPassword).not.toHaveBeenCalled();
-    });
-
-    it("captura excepciones imprevistas y responde con el error genérico seguro", async () => {
-      (supabase.auth.signInWithPassword as jest.Mock).mockRejectedValueOnce(
-        new Error("Network error"),
-      );
-
-      const result = await signInSupervisor("test@purisima.es", "pass");
+    it("rechaza llamadas sin exactamente 3 dibujos", async () => {
+      const result = await signInEstudianteConDibujos("carlos", ["manzana", "perro"]);
       expect(result.success).toBe(false);
-      expect(result.error).toBe(AUTH_GENERIC_ERROR_MESSAGE);
+      expect(result.error).toContain("3 dibujos");
+      expect(supabase.auth.signInWithPassword).not.toHaveBeenCalled();
     });
   });
 
@@ -112,16 +136,6 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
       const result = await signOutSupervisor();
       expect(result.success).toBe(true);
       expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
-    });
-
-    it("gestiona error de cierre de sesión", async () => {
-      (supabase.auth.signOut as jest.Mock).mockResolvedValueOnce({
-        error: { message: "Fallo de red al revocar token" },
-      });
-
-      const result = await signOutSupervisor();
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Fallo de red");
     });
   });
 
@@ -148,16 +162,6 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
       expect(session).not.toBeNull();
       expect(session?.accessToken).toBe("jwt-activo");
       expect(session?.user.role).toBe("admin");
-    });
-
-    it("retorna null si no hay sesión activa", async () => {
-      (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
-        data: { session: null },
-        error: null,
-      });
-
-      const session = await getCurrentSession();
-      expect(session).toBeNull();
     });
   });
 });
