@@ -1,15 +1,16 @@
 /**
- * Tipos y contratos para el módulo de Autenticación y RBAC (SCRUM-56 / HU-02)
- * Alineado con requisitos RF1.3, RF1.4, RF1.8 y RNF1.3.
+ * Tipos y contratos para el módulo de Autenticación y RBAC (HU-01, HU-02)
+ * Alineado con requisitos RF1.1, RF1.2, RF1.3, RF1.4, RF1.8 y RNF1.3.
  */
 
 export type SupervisorRole = "tutor_docente" | "familiar" | "admin" | "especialista";
+export type UserRole = SupervisorRole | "estudiante";
 
 export interface SupervisorProfile {
   id: string;
   email: string;
   fullName: string;
-  role: SupervisorRole;
+  role: UserRole;
   centroId?: string;
   createdAt?: string;
 }
@@ -25,6 +26,11 @@ export interface AuthResult {
   success: boolean;
   session?: AuthSession;
   error?: string;
+}
+
+export interface EstudianteAuthPayload {
+  alumnoId: string;
+  secuenciaDibujos: string[]; // 3 pictogramas/dibujos seleccionados
 }
 
 /**
