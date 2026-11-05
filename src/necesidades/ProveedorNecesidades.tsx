@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { View, StyleSheet } from "react-native";
 import { BotonNecesidades } from "./BotonNecesidades";
-import { PosicionBotonNecesidades, VarianteColorNecesidades } from "./tipos";
+import { ModalNecesidades } from "./ModalNecesidades";
+import { PosicionBotonNecesidades, VarianteColorNecesidades, ClaveNecesidad } from "./tipos";
 
 interface NecesidadesContextType {
   mostrarBotonNecesidades: boolean;
@@ -13,6 +14,8 @@ interface NecesidadesContextType {
   abrirModalNecesidades: () => void;
   modalAbierto: boolean;
   cerrarModalNecesidades: () => void;
+  ultimaNecesidadSolicitada: ClaveNecesidad | null;
+  solicitarNecesidad: (clave: ClaveNecesidad) => void;
 }
 
 const NecesidadesContext = createContext<NecesidadesContextType | undefined>(undefined);
@@ -23,6 +26,8 @@ export interface ProveedorNecesidadesProps {
   posicionInicial?: PosicionBotonNecesidades;
   varianteInicial?: VarianteColorNecesidades;
   onPulsarNecesidades?: () => void;
+  onSolicitarNecesidad?: (clave: ClaveNecesidad) => void;
+  nombreTutora?: string;
 }
 
 export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
@@ -31,14 +36,21 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
   posicionInicial = "inferior-izquierda",
   varianteInicial = "estandar",
   onPulsarNecesidades,
+  onSolicitarNecesidad,
+  nombreTutora = "Carmen",
 }) => {
   const [mostrarBotonNecesidades, setMostrarBotonNecesidades] =
     useState<boolean>(inicialmenteVisible);
   const [posicionBoton, setPosicionBoton] = useState<PosicionBotonNecesidades>(posicionInicial);
   const [varianteBoton, setVarianteBoton] = useState<VarianteColorNecesidades>(varianteInicial);
   const [modalAbierto, setModalAbierto] = useState<boolean>(false);
+  const [necesidadEnviada, setNecesidadEnviada] = useState<ClaveNecesidad | null>(null);
+  const [ultimaNecesidadSolicitada, setUltimaNecesidadSolicitada] = useState<ClaveNecesidad | null>(
+    null,
+  );
 
   const abrirModalNecesidades = () => {
+    setNecesidadEnviada(null);
     setModalAbierto(true);
     if (onPulsarNecesidades) {
       onPulsarNecesidades();
@@ -47,6 +59,15 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
 
   const cerrarModalNecesidades = () => {
     setModalAbierto(false);
+    setNecesidadEnviada(null);
+  };
+
+  const solicitarNecesidad = (clave: ClaveNecesidad) => {
+    setNecesidadEnviada(clave);
+    setUltimaNecesidadSolicitada(clave);
+    if (onSolicitarNecesidad) {
+      onSolicitarNecesidad(clave);
+    }
   };
 
   return (
@@ -61,6 +82,8 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
         abrirModalNecesidades,
         modalAbierto,
         cerrarModalNecesidades,
+        ultimaNecesidadSolicitada,
+        solicitarNecesidad,
       }}
     >
       <View style={estilos.contenedorRaiz}>
@@ -73,6 +96,16 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
             variante={varianteBoton}
           />
         )}
+
+        <ModalNecesidades
+          visible={modalAbierto}
+          alSeleccionarNecesidad={solicitarNecesidad}
+          alCerrar={cerrarModalNecesidades}
+          necesidadEnviada={necesidadEnviada}
+          alConfirmarAvisoEnviado={cerrarModalNecesidades}
+          nombreTutora={nombreTutora}
+          variante={varianteBoton}
+        />
       </View>
     </NecesidadesContext.Provider>
   );
