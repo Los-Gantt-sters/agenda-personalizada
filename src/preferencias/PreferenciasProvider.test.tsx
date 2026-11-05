@@ -38,6 +38,7 @@ describe("PreferenciasProvider", () => {
       tamanoLetra: "normal",
       tamanoBoton: "L",
       forma: "round",
+      canal: "ambos",
     });
   });
 
@@ -90,6 +91,7 @@ describe("PreferenciasProvider", () => {
       tamanoLetra: "normal",
       tamanoBoton: "L",
       forma: "round",
+      canal: "ambos",
     });
     expect(ref.tema?.nombre).toBe("claro");
   });

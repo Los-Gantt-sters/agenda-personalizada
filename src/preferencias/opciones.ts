@@ -1,6 +1,6 @@
 // Opciones de apariencia que el tutor puede elegir para cada estudiante (T-04.3, HU-04).
-// Los valores salen de tuagendita-prototipos.html: FONTS, FS, BS y SHAPES (y las clases
-// .shape-* y .sbtn del CSS), con la variante A como valores por defecto.
+// Los valores salen de tuagendita-prototipos.html: FONTS, FS, BS, SHAPES y canales (canal / chan),
+// con la variante A como valores por defecto.
 import { NombreTema, TEMA_POR_DEFECTO, esNombreTema } from "../temas";
 
 // ---- Tipo de letra (RF3.2): las tres fuentes pensadas para Lectura Fácil del prototipo ----
@@ -62,11 +62,44 @@ export const FORMAS_BOTON: Record<
   pill: { etiqueta: "Circulares", radioTarjeta: 32, radioBoton: 999 },
 };
 
+// ---- Canal cognitivo de presentación (RF3.1, RI3.1, RNF4.4) ----
+// Permite elegir si en cada pantalla se ven solo dibujos/pictogramas, solo texto o ambos.
+export type ModoCanal = "ambos" | "soloPictograma" | "soloTexto";
+
+export interface InfoModoCanal {
+  clave: ModoCanal;
+  etiqueta: string;
+  descripcion: string;
+  icono: string;
+}
+
+export const MODOS_CANAL: Record<ModoCanal, InfoModoCanal> = {
+  ambos: {
+    clave: "ambos",
+    etiqueta: "Dibujo y texto",
+    descripcion: "Muestra el pictograma junto al texto en Lectura Fácil",
+    icono: "🖼️🔤",
+  },
+  soloPictograma: {
+    clave: "soloPictograma",
+    etiqueta: "Solo pictograma",
+    descripcion: "Solo muestra dibujos gigantes (sin texto para no lectores)",
+    icono: "🖼️",
+  },
+  soloTexto: {
+    clave: "soloTexto",
+    etiqueta: "Solo texto",
+    descripcion: "Solo muestra texto en letra grande (evita sobreestimulación)",
+    icono: "🔤",
+  },
+};
+
 /** Orden en que se muestran las opciones en el panel. */
 export const ORDEN_FUENTES: FuenteLetra[] = ["atkinson", "lexend", "andika"];
 export const ORDEN_TAMANOS_LETRA: TamanoLetra[] = ["normal", "grande", "extra"];
 export const ORDEN_TAMANOS_BOTON: TamanoBoton[] = ["M", "L", "XL"];
 export const ORDEN_FORMAS: FormaBoton[] = ["round", "square", "pill"];
+export const ORDEN_MODOS_CANAL: ModoCanal[] = ["ambos", "soloPictograma", "soloTexto"];
 
 /** RI3.1: preferencias de visualización del estudiante que cubre este panel. */
 export interface PreferenciasApariencia {
@@ -75,15 +108,17 @@ export interface PreferenciasApariencia {
   tamanoLetra: TamanoLetra;
   tamanoBoton: TamanoBoton;
   forma: FormaBoton;
+  canal: ModoCanal;
 }
 
-/** Valores de la variante A del prototipo: clara, Atkinson, redondeados, botones grandes. */
+/** Valores de la variante A del prototipo: clara, Atkinson, redondeados, botones grandes, ambos. */
 export const PREFERENCIAS_POR_DEFECTO: PreferenciasApariencia = {
   tema: TEMA_POR_DEFECTO,
   fuente: "atkinson",
   tamanoLetra: "normal",
   tamanoBoton: "L",
   forma: "round",
+  canal: "ambos",
 };
 
 const tiene = (objeto: object, clave: unknown): boolean =>
@@ -107,5 +142,6 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
       ? (c.tamanoBoton as TamanoBoton)
       : d.tamanoBoton,
     forma: tiene(FORMAS_BOTON, c.forma) ? (c.forma as FormaBoton) : d.forma,
+    canal: tiene(MODOS_CANAL, c.canal) ? (c.canal as ModoCanal) : d.canal,
   };
 }

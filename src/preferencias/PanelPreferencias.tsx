@@ -1,7 +1,7 @@
 // Panel de preferencias de apariencia (T-04.3, HU-04). Todo se configura en una sola pantalla y
 // sin pasos técnicos (RNF3.3); cada cambio se ve al momento en la vista previa (RF3.15).
-// Cubre RF3.1 (paleta), RF3.2 (tipo de letra), RF3.3 (tamaño de letra), RF3.4 (tamaño de
-// botones, tres opciones) y RF3.5 (forma de los botones).
+// Cubre RF3.1 (paleta y canal de información), RF3.2 (tipo de letra), RF3.3 (tamaño de letra),
+// RF3.4 (tamaño de botones, tres opciones) y RF3.5 (forma de los botones).
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -12,8 +12,10 @@ import { usePreferencias } from "./PreferenciasProvider";
 import {
   FORMAS_BOTON,
   FUENTES,
+  MODOS_CANAL,
   ORDEN_FORMAS,
   ORDEN_FUENTES,
+  ORDEN_MODOS_CANAL,
   ORDEN_TAMANOS_BOTON,
   ORDEN_TAMANOS_LETRA,
   TAMANOS_BOTON,
@@ -47,6 +49,9 @@ export function PanelPreferencias() {
   const { colores } = useTema();
   const { preferencias, estilos, cambiar, restablecer } = usePreferencias();
 
+  const verDibujo = preferencias.canal === "ambos" || preferencias.canal === "soloPictograma";
+  const verTexto = preferencias.canal === "ambos" || preferencias.canal === "soloTexto";
+
   return (
     <ScrollView style={{ backgroundColor: colores.fondo }} contentContainerStyle={styles.pantalla}>
       <Text accessibilityRole="header" style={[styles.titulo, { color: colores.texto }]}>
@@ -58,6 +63,20 @@ export function PanelPreferencias() {
 
       <View style={styles.columnas}>
         <View style={styles.columna}>
+          <Grupo
+            titulo="Qué se ve (Dibujos y palabras)"
+            ayuda="Elige si quieres ver solo dibujos, solo texto en letra grande o ambos a la vez."
+          >
+            {ORDEN_MODOS_CANAL.map((modo) => (
+              <OpcionPreferencia
+                key={modo}
+                etiqueta={`${MODOS_CANAL[modo].icono} ${MODOS_CANAL[modo].etiqueta}`}
+                elegida={preferencias.canal === modo}
+                onPress={() => cambiar({ canal: modo })}
+              />
+            ))}
+          </Grupo>
+
           <Grupo titulo="Fondo y colores">
             {NOMBRES_TEMAS.map((nombre) => {
               const tema = TEMAS[nombre];
@@ -165,25 +184,58 @@ export function PanelPreferencias() {
               >
                 AHORA
               </Text>
-              <Text
-                style={{
-                  color: colores.texto,
-                  fontFamily: estilos.fuenteNegrita,
-                  fontSize: estilos.texto(22),
-                  fontWeight: "700",
-                }}
-              >
-                Lavarse las manos
-              </Text>
-              <Text
-                style={{
-                  color: colores.textoSecundario,
-                  fontFamily: estilos.fuenteNormal,
-                  fontSize: estilos.tamanoTexto,
-                }}
-              >
-                Faltan 5 minutos. Usa agua y jabón.
-              </Text>
+
+              <View style={styles.filaContenidoTarea}>
+                {verDibujo && (
+                  <View
+                    testID="preview-pictograma"
+                    style={[
+                      styles.cajaPictograma,
+                      {
+                        borderColor: colores.borde,
+                        width: preferencias.canal === "soloPictograma" ? 90 : 64,
+                        height: preferencias.canal === "soloPictograma" ? 90 : 64,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{ fontSize: preferencias.canal === "soloPictograma" ? 54 : 38 }}
+                      accessibilityLabel="Lavarse las manos"
+                    >
+                      🧼
+                    </Text>
+                  </View>
+                )}
+
+                {verTexto && (
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text
+                      testID="preview-titulo-texto"
+                      style={{
+                        color: colores.texto,
+                        fontFamily: estilos.fuenteNegrita,
+                        fontSize:
+                          preferencias.canal === "soloTexto"
+                            ? estilos.texto(26)
+                            : estilos.texto(22),
+                        fontWeight: "700",
+                      }}
+                    >
+                      Lavarse las manos
+                    </Text>
+                    <Text
+                      testID="preview-descripcion-texto"
+                      style={{
+                        color: colores.textoSecundario,
+                        fontFamily: estilos.fuenteNormal,
+                        fontSize: estilos.tamanoTexto,
+                      }}
+                    >
+                      Faltan 5 minutos. Usa agua y jabón.
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
             <View style={styles.botonesVista}>
@@ -219,5 +271,13 @@ const styles = StyleSheet.create({
   botonRestablecer: { alignSelf: "flex-start" },
   vistaPrevia: { borderWidth: 3, padding: 16, gap: 16 },
   tareaAhora: { borderWidth: 3, padding: 14, gap: 6 },
+  filaContenidoTarea: { flexDirection: "row", alignItems: "center", gap: 14 },
+  cajaPictograma: {
+    borderWidth: 2,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   botonesVista: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
 });

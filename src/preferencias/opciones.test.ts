@@ -3,13 +3,15 @@ import { describe, expect, it } from "@jest/globals";
 import {
   FORMAS_BOTON,
   FUENTES,
+  MODOS_CANAL,
+  ORDEN_MODOS_CANAL,
   PREFERENCIAS_POR_DEFECTO,
   TAMANOS_BOTON,
   TAMANOS_LETRA,
   normalizarPreferencias,
 } from "./opciones";
 
-describe("opciones del prototipo (FONTS, FS, BS y SHAPES)", () => {
+describe("opciones del prototipo (FONTS, FS, BS, SHAPES y CANAL)", () => {
   it("ofrece las tres fuentes de Lectura Fácil del prototipo (RF3.2)", () => {
     expect(Object.values(FUENTES).map((f) => f.etiqueta)).toEqual([
       "Atkinson Hyperlegible",
@@ -37,6 +39,13 @@ describe("opciones del prototipo (FONTS, FS, BS y SHAPES)", () => {
     expect(FORMAS_BOTON.pill).toMatchObject({ radioTarjeta: 32, radioBoton: 999 });
   });
 
+  it("canales de presentación: ambos, soloPictograma y soloTexto (RF3.1, RI3.1, RNF4.4)", () => {
+    expect(ORDEN_MODOS_CANAL).toEqual(["ambos", "soloPictograma", "soloTexto"]);
+    expect(MODOS_CANAL.ambos.etiqueta).toBe("Dibujo y texto");
+    expect(MODOS_CANAL.soloPictograma.etiqueta).toBe("Solo pictograma");
+    expect(MODOS_CANAL.soloTexto.etiqueta).toBe("Solo texto");
+  });
+
   it("los valores por defecto son los de la variante A del prototipo", () => {
     expect(PREFERENCIAS_POR_DEFECTO).toEqual({
       tema: "claro",
@@ -44,6 +53,7 @@ describe("opciones del prototipo (FONTS, FS, BS y SHAPES)", () => {
       tamanoLetra: "normal",
       tamanoBoton: "L",
       forma: "round",
+      canal: "ambos",
     });
   });
 });
@@ -62,6 +72,7 @@ describe("normalizarPreferencias", () => {
         fuente: "comic",
         tamanoBoton: "XL",
         forma: "toString",
+        canal: "soloPictograma",
       }),
     ).toEqual({
       tema: "pastel",
@@ -69,6 +80,7 @@ describe("normalizarPreferencias", () => {
       tamanoLetra: "normal",
       tamanoBoton: "XL",
       forma: "round",
+      canal: "soloPictograma",
     });
   });
 });
