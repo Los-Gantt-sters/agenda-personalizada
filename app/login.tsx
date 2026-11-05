@@ -11,8 +11,8 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { signInSupervisor, getRoleHomeRoute } from "../src/services/authService";
-import { AUTH_GENERIC_ERROR_MESSAGE, SupervisorRole } from "../src/types/auth";
+import { signInSupervisor, getRoleHomeRoute } from "../src/servicios/authService";
+import { AUTH_GENERIC_ERROR_MESSAGE, SupervisorRole } from "../src/tipos/auth";
 
 export default function LoginScreen() {
   const router = useRouter();

@@ -5,7 +5,7 @@ import {
   SupervisorRole,
   SupervisorProfile,
   AUTH_GENERIC_ERROR_MESSAGE,
-} from "../types/auth";
+} from "../tipos/auth";
 
 /**
  * Normaliza y valida el rol recibido de la metadata o base de datos.
