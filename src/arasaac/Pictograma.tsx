@@ -3,6 +3,7 @@
 import React from "react";
 import { Image, ImageStyle, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 
+import { TEMAS, TEMA_POR_DEFECTO, useTemaOpcional } from "../temas";
 import { PictogramaArasaac } from "./tipos";
 
 interface Props {
@@ -15,13 +16,19 @@ interface Props {
   completado?: boolean;
   /** Etiqueta accesible personalizada (por defecto usa pictograma.descripcion). */
   etiqueta?: string;
-  /** Color del borde de la tarjeta (por defecto #C6D1E2, igual que --d-line en el prototipo). */
+  /**
+   * Color del borde de la tarjeta. Por defecto, el `borde` del tema activo (o del tema claro fuera de
+   * TemaProvider), que llega a 3:1 frente al relleno blanco en todos los temas (WCAG 1.4.11).
+   */
   colorBorde?: string;
   style?: StyleProp<ImageStyle>;
   contenedorStyle?: StyleProp<ViewStyle>;
 }
 
 export const TAMANO_MINIMO_PICTOGRAMA = 48;
+
+/** Fondo de la insignia ✓ de tarea hecha. */
+export const COLOR_INSIGNIA_HECHO = "#005A1E";
 export const TAMANO_MINI_PICTOGRAMA = 34;
 
 export function Pictograma({
@@ -30,10 +37,12 @@ export function Pictograma({
   variante = "normal",
   completado = false,
   etiqueta,
-  colorBorde = "#C6D1E2",
+  colorBorde,
   style,
   contenedorStyle,
 }: Props) {
+  const tema = useTemaOpcional();
+  const borde = colorBorde ?? tema?.colores.borde ?? TEMAS[TEMA_POR_DEFECTO].paleta.borde;
   const esMini = variante === "mini";
   const lado = esMini
     ? Math.max(TAMANO_MINI_PICTOGRAMA, tamano)
@@ -53,7 +62,7 @@ export function Pictograma({
           height: lado,
           borderRadius: radio,
           borderWidth: grosorBorde,
-          borderColor: colorBorde,
+          borderColor: borde,
         },
         contenedorStyle,
       ]}
@@ -95,7 +104,8 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#2B7A4B",
+    // Verde oscuro fijo: el ✓ blanco llega a 8,46:1, por encima del 7:1 del alto contraste
+    backgroundColor: COLOR_INSIGNIA_HECHO,
     alignItems: "center",
     justifyContent: "center",
   },

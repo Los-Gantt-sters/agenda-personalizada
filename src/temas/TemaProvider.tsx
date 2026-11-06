@@ -39,6 +39,14 @@ export function TemaProvider({ temaInicial = TEMA_POR_DEFECTO, children }: Props
   return <TemaContext.Provider value={valor}>{children}</TemaContext.Provider>;
 }
 
+/**
+ * Devuelve el tema activo, o null fuera de <TemaProvider>. Para componentes reutilizables que
+ * también se pintan sin tema (por ejemplo, en sus propios tests).
+ */
+export function useTemaOpcional(): ValorTema | null {
+  return useContext(TemaContext);
+}
+
 /** Devuelve el tema activo. Debe usarse dentro de <TemaProvider>. */
 export function useTema(): ValorTema {
   const valor = useContext(TemaContext);

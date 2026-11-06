@@ -29,7 +29,7 @@ Versiones finales en PDF de los documentos de **TuAgendita**: una agenda visual 
 
 ### Accesibilidad
 
-- [`auditoria-contraste-wcag.md`](accesibilidad/auditoria-contraste-wcag.md): auditoría de contraste WCAG 2.1 AA/AAA de los temas de color y de los componentes (SCRUM-67), con las no conformidades encontradas.
+- [`auditoria-contraste-wcag.md`](accesibilidad/auditoria-contraste-wcag.md): auditoría de contraste WCAG 2.1 AA/AAA de los temas de color, los pictogramas y el panel de preferencias de la HU-04 (SCRUM-67), con las no conformidades encontradas.
 
 ### MDA (Metodologías de Desarrollo Ágil)
 

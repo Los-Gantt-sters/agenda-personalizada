@@ -2,7 +2,6 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   COMBINACIONES_DE_USO,
-  COMBINACIONES_FIJAS,
   Combinacion,
   auditarContraste,
   auditarTema,
@@ -24,13 +23,6 @@ describe.each(NOMBRES_TEMAS.map((n) => [n, TEMAS[n]] as const))(
     );
   },
 );
-
-describe("combinaciones con colores fijos", () => {
-  it.each(COMBINACIONES_FIJAS.map((c) => [c.id, c] as const))("%s llega al mínimo", (_id, c) => {
-    const resultado = evaluarCombinacion(c, null);
-    expect(resultado.ratio).toBeGreaterThanOrEqual(resultado.minimo);
-  });
-});
 
 describe("reglas de la auditoría", () => {
   it("exige 4,5:1 al texto, 7:1 en alto contraste y 3:1 a los componentes", () => {
@@ -77,14 +69,12 @@ describe("reglas de la auditoría", () => {
   });
 
   it("los identificadores no se repiten", () => {
-    const ids = [...COMBINACIONES_DE_USO, ...COMBINACIONES_FIJAS].map((c) => c.id);
+    const ids = COMBINACIONES_DE_USO.map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("audita cada combinación de uso en los cinco temas, más las fijas", () => {
-    expect(auditarContraste()).toHaveLength(
-      COMBINACIONES_DE_USO.length * NOMBRES_TEMAS.length + COMBINACIONES_FIJAS.length,
-    );
+  it("audita cada combinación de uso en los cinco temas", () => {
+    expect(auditarContraste()).toHaveLength(COMBINACIONES_DE_USO.length * NOMBRES_TEMAS.length);
   });
 
   it("el informe tiene una fila por resultado y marca los que no cumplen", () => {

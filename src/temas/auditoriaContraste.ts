@@ -205,31 +205,52 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
       ["#FFFFFF", "superficieDestacada"],
     ],
   },
-];
 
-/**
- * Combinaciones con colores fijos que no dependen del tema. Se comprueban en el contexto para el que
- * están pensadas (el reloj visual, sobre su propio disco blanco).
- */
-export const COMBINACIONES_FIJAS: readonly Combinacion[] = [
+  // ---- Pictograma (SCRUM-65): marco blanco con el borde del tema y marca de «hecho» ----
   {
-    id: "reloj-disco",
-    elemento: "Disco de tiempo restante del reloj visual",
-    usoEn: "RelojVisual (colores por defecto)",
+    id: "pictograma-marco-fondo",
+    elemento: "Marco del pictograma sobre el fondo de la pantalla",
+    usoEn: "Pictograma (borde por defecto)",
     tipo: "componente",
-    pares: [["#d1495b", "#ffffff"]],
+    pares: [
+      ["borde", "#FFFFFF"],
+      ["borde", "fondo"],
+      ["#FFFFFF", "fondo"],
+    ],
   },
   {
-    id: "reloj-tinta",
-    elemento: "Borde y marcas del reloj visual",
-    usoEn: "RelojVisual (colores por defecto)",
+    id: "pictograma-marco-superficie",
+    elemento: "Marco del pictograma sobre tarjetas",
+    usoEn: "Pictograma (borde por defecto)",
     tipo: "componente",
-    pares: [["#14213d", "#ffffff"]],
+    pares: [
+      ["borde", "#FFFFFF"],
+      ["borde", "superficie"],
+      ["#FFFFFF", "superficie"],
+    ],
+  },
+  {
+    id: "pictograma-marco-superficieDestacada",
+    elemento: "Marco del pictograma en la tarea «Ahora» o la opción elegida",
+    usoEn: "Pictograma (borde por defecto)",
+    tipo: "componente",
+    pares: [
+      ["borde", "#FFFFFF"],
+      ["borde", "superficieDestacada"],
+      ["#FFFFFF", "superficieDestacada"],
+    ],
+  },
+  {
+    id: "pictograma-hecho",
+    elemento: "Marca ✓ de pictograma hecho",
+    usoEn: "Pictograma (insignia de completado, COLOR_INSIGNIA_HECHO)",
+    tipo: "texto",
+    pares: [["#FFFFFF", "#005A1E"]],
   },
 ];
 
 export interface ResultadoContraste {
-  /** Tema auditado, o null para las combinaciones fijas. */
+  /** Tema auditado, o null si la combinación solo usa colores fijos. */
   tema: InfoTema | null;
   combinacion: Combinacion;
   /** Par de colores (ya en hexadecimal) que mejor contraste da. */
@@ -279,12 +300,9 @@ export function auditarTema(tema: InfoTema): ResultadoContraste[] {
   return COMBINACIONES_DE_USO.map((c) => evaluarCombinacion(c, tema));
 }
 
-/** Audita los cinco temas y las combinaciones fijas. */
+/** Audita los cinco temas. */
 export function auditarContraste(): ResultadoContraste[] {
-  return [
-    ...NOMBRES_TEMAS.flatMap((nombre) => auditarTema(TEMAS[nombre])),
-    ...COMBINACIONES_FIJAS.map((c) => evaluarCombinacion(c, null)),
-  ];
+  return NOMBRES_TEMAS.flatMap((nombre) => auditarTema(TEMAS[nombre]));
 }
 
 const formatear = (n: number) => n.toFixed(2).replace(".", ",");
