@@ -2,7 +2,7 @@
 
 **Tarea:** SCRUM-67 · T-04.4 [Accesibilidad] · Historia SCRUM-63 (HU-04)
 **Fecha:** 6 de noviembre de 2026 · **Autor:** Javier Miñán Molina (gestor de calidad)
-**Alcance:** rama `SCRUM-63-hu-04-…` con SCRUM-64 (temas) y SCRUM-66 (panel de preferencias) integradas, más el componente `Pictograma` de SCRUM-65 (PR #10, pendiente de integrar) y el reloj visual (HU-09) que ya está en `main`.
+**Alcance:** rama `SCRUM-63-hu-04-…` con SCRUM-64 (temas) y SCRUM-66 (panel de preferencias) integradas, y el reloj visual (HU-09) que ya está en `main`.
 
 ## Criterios
 
@@ -19,7 +19,7 @@ El contraste se calcula con la fórmula de luminancia relativa de WCAG 2.1 (`src
 1. Se recorrieron todas las pantallas y componentes de la rama, apuntando cada combinación de color de texto y de fondo y cada borde que identifica un componente.
 2. Cada combinación está declarada en `src/temas/auditoriaContraste.ts` (`COMBINACIONES_DE_USO` y `COMBINACIONES_FIJAS`), con el componente donde se usa.
 3. `src/temas/auditoriaContraste.test.ts` comprueba cada combinación en los cinco temas dentro del flujo de integración continua. Si alguien cambia un color de la paleta y deja de llegar al mínimo, la pull request falla.
-4. Los colores fijos de componentes que todavía no usan los temas (`Pictograma`, `RelojVisual`) se midieron aparte contra el fondo de cada tema.
+4. Los colores fijos del reloj visual, que todavía no usa los temas, se midieron aparte contra el fondo de cada tema.
 
 ## Resultado
 
@@ -53,12 +53,6 @@ Siguiendo el Plan de calidad, cada fallo se apunta en la hoja `No_conformidades`
 En los temas oscuros el estudiante no puede leer cuánto tiempo le queda. El disco blanco sí se distingue del fondo oscuro (18,13:1), así que el fallo afecta solo al rótulo.
 
 **Acción propuesta:** que `RelojVisual` tome los colores del tema activo cuando esté dentro de `TemaProvider`: `texto` para la tinta, `superficie` para el disco y `peligro` para el sector. Después, añadir sus combinaciones a `COMBINACIONES_DE_USO`.
-
-## Observaciones
-
-Mejoras pequeñas que no se registran como no conformidad.
-
-- **Borde del `Pictograma` (SCRUM-65, PR #10):** el borde fijo `#C6D1E2` da 1,54:1 frente a la tarjeta blanca, así que en los temas claros la tarjeta apenas se distingue del fondo. Se recomienda usar `colores.borde` del tema, como ya hace la caja del pictograma en la vista previa de `PanelPreferencias` (entre 3,38:1 y 21:1 frente a la tarjeta en los temas claro, oscuro, pastel y alto contraste claro; en alto contraste oscuro la tarjeta blanca ya se distingue del fondo negro), y añadir la tarjeta a `COMBINACIONES_DE_USO` cuando SCRUM-65 esté integrada.
 
 ## Fuera de alcance
 
