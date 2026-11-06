@@ -27,6 +27,10 @@ Versiones finales en PDF de los documentos de **TuAgendita**: una agenda visual 
 - [`plan-calidad.pdf`](dgp/plan-calidad.pdf): estándares, revisiones, criterios de entrega y métricas de calidad.
 - [`informe-accesibilidad.pdf`](dgp/informe-accesibilidad.pdf): checklist de accesibilidad por sprint (lectura fácil, tamaños mínimos de los elementos táctiles, contraste, uso con pulsador...).
 
+### Accesibilidad
+
+- [`auditoria-contraste-wcag.md`](accesibilidad/auditoria-contraste-wcag.md): auditoría de contraste WCAG 2.1 AA/AAA de los temas de color, los pictogramas y el panel de preferencias de la HU-04 (SCRUM-67), con las no conformidades encontradas.
+
 ### MDA (Metodologías de Desarrollo Ágil)
 
 - [`practica-0.pdf`](mda/practica-0.pdf): descripción del problema y roles del equipo.
