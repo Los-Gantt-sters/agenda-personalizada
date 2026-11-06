@@ -36,9 +36,9 @@ Márgenes más ajustados (cumplen, pero conviene no oscurecer ni aclarar más es
 
 ## No conformidades
 
-Siguiendo el Plan de calidad, cada fallo se comunica a su autor, que lo corrige.
+Siguiendo el Plan de calidad, cada fallo se apunta en la hoja `No_conformidades` del libro de herramientas de calidad y se comunica a su autor, que lo corrige.
 
-### 1. Rótulo del reloj visual invisible en los temas oscuros (Mayor)
+### NC-004. Rótulo del reloj visual invisible en los temas oscuros (Mayor)
 
 `RelojVisual` (HU-09, SCRUM-78/79) usa colores fijos y no lee el tema activo. El rótulo «Quedan 3 minutos» se pinta con la tinta `#14213d` sobre el fondo de la pantalla:
 
@@ -54,19 +54,11 @@ En los temas oscuros el estudiante no puede leer cuánto tiempo le queda. El dis
 
 **Acción propuesta:** que `RelojVisual` tome los colores del tema activo cuando esté dentro de `TemaProvider`: `texto` para la tinta, `superficie` para el disco y `peligro` para el sector. Después, añadir sus combinaciones a `COMBINACIONES_DE_USO`.
 
-### 2. Borde del pictograma casi invisible en los temas claros (Menor)
+## Observaciones
 
-`Pictograma` (SCRUM-65, PR #10) dibuja una tarjeta blanca con el borde fijo `#C6D1E2`:
+Mejoras pequeñas que no se registran como no conformidad.
 
-| Comparación | Contraste | Mínimo |
-|---|---|---|
-| Borde frente a la tarjeta blanca | 1,54:1 | 3:1 |
-| Tarjeta blanca frente al fondo del tema claro | 1,05:1 | 3:1 |
-| Tarjeta blanca frente al fondo del tema pastel | 1,12:1 | 3:1 |
-
-En los temas claro, pastel y alto contraste claro, la tarjeta no se distingue del fondo. Cuando el pictograma se puede pulsar (buscador o selección por categorías), incumple 1.4.11. La insignia verde de «hecho» sí cumple: 5,27:1 sobre la tarjeta.
-
-**Acción propuesta:** usar `colores.borde` del tema como borde por defecto, igual que hace ya la caja del pictograma en la vista previa de `PanelPreferencias`. Frente a la tarjeta blanca da 4,02:1 (claro), 3,88:1 (pastel), 3,38:1 (oscuro) y 21:1 (alto contraste claro). En alto contraste oscuro el borde es blanco, pero la tarjeta blanca se distingue sola del fondo negro (21:1). Cuando SCRUM-65 esté integrada, añadir la tarjeta a `COMBINACIONES_DE_USO` con los dos pares, como la combinación `caja-pictograma`.
+- **Borde del `Pictograma` (SCRUM-65, PR #10):** el borde fijo `#C6D1E2` da 1,54:1 frente a la tarjeta blanca, así que en los temas claros la tarjeta apenas se distingue del fondo. Se recomienda usar `colores.borde` del tema, como ya hace la caja del pictograma en la vista previa de `PanelPreferencias` (de 3,38:1 a 21:1 según el tema), y añadir la tarjeta a `COMBINACIONES_DE_USO` cuando SCRUM-65 esté integrada.
 
 ## Fuera de alcance
 
