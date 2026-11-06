@@ -58,7 +58,7 @@ En los temas oscuros el estudiante no puede leer cuánto tiempo le queda. El dis
 
 Mejoras pequeñas que no se registran como no conformidad.
 
-- **Borde del `Pictograma` (SCRUM-65, PR #10):** el borde fijo `#C6D1E2` da 1,54:1 frente a la tarjeta blanca, así que en los temas claros la tarjeta apenas se distingue del fondo. Se recomienda usar `colores.borde` del tema, como ya hace la caja del pictograma en la vista previa de `PanelPreferencias` (de 3,38:1 a 21:1 según el tema), y añadir la tarjeta a `COMBINACIONES_DE_USO` cuando SCRUM-65 esté integrada.
+- **Borde del `Pictograma` (SCRUM-65, PR #10):** el borde fijo `#C6D1E2` da 1,54:1 frente a la tarjeta blanca, así que en los temas claros la tarjeta apenas se distingue del fondo. Se recomienda usar `colores.borde` del tema, como ya hace la caja del pictograma en la vista previa de `PanelPreferencias` (entre 3,38:1 y 21:1 frente a la tarjeta en los temas claro, oscuro, pastel y alto contraste claro; en alto contraste oscuro la tarjeta blanca ya se distingue del fondo negro), y añadir la tarjeta a `COMBINACIONES_DE_USO` cuando SCRUM-65 esté integrada.
 
 ## Fuera de alcance
 
