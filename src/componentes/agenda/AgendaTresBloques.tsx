@@ -13,6 +13,7 @@ import { PictogramaTarea } from "./PictogramaTarea";
 import { BotonAccionTarea } from "../ejecucion-tarea/BotonAccionTarea";
 import { useTranscurrido } from "../ejecucion-tarea/useTranscurrido";
 import { RelojVisual } from "../reloj-visual/RelojVisual";
+import type { PreferenciasConfirmacion } from "../ejecucion-tarea/tipos";
 
 /** Hora local «9:32» de una fecha ISO. */
 function horaDe(iso: string): string {
@@ -68,12 +69,15 @@ export function AgendaTresBloques({
   onEmpezar = () => {},
   onConfirmarFin,
   onAbrir,
+  confirmacion,
 }: {
   bloques: BloquesAgenda;
   /** RF6.1: «Empezar». Solo se usa si la tarea lo pide (RF6.8). */
   onEmpezar?: (idEntrada: string) => void;
   onConfirmarFin: (idEntrada: string) => void;
   onAbrir: (entrada: EntradaAgenda) => void;
+  /** T-08.2: modo antitoques del perfil del estudiante (RNF6.1). */
+  confirmacion?: PreferenciasConfirmacion;
 }) {
   const ventana = useWindowDimensions();
   // Se mide el hueco real (puede no ser toda la ventana: márgenes seguros, etc.).
@@ -107,6 +111,7 @@ export function AgendaTresBloques({
         onAbrir={onAbrir}
         onEmpezar={onEmpezar}
         onConfirmarFin={onConfirmarFin}
+        confirmacion={confirmacion}
       />
       <Bloque
         tipo="despues"
@@ -249,6 +254,7 @@ function BloqueAhora({
   onAbrir,
   onEmpezar,
   onConfirmarFin,
+  confirmacion,
 }: {
   bloques: BloquesAgenda;
   escala: number;
@@ -256,6 +262,7 @@ function BloqueAhora({
   onAbrir: (e: EntradaAgenda) => void;
   onEmpezar: (id: string) => void;
   onConfirmarFin: (id: string) => void;
+  confirmacion?: PreferenciasConfirmacion;
 }) {
   const ahora = bloques.ahora;
   // RF6.1: el reloj visual arranca al pulsar «Empezar» y cuenta desde la hora guardada.
@@ -339,6 +346,7 @@ function BloqueAhora({
             <BotonAccionTarea
               key={`${ahora.id}-${accion}`}
               accion={accion}
+              confirmacion={confirmacion}
               onConfirmar={() =>
                 accion === "empezar" ? onEmpezar(ahora.id) : onConfirmarFin(ahora.id)
               }
