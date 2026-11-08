@@ -1,6 +1,7 @@
 // Datos de ejemplo de la agenda del día (T-06.1, HU-06). Se usan en app/agenda.tsx hasta que la
 // agenda se cargue desde Supabase (T-06.2). Los pictogramas son emojis; con datos reales,
 // pictograma_url apunta a ARASAAC o a una foto.
+// HU-08: «Lavarse las manos» y «Reprografía» piden pulsar «Empezar» antes de «Terminar» (RF6.8).
 import type { EntradaAgenda, Tarea } from "./tipos";
 
 const T = (id: string, titulo: string, emoji: string, extra: Partial<Tarea> = {}): Tarea => ({
@@ -54,6 +55,7 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     ["11:30", 30, T("t5", "Recreo", "⚽", { descripcion: "Salimos al patio." }), "pendiente"],
     ["12:00", 60, T("t6", "Taller de cocina", "🍳"), "pendiente"],
   ];
+  const conInicioFin = new Set(["t2", "t4"]);
   return tareas.map(([hora, dur, tarea, estado], i) => ({
     id: `e${i + 1}`,
     estudiante_id: ESTUDIANTE_DEMO,
@@ -64,5 +66,6 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     orden: i + 1,
     estado,
     tarea,
+    requiere_inicio_fin: conInicioFin.has(tarea.id),
   }));
 }

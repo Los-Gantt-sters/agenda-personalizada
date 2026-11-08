@@ -1,4 +1,9 @@
-import { marcarTareaHecha, obtenerSecuenciaDia, suscribirseAgenda } from "../agendaService";
+import {
+  marcarTareaEnCurso,
+  marcarTareaHecha,
+  obtenerSecuenciaDia,
+  suscribirseAgenda,
+} from "../agendaService";
 import { supabase } from "../../lib/supabaseClient";
 
 // Consulta encadenable de Supabase: cada método devuelve la misma consulta y al final se resuelve.
@@ -45,11 +50,28 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     const q = consultaFalsa({ error: null });
     sb.from.mockReturnValue(q);
 
-    await marcarTareaHecha("e1");
+    await marcarTareaHecha("e1", "2026-11-05T09:40:00.000Z");
 
-    expect(q.update).toHaveBeenCalledWith({ estado: "hecha" });
+    expect(q.update).toHaveBeenCalledWith({
+      estado: "hecha",
+      fin_real: "2026-11-05T09:40:00.000Z",
+    });
     expect(q.eq).toHaveBeenCalledWith("id", "e1");
     expect(q.in).toHaveBeenCalledWith("estado", ["pendiente", "en_curso"]);
+  });
+
+  it("SCRUM-74: al empezar pone la tarea en curso con su hora de inicio, solo si seguía pendiente (RF6.1, RI6.1)", async () => {
+    const q = consultaFalsa({ error: null });
+    sb.from.mockReturnValue(q);
+
+    await marcarTareaEnCurso("e1", "2026-11-05T09:30:00.000Z");
+
+    expect(q.update).toHaveBeenCalledWith({
+      estado: "en_curso",
+      inicio_real: "2026-11-05T09:30:00.000Z",
+    });
+    expect(q.eq).toHaveBeenCalledWith("id", "e1");
+    expect(q.eq).toHaveBeenCalledWith("estado", "pendiente");
   });
 
   it("se suscribe a Realtime y avisa con los cambios del tutor (RF4.7)", () => {

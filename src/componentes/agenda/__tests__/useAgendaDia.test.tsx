@@ -66,4 +66,40 @@ describe("useAgendaDia (SCRUM-70: T-06.2 Lógica reactiva de avance automático 
     await waitFor(() => expect(result.current.bloques.ahora?.id).toBe("1"));
     expect(result.current.errorGuardado).toBe("sin red");
   });
+
+  it("SCRUM-74: Empezar pone la tarea en curso al momento y guarda inicio y fin en el servidor (RI6.1)", async () => {
+    const { repo } = crearRepositorioMemoria([
+      { ...e("1", "09:00"), requiere_inicio_fin: true },
+      e("2", "10:00"),
+    ]);
+    const { result } = await renderHook(() => useAgendaDia(repo, "al1", F));
+    await waitFor(() => expect(result.current.bloques.ahora?.id).toBe("1"));
+
+    await act(() => result.current.empezar("1"));
+    expect(result.current.bloques.ahora).toMatchObject({ id: "1", estado: "en_curso" });
+    let servidor = await repo.obtenerSecuenciaDia("al1", F);
+    expect(servidor[0].estado).toBe("en_curso");
+    expect(servidor[0].inicio_real).toEqual(expect.any(String));
+
+    await act(() => result.current.confirmarFin("1"));
+    servidor = await repo.obtenerSecuenciaDia("al1", F);
+    expect(servidor[0]).toMatchObject({ estado: "hecha", inicio_real: expect.any(String) });
+    expect(Date.parse(servidor[0].fin_real!)).toBeGreaterThanOrEqual(
+      Date.parse(servidor[0].inicio_real!),
+    );
+    expect(result.current.bloques.ahora?.id).toBe("2");
+  });
+
+  it("SCRUM-74: si no se puede guardar el inicio, la tarea vuelve a pendiente y avisa", async () => {
+    const { repo } = crearRepositorioMemoria([{ ...e("1", "09:00"), requiere_inicio_fin: true }]);
+    repo.marcarEnCurso = async () => {
+      throw new Error("sin red");
+    };
+    const { result } = await renderHook(() => useAgendaDia(repo, "al1", F));
+    await waitFor(() => expect(result.current.bloques.ahora?.id).toBe("1"));
+
+    await act(() => result.current.empezar("1"));
+    await waitFor(() => expect(result.current.bloques.ahora?.estado).toBe("pendiente"));
+    expect(result.current.errorGuardado).toBe("sin red");
+  });
 });

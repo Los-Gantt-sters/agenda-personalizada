@@ -3,6 +3,9 @@ import { AgendaTresBloques } from "../AgendaTresBloques";
 import { dividirEnBloques } from "../logica";
 import type { EntradaAgenda } from "../tipos";
 
+// El reloj visual y el refuerzo usan sonidos; en las pruebas no suenan.
+jest.mock("../../../servicios/sonidos", () => ({ reproducirSonido: jest.fn() }));
+
 const e = (
   id: string,
   hora: string,

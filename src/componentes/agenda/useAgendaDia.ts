@@ -2,10 +2,16 @@
 // RF4.1: carga la secuencia del día. RF4.3: al confirmar el fin, la tarea pasa a «Hecho» al momento
 // (actualización optimista) y se guarda; si falla, se vuelve a lo que diga el servidor.
 // RF4.7: con la suscripción del repositorio (Supabase Realtime) recarga sola cuando el tutor cambia algo.
+// T-08.1 (HU-08): RF6.1 «Empezar» pone la tarea en curso al momento y guarda la hora de inicio.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import type { EntradaAgenda, RepositorioAgenda } from "./tipos";
-import { confirmarFin as aplicarFin, dividirEnBloques, type OpcionesBloques } from "./logica";
+import {
+  confirmarFin as aplicarFin,
+  dividirEnBloques,
+  empezarTarea,
+  type OpcionesBloques,
+} from "./logica";
 
 export function hoyISO(d = new Date()): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -29,9 +35,9 @@ export function useAgendaDia(
   useEffect(() => {
     entradasRef.current = entradas;
   }, [entradas]);
-  // Ids de entradas que se están guardando: el servidor aún no las tiene como
-  // hechas y una recarga no debe "devolverlas" a «Ahora».
-  const guardando = useRef(new Set<string>());
+  // Entradas que se están guardando, con el cambio que se espera: el servidor aún no lo tiene y
+  // una recarga no debe "devolverlas" a como estaban (p. ej. de «Hecho» otra vez a «Ahora»).
+  const guardando = useRef(new Map<string, Partial<EntradaAgenda>>());
   const peticion = useRef(0);
 
   const recargar = useCallback(async () => {
@@ -40,11 +46,12 @@ export function useAgendaDia(
       const datos = await repo.obtenerSecuenciaDia(estudianteId, fecha);
       if (n !== peticion.current) return; // llegó otra respuesta más nueva
       setEntradas(
-        datos.map((e) =>
-          guardando.current.has(e.id) && e.estado !== "cancelada" && e.estado !== "bloqueada"
-            ? { ...e, estado: "hecha" }
-            : e,
-        ),
+        datos.map((e) => {
+          const cambio = guardando.current.get(e.id);
+          return cambio && e.estado !== "cancelada" && e.estado !== "bloqueada"
+            ? { ...e, ...cambio }
+            : e;
+        }),
       );
       setError(null);
     } catch (e: any) {
@@ -80,26 +87,59 @@ export function useAgendaDia(
     };
   }, [repo, estudianteId, fecha, recargar, recargarPronto]);
 
-  const confirmarFin = useCallback(
-    async (idEntrada: string) => {
+  /** Aplica un cambio al momento, lo guarda y, si falla, vuelve a lo que diga el servidor. */
+  const guardar = useCallback(
+    async (
+      idEntrada: string,
+      aplicar: (entradas: readonly EntradaAgenda[]) => EntradaAgenda[],
+      enviar: (cambio: EntradaAgenda) => Promise<void>,
+    ) => {
       const antes = entradasRef.current;
-      const despues = aplicarFin(antes, idEntrada);
-      if (despues.every((e, i) => e.estado === antes[i]?.estado)) return; // no era la de «Ahora»
-      guardando.current.add(idEntrada);
+      const despues = aplicar(antes);
+      if (despues.every((e, i) => e.estado === antes[i]?.estado)) return false; // no era la de «Ahora»
+      const cambiada = despues.find((e) => e.id === idEntrada)!;
+      guardando.current.set(idEntrada, {
+        estado: cambiada.estado,
+        inicio_real: cambiada.inicio_real,
+        fin_real: cambiada.fin_real,
+      });
       entradasRef.current = despues;
       setEntradas(despues);
       setErrorGuardado(null);
       try {
-        await repo.marcarHecha(idEntrada);
+        await enviar(cambiada);
       } catch (e: any) {
-        // La recarga de abajo devuelve la tarea a «Ahora» para que se pueda repetir.
+        // La recarga de abajo devuelve la tarea a como estaba para que se pueda repetir.
         setErrorGuardado(e?.message ?? "No se ha podido guardar");
       } finally {
         guardando.current.delete(idEntrada);
         recargarPronto();
       }
+      return true;
     },
-    [repo, recargarPronto],
+    [recargarPronto],
+  );
+
+  /** RF6.1: «Empezar». Devuelve false si la tarea no era la de «Ahora» o ya estaba empezada. */
+  const empezar = useCallback(
+    (idEntrada: string) =>
+      guardar(
+        idEntrada,
+        (antes) => empezarTarea(antes, idEntrada),
+        (e) => repo.marcarEnCurso(idEntrada, e.inicio_real!),
+      ),
+    [guardar, repo],
+  );
+
+  /** RF4.3 y RF6.4: «Terminar». Devuelve false si la tarea no era la de «Ahora». */
+  const confirmarFin = useCallback(
+    (idEntrada: string) =>
+      guardar(
+        idEntrada,
+        (antes) => aplicarFin(antes, idEntrada),
+        (e) => repo.marcarHecha(idEntrada, e.fin_real ?? undefined),
+      ),
+    [guardar, repo],
   );
 
   const maxHecho = opciones?.maxHecho;
@@ -109,5 +149,5 @@ export function useAgendaDia(
     [entradas, maxHecho, maxDespues],
   );
 
-  return { bloques, entradas, cargando, error, errorGuardado, confirmarFin, recargar };
+  return { bloques, entradas, cargando, error, errorGuardado, empezar, confirmarFin, recargar };
 }

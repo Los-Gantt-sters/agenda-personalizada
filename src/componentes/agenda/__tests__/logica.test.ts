@@ -1,6 +1,16 @@
-import { confirmarFin, dividirEnBloques, franjaHoraria, ordenarSecuencia } from "../logica";
+import {
+  confirmarFin,
+  dividirEnBloques,
+  empezarTarea,
+  franjaHoraria,
+  necesitaEmpezar,
+  ordenarSecuencia,
+} from "../logica";
 import type { EntradaAgenda } from "../tipos";
 import { calcularMedidas } from "../AgendaTresBloques";
+
+// El reloj visual y el refuerzo usan sonidos; en las pruebas no suenan.
+jest.mock("../../../servicios/sonidos", () => ({ reproducirSonido: jest.fn() }));
 
 const e = (
   id: string,
@@ -114,5 +124,35 @@ describe("SCRUM-70 · RF4.3 avance al confirmar", () => {
     const dia = [e("1", "09:00", "hecha"), e("2", "10:00"), e("3", "11:00")];
     expect(confirmarFin(dia, "1")).toEqual(dia);
     expect(confirmarFin(dia, "3")).toEqual(dia);
+  });
+});
+
+describe("SCRUM-74 · RF6.1 y RF6.4 empezar y terminar (T-08.1)", () => {
+  const INICIO = "2026-11-05T08:30:00.000Z";
+  const FIN = "2026-11-05T08:52:00.000Z";
+
+  it("Empezar pone en curso la tarea de Ahora y guarda la hora de inicio (RI6.1)", () => {
+    const r = empezarTarea([e("1", "09:00", "hecha"), e("2", "10:00")], "2", INICIO);
+    expect(r.find((x) => x.id === "2")).toMatchObject({ estado: "en_curso", inicio_real: INICIO });
+  });
+
+  it("Empezar no hace nada si no es la tarea de Ahora o si ya estaba en curso", () => {
+    const entradas = [e("1", "09:00"), e("2", "10:00")];
+    expect(empezarTarea(entradas, "2", INICIO)).toEqual(entradas);
+    const enCurso = [{ ...e("1", "09:00", "en_curso"), inicio_real: INICIO }];
+    expect(empezarTarea(enCurso, "1", FIN)[0].inicio_real).toBe(INICIO);
+  });
+
+  it("Terminar marca como hecha y guarda la hora de fin (RI6.1)", () => {
+    const r = confirmarFin([{ ...e("1", "09:00", "en_curso"), inicio_real: INICIO }], "1", FIN);
+    expect(r[0]).toMatchObject({ estado: "hecha", inicio_real: INICIO, fin_real: FIN });
+  });
+
+  it("solo pide Empezar si el tutor lo ha marcado y aún no se ha empezado (RF6.8)", () => {
+    expect(necesitaEmpezar(e("1", "09:00"))).toBe(false);
+    expect(necesitaEmpezar({ ...e("1", "09:00"), requiere_inicio_fin: true })).toBe(true);
+    expect(necesitaEmpezar({ ...e("1", "09:00", "en_curso"), requiere_inicio_fin: true })).toBe(
+      false,
+    );
   });
 });
