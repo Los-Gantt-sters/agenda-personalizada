@@ -1,6 +1,7 @@
 import React from "react";
 import { TouchableOpacity, Text, View, StyleSheet, Image, Platform } from "react-native";
 import { Estudiante } from "../../tipos/estudiante";
+import { reproducirSonido } from "../../servicios/sonidos";
 
 export interface TarjetaEstudianteProps {
   estudiante: Estudiante;
@@ -35,7 +36,10 @@ export const TarjetaEstudiante: React.FC<TarjetaEstudianteProps> = ({
         },
         seleccionado && estilos.tarjetaSeleccionada,
       ]}
-      onPress={() => alSeleccionar(estudiante)}
+      onPress={() => {
+        reproducirSonido("toque"); // T-01.3: feedback sonoro al pulsar
+        alSeleccionar(estudiante);
+      }}
     >
       <View
         style={[
