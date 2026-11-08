@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -7,6 +7,12 @@ import {
   CuadriculaEstudiantes,
   ModalConfirmacionEstudiante,
 } from "../src/componentes/autenticacion";
+import { reproducirSonido } from "../src/servicios/sonidos";
+import {
+  obtenerAlumnoTableta,
+  olvidarAlumnoTableta,
+  recordarAlumnoTableta,
+} from "../src/servicios/tabletaPersonal";
 
 export interface LoginEstudiantesScreenProps {
   /**
@@ -17,10 +23,16 @@ export interface LoginEstudiantesScreenProps {
     alumnoId: string,
     secuenciaDibujos: string[],
   ) => Promise<void> | void;
+  /**
+   * Modo tableta personal (T-01.3): la tableta recuerda al último alumno que entró y abre
+   * directamente su credencial de 3 dibujos. En tabletas compartidas del aula se deja a false.
+   */
+  modoTabletaPersonal?: boolean;
 }
 
 export default function LoginEstudiantesScreen({
   alCompletarCredencialVisual,
+  modoTabletaPersonal = process.env.EXPO_PUBLIC_MODO_TABLETA_PERSONAL === "true",
 }: LoginEstudiantesScreenProps = {}) {
   const router = useRouter();
   const [claseSeleccionada, setClaseSeleccionada] = useState<Clase | null>(null);
@@ -32,6 +44,28 @@ export default function LoginEstudiantesScreen({
     ? ESTUDIANTES_MOCK.filter((s) => s.claseId === claseSeleccionada.id)
     : [];
 
+  // Modo tableta personal: si la tableta recuerda a un alumno, se abre directamente su credencial
+  useEffect(() => {
+    if (!modoTabletaPersonal) return;
+    let montado = true;
+    obtenerAlumnoTableta().then((alumnoId) => {
+      const recordado = ESTUDIANTES_MOCK.find((e) => e.id === alumnoId);
+      if (!montado || !recordado) return;
+      const clase = Object.values(CLASES).find((c) => c.id === recordado.claseId) ?? null;
+      setClaseSeleccionada(clase);
+      setEstudiantePendiente(recordado);
+      setModalVisible(true);
+    });
+    return () => {
+      montado = false;
+    };
+  }, [modoTabletaPersonal]);
+
+  const handleSeleccionarClase = (clase: Clase) => {
+    reproducirSonido("toque"); // T-01.3: feedback sonoro al pulsar
+    setClaseSeleccionada(clase);
+  };
+
   const handleSeleccionarEstudiante = (estudiante: Estudiante) => {
     setEstudiantePendiente(estudiante);
     setModalVisible(true);
@@ -39,6 +73,7 @@ export default function LoginEstudiantesScreen({
 
   const handleConfirmarEstudiante = async (estudiante: Estudiante, secuenciaDibujos: string[]) => {
     setModalVisible(false);
+    if (modoTabletaPersonal) await recordarAlumnoTableta(estudiante.id);
     if (alCompletarCredencialVisual) {
       await alCompletarCredencialVisual(estudiante.id, secuenciaDibujos);
       return;
@@ -48,6 +83,8 @@ export default function LoginEstudiantesScreen({
   };
 
   const handleCancelarConfirmacion = () => {
+    // "No soy yo": la tableta deja de recordar a este alumno y se vuelve a la cuadrícula
+    if (modoTabletaPersonal) void olvidarAlumnoTableta();
     setModalVisible(false);
     setEstudiantePendiente(null);
   };
@@ -72,7 +109,7 @@ export default function LoginEstudiantesScreen({
                   accessibilityRole="button"
                   accessibilityLabel={`Clase ${clase.nombre}`}
                   testID={`tarjeta-clase-${clase.id}`}
-                  onPress={() => setClaseSeleccionada(clase)}
+                  onPress={() => handleSeleccionarClase(clase)}
                 >
                   <Text style={estilos.simboloClase}>{clase.simbolo}</Text>
                   <Text style={estilos.nombreClase}>Clase {clase.nombre}</Text>

@@ -6,6 +6,7 @@ import {
   Estudiante,
   LONGITUD_SECUENCIA_DIBUJOS,
 } from "../../tipos/estudiante";
+import { reproducirSonido } from "../../servicios/sonidos";
 
 export interface ModalConfirmacionEstudianteProps {
   estudiante: Estudiante | null;
@@ -58,12 +59,17 @@ export const ModalConfirmacionEstudiante: React.FC<ModalConfirmacionEstudiantePr
       dibujos: nuevaSecuencia,
     });
 
+    // T-01.3: cada toque suena suave; al completar los 3 dibujos suena el "acierto"
     if (nuevaSecuencia.length === LONGITUD_SECUENCIA_DIBUJOS) {
+      reproducirSonido("acierto");
       alConfirmar(estudiante, nuevaSecuencia);
+    } else {
+      reproducirSonido("toque");
     }
   };
 
   const manejarBorrarUltimo = () => {
+    reproducirSonido("borrar");
     setEstadoSecuencia({
       alumnoId: estudiante.id,
       dibujos: secuenciaSeleccionada.slice(0, -1),

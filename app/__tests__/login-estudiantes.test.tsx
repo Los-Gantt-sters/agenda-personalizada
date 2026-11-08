@@ -1,6 +1,8 @@
 import React from "react";
 import { render, screen, userEvent } from "@testing-library/react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoginEstudiantesScreen from "../login-estudiantes";
+import { obtenerAlumnoTableta, recordarAlumnoTableta } from "../../src/servicios/tabletaPersonal";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -62,5 +64,52 @@ describe("LoginEstudiantesScreen", () => {
     await user.press(screen.getByTestId("dibujo-credencial-estrella"));
 
     expect(callbackJaime).toHaveBeenCalledWith("ale", ["manzana", "perro", "estrella"]);
+  });
+
+  describe("modo tableta personal (SCRUM-52: T-01.3)", () => {
+    beforeEach(async () => {
+      await AsyncStorage.clear();
+    });
+
+    it("si la tableta recuerda a un alumno, abre directamente su credencial de 3 dibujos", async () => {
+      await recordarAlumnoTableta("ale");
+      await render(<LoginEstudiantesScreen modoTabletaPersonal />);
+
+      expect(await screen.findByText("¿Eres Alejandro?")).toBeTruthy();
+    });
+
+    it("tras entrar, la tableta recuerda al alumno", async () => {
+      const user = userEvent.setup();
+      await render(
+        <LoginEstudiantesScreen modoTabletaPersonal alCompletarCredencialVisual={jest.fn()} />,
+      );
+
+      await user.press(screen.getByTestId("tarjeta-clase-tri"));
+      await user.press(screen.getByTestId("tarjeta-estudiante-ale"));
+      await user.press(screen.getByTestId("dibujo-credencial-manzana"));
+      await user.press(screen.getByTestId("dibujo-credencial-perro"));
+      await user.press(screen.getByTestId("dibujo-credencial-estrella"));
+
+      expect(await obtenerAlumnoTableta()).toBe("ale");
+    });
+
+    it("«No soy yo» hace que la tableta olvide al alumno y vuelve a la cuadrícula", async () => {
+      const user = userEvent.setup();
+      await recordarAlumnoTableta("ale");
+      await render(<LoginEstudiantesScreen modoTabletaPersonal />);
+
+      await user.press(await screen.findByTestId("btn-cancelar-estudiante"));
+
+      expect(await obtenerAlumnoTableta()).toBeNull();
+      expect(screen.getByText("Clase Triángulo")).toBeTruthy();
+    });
+
+    it("en tableta compartida (por defecto) no recuerda a nadie", async () => {
+      await recordarAlumnoTableta("ale");
+      await render(<LoginEstudiantesScreen />);
+
+      expect(screen.getByText("¿Cuál es tu clase?")).toBeTruthy();
+      expect(screen.queryByText("¿Eres Alejandro?")).toBeNull();
+    });
   });
 });
