@@ -13,10 +13,18 @@ export function crearRepositorioMemoria(inicial: EntradaAgenda[]) {
         .filter((e) => e.estudiante_id === estudianteId && e.fecha === fecha)
         .map((e) => ({ ...e }));
     },
-    async marcarHecha(idEntrada) {
+    async marcarEnCurso(idEntrada, inicio) {
+      entradas = entradas.map((e) =>
+        e.id === idEntrada && e.estado === "pendiente"
+          ? { ...e, estado: "en_curso", inicio_real: inicio }
+          : e,
+      );
+      avisar();
+    },
+    async marcarHecha(idEntrada, fin = new Date().toISOString()) {
       entradas = entradas.map((e) =>
         e.id === idEntrada && (e.estado === "pendiente" || e.estado === "en_curso")
-          ? { ...e, estado: "hecha" }
+          ? { ...e, estado: "hecha", fin_real: fin }
           : e,
       );
       avisar();

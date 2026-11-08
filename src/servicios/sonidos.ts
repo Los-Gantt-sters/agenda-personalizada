@@ -2,10 +2,13 @@
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 
 import finTiempo from "../../assets/sonidos/fin-tiempo.wav";
+import refuerzo from "../../assets/sonidos/refuerzo.wav";
 
 const SONIDOS = {
   /** Campanita de dos notas al acabarse el tiempo de una tarea (HU-09, RF6.7). */
   finTiempo,
+  /** Arpegio suave de cuatro notas al terminar una tarea (HU-08, RF6.4). */
+  refuerzo,
 } as const;
 
 export type NombreSonido = keyof typeof SONIDOS;
