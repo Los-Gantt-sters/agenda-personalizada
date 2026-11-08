@@ -1,6 +1,7 @@
 // Agenda del día completa (T-06.2, HU-06): une el estado reactivo (useAgendaDia), la vista de tres
 // bloques (T-06.1) y el detalle de la tarea. La pantalla app/agenda.tsx le pasa el repositorio.
 // T-08.1 (HU-08): «Empezar» y «Terminar»; al terminar, refuerzo positivo según el perfil (RF6.4).
+// T-08.2: el modo antitoques (mantener 1,5 s o «¿Seguro?») también sale del perfil (RNF6.1).
 import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import type { EntradaAgenda, RepositorioAgenda } from "./tipos";
@@ -77,6 +78,7 @@ export function AgendaDelDia({
         bloques={bloques}
         onEmpezar={empezar}
         onConfirmarFin={terminar}
+        confirmacion={preferencias.confirmacion}
         onAbrir={(e: EntradaAgenda) => setAbiertaId(e.id)}
       />
       {/* Aviso discreto solo si algo falla; no tapa la tarea de «Ahora». */}

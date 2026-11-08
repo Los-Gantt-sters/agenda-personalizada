@@ -2,6 +2,14 @@ import { act, fireEvent, render, screen, userEvent, waitFor } from "@testing-lib
 
 import PantallaAgenda from "../agenda";
 import { reproducirSonido } from "../../src/servicios/sonidos";
+import {
+  AgendaDelDia,
+  ESTUDIANTE_DEMO,
+  agendaDemo,
+  crearRepositorioMemoria,
+  hoyISO,
+} from "../../src/componentes/agenda";
+import { PREFERENCIAS_EJECUCION_POR_DEFECTO } from "../../src/componentes/ejecucion-tarea";
 
 // La primera prueba compila el reloj (SVG) y la agenda: sin caché de Jest (CI) tarda más de 5 s.
 jest.setTimeout(20_000);
@@ -16,6 +24,8 @@ jest.mock("expo-router", () => ({
 }));
 
 const etiqueta = (id: string) => screen.getByTestId(id).props.accessibilityLabel;
+// T-08.2: un botón recién aparecido no hace caso durante 0,8 s (antitoques).
+const pasaElBloqueo = () => act(() => new Promise<void>((r) => setTimeout(r, 850)));
 const activar = (boton: ReturnType<typeof screen.getByRole>) =>
   fireEvent(boton, "accessibilityAction", { nativeEvent: { actionName: "activate" } });
 
@@ -44,8 +54,11 @@ describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
   it("al confirmar el fin, la tarea pasa a Hecho y la siguiente a Ahora (RF4.3, T-06.2)", async () => {
     await render(<PantallaAgenda />);
     // Con lector de pantalla basta con activar el botón (sin mantenerlo pulsado).
+    await pasaElBloqueo();
     await activar(await screen.findByRole("button", { name: "Empezar" }));
-    await activar(await screen.findByRole("button", { name: "Terminar" }));
+    await screen.findByRole("button", { name: "Terminar" });
+    await pasaElBloqueo();
+    await activar(screen.getByRole("button", { name: "Terminar" }));
 
     await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
     expect(etiqueta("bloque-hecho")).toBe("Hecho: Asamblea, Lavarse las manos");
@@ -88,8 +101,11 @@ describe("Pantalla agenda del día (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)
 
   it("BDD: al pulsar Terminar sale el refuerzo positivo con sonido y Seguir vuelve a la agenda", async () => {
     await render(<PantallaAgenda />);
+    await pasaElBloqueo();
     await activar(await screen.findByRole("button", { name: "Empezar" }));
-    await activar(await screen.findByRole("button", { name: "Terminar" }));
+    await screen.findByRole("button", { name: "Terminar" });
+    await pasaElBloqueo();
+    await activar(screen.getByRole("button", { name: "Terminar" }));
 
     expect(await screen.findByText("¡Muy bien!")).toBeTruthy();
     expect(screen.getByText("Has terminado: Lavarse las manos")).toBeTruthy();
@@ -102,8 +118,11 @@ describe("Pantalla agenda del día (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)
 
   it("si el tutor no pide registrar el inicio (RF6.8), sale directamente Terminar", async () => {
     await render(<PantallaAgenda />);
+    await pasaElBloqueo();
     await activar(await screen.findByRole("button", { name: "Empezar" }));
-    await activar(await screen.findByRole("button", { name: "Terminar" }));
+    await screen.findByRole("button", { name: "Terminar" });
+    await pasaElBloqueo();
+    await activar(screen.getByRole("button", { name: "Terminar" }));
     await userEvent.setup().press(await screen.findByRole("button", { name: "Seguir ➜" }));
 
     // «Desayuno» no lo pide.
@@ -116,5 +135,31 @@ describe("Pantalla agenda del día (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)
     await render(<PantallaAgenda />);
     await activar(await screen.findByRole("button", { name: "Empezar" }));
     expect(JSON.stringify(screen.toJSON())).not.toContain('"type":"TextInput"');
+  });
+});
+
+describe("Pantalla agenda del día (SCRUM-75: T-08.2 Antitoques accidentales)", () => {
+  it("con el modo simple del perfil, Empezar pregunta «¿Seguro?» antes de ponerla en curso", async () => {
+    const user = userEvent.setup();
+    const { repo } = crearRepositorioMemoria(agendaDemo(hoyISO()));
+    await render(
+      <AgendaDelDia
+        repo={repo}
+        estudianteId={ESTUDIANTE_DEMO}
+        preferencias={{
+          ...PREFERENCIAS_EJECUCION_POR_DEFECTO,
+          confirmacion: { ...PREFERENCIAS_EJECUCION_POR_DEFECTO.confirmacion, modo: "simple" },
+        }}
+      />,
+    );
+    await screen.findByRole("button", { name: "Empezar" });
+    await pasaElBloqueo();
+
+    await user.press(screen.getByRole("button", { name: "Empezar" }));
+    expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos");
+    await user.press(screen.getByRole("button", { name: "Sí, empezar" }));
+    await waitFor(() =>
+      expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos, en curso"),
+    );
   });
 });
