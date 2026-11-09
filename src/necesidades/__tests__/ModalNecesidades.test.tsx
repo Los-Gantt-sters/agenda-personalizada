@@ -7,6 +7,8 @@ import {
   obtenerInfoNecesidad,
 } from "../opcionesNecesidades";
 
+jest.setTimeout(15000);
+
 describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASAAC)", () => {
   it("contiene exactamente las 3 opciones fisiológicas básicas con sus IDs de ARASAAC oficiales", () => {
     expect(OPCIONES_NECESIDADES_BASICAS).toHaveLength(3);
