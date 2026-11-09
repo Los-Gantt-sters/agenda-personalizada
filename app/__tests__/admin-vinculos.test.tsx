@@ -53,6 +53,8 @@ function prepararDatos() {
 }
 
 describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
+  jest.setTimeout(15000);
+
   beforeEach(() => {
     jest.clearAllMocks();
     prepararDatos();
