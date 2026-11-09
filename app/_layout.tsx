@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { ProveedorNecesidades } from "../src/necesidades";
 import { PreferenciasProvider, useFuentesPreferencias } from "../src/preferencias";
+import { SesionProvider } from "../src/sesion";
 import { TemaProvider } from "../src/temas";
 
 export default function RootLayout() {
@@ -10,9 +11,11 @@ export default function RootLayout() {
   return (
     <TemaProvider>
       <PreferenciasProvider>
-        <ProveedorNecesidades>
-          <Stack />
-        </ProveedorNecesidades>
+        <SesionProvider>
+          <ProveedorNecesidades>
+            <Stack />
+          </ProveedorNecesidades>
+        </SesionProvider>
       </PreferenciasProvider>
     </TemaProvider>
   );
