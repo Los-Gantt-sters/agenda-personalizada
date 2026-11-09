@@ -1,0 +1,10 @@
+node_modules
+.expo
+android
+ios
+dist
+package-lock.json
+docs
+*.md
+docs/Prototipo/**
+.vercel

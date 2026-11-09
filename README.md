@@ -14,7 +14,7 @@ Facilitar la organización y estructuración del tiempo de los estudiantes del P
 
 - Personalizar la lista de tareas y avisar del tiempo.
 - Asignar tareas del centro (reprografía, comedor, menú mensual y guía de visitas) y crear tareas personales con imagen, horario y descripción en un formato accesible.
-- Adaptar la interfaz a cada estudiante mediante perfiles (colores, tipografía, posición de botones, pictogramas de ARASAAC).
+- Adaptar la interfaz a cada estudiante mediante perfiles (colores, tipografía, pictogramas de ARASAAC).
 - Distinguir tres tipos de usuario: administrador, tutor y estudiante.
 
 La aplicación debe cumplir la normativa de accesibilidad y la ley de protección de datos.
@@ -38,6 +38,25 @@ Los roles pueden rotar entre iteraciones, salvo el de gestor de calidad y el de 
 
 El proyecto sigue un desarrollo iterativo en tres iteraciones, con gestión ágil del proyecto (Scrum), historias de usuario, prototipado y evaluación con usuarios siguiendo un diseño centrado en el usuario. Los sprints, el Product Backlog y las tareas se gestionan en Jira.
 
+### Flujo de ramas
+
+Cada historia tiene su rama y cada subtarea va en una subrama que sale de la de su historia. Los nombres son los que genera Jira al crear la rama: `SCRUM-<número>-<título>`.
+
+```
+main
+└── SCRUM-49-hu-01-inicio-de-sesion-accesible-…        ← rama de la historia
+    ├── SCRUM-50-t-01-1-ux-frontend-cuadricula-…       ← subrama de una subtarea
+    └── SCRUM-51-t-01-2-backend-endpoint-de-login-…    ← subrama de otra subtarea
+```
+
+1. **Antes de empezar una subtarea**, comprueba si ya existe la rama de su historia. Si no existe, créala desde `main` actualizada.
+2. **Crea la subrama desde la rama de la historia** (no desde `main`) y trabaja en ella. Los commits citan la tarea: `SCRUM-51: …`.
+3. **Abre el pull request de la subtarea contra la rama de la historia.** El flujo automático debe quedar en verde y la revisión sigue el Plan de calidad.
+4. **Cuando todas las subtareas estén unidas**, se abre el pull request de la historia contra `main`.
+5. Las ramas ya unidas se borran para mantener limpio el repositorio.
+
+Los cambios que no pertenecen a ninguna historia (documentación, configuración) van en una rama propia desde `main`, por ejemplo `docs/…`.
+
 ## Tecnologías
 
 | Ámbito | Herramienta |
@@ -46,7 +65,7 @@ El proyecto sigue un desarrollo iterativo en tres iteraciones, con gestión ági
 | Front-end | Native |
 | Backend y base de datos | Supabase (base de datos PostgreSQL, autenticación, almacenamiento y tiempo real) |
 | Despliegue | Vercel |
-| Control de versiones | Git y GitHub, con `master` como rama del trabajo definitivo y una rama paralela por tarea |
+| Control de versiones | Git y GitHub, con `main` como rama del trabajo definitivo, una rama por historia y una subrama por subtarea (ver [Flujo de ramas](#flujo-de-ramas)) |
 | Calidad de código | ESLint y Prettier |
 | Integración continua | GitHub Actions: compila, ejecuta las pruebas y comprueba ESLint y Prettier en cada pull request |
 | Editor | Visual Studio Code |
@@ -65,11 +84,27 @@ El repositorio está en fase inicial. Esta es la estructura prevista y se actual
 .
 ├── .github/workflows/   # Flujo de integración continua (compilación, pruebas, ESLint y Prettier)
 ├── .vscode/             # Ajustes y extensiones recomendadas de Visual Studio Code
-├── docs/                # Documentación: PDF finales de propuestas, manual, plan de calidad y entregas
+├── docs/                # Documentación en PDF (dgp/, mda/) y prototipo HTML; índice en docs/README.md
+├── app/                 # Pantallas (Expo Router: cada archivo es una ruta)
+│   └── __tests__/       # Pruebas de las pantallas
+├── assets/              # Iconos, imágenes y sonidos
 ├── src/                 # Código de la aplicación
-├── tests/               # Pruebas unitarias y de integración
+│   ├── componentes/     # Componentes reutilizables, cada uno con su carpeta __tests__/
+│   └── servicios/        # Capa de acceso a Supabase (back-end), con su carpeta __tests__/
 └── README.md
 ```
+
+### Dónde van las pruebas
+
+Cada prueba va en una carpeta `__tests__/` **junto al código que prueba**:
+
+| Qué se prueba | Dónde | Ejemplo |
+|---|---|---|
+| Una pantalla (integración de varios componentes) | `app/__tests__/` | `app/__tests__/login.test.tsx` |
+| Un componente y su lógica (unitarias) | `src/componentes/<componente>/__tests__/` | `src/componentes/reloj-visual/__tests__/RelojVisual.test.tsx` |
+| Un servicio del back-end (acceso a Supabase) | `src/servicios/__tests__/` | `src/servicios/__tests__/authService.test.ts` |
+
+Así nunca hay dudas de dónde va una prueba, los `import` son cortos (`../RelojVisual`) y la capa de back-end queda separada como pide el Plan de calidad (RNF16.6). Jest encuentra cualquier `*.test.ts(x)` dentro de una carpeta `__tests__`; se ejecutan todas con `npm test`.
 
 ## Documentación
 
@@ -77,10 +112,8 @@ El repositorio está en fase inicial. Esta es la estructura prevista y se actual
 |---|---|
 | Tablero y Product Backlog en Jira | [Backlog](https://gantt-sters.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog) y [tablero de trabajo](https://gantt-sters.atlassian.net/jira/software/projects/SCRUM/boards/1) |
 | Documentación compartida del equipo | [Carpeta DGP-MDA en Google Drive](https://drive.google.com/drive/folders/1pVqvauxM2EXDeXHBzrr1V0hjfa7VoFjG) (acceso restringido al equipo y al profesorado) |
-| Propuesta técnica y Propuesta de solución | Carpeta `docs/` y carpeta correspondiente de Drive |
-| Manual de coordinación | Carpeta `docs/` y carpeta correspondiente de Drive |
-| Plan de calidad | Carpeta `docs/` y carpeta correspondiente de Drive |
-| Entregas de las prácticas y actas de reunión | Carpetas de cada práctica y de actas en Drive |
+| Propuestas, manual de coordinación, plan de calidad, accesibilidad, prácticas y planificación (PDF) | [`docs/`](docs/README.md) |
+| Fuentes LaTeX, actas de reunión y hojas de cálculo | Carpeta DGP-MDA de Drive |
 
 ## Licencia
 
