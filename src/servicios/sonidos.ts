@@ -1,10 +1,13 @@
 // Servicio de sonidos de la app (base de T-T03.3). Todos los sonidos son suaves y no estridentes.
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 
+import aviso from "../../assets/sonidos/aviso.wav";
 import finTiempo from "../../assets/sonidos/fin-tiempo.wav";
 import refuerzo from "../../assets/sonidos/refuerzo.wav";
 
 const SONIDOS = {
+  /** Dos notas suaves que suben, 5 minutos antes de la siguiente tarea (HU-16, RNF4.3). */
+  aviso,
   /** Campanita de dos notas al acabarse el tiempo de una tarea (HU-09, RF6.7). */
   finTiempo,
   /** Arpegio suave de cuatro notas al terminar una tarea (HU-08, RF6.4). */
