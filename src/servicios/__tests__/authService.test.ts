@@ -6,7 +6,7 @@ import {
   normalizeRole,
 } from "../authService";
 import { supabase } from "../../lib/supabaseClient";
-import { AUTH_GENERIC_ERROR_MESSAGE } from "../../types/auth";
+import { AUTH_GENERIC_ERROR_MESSAGE } from "../../tipos/auth";
 
 jest.mock("../../lib/supabaseClient", () => {
   return {
@@ -132,7 +132,7 @@ describe("authService - SCRUM-56 (Backend JWT, bcrypt & RBAC)", () => {
           session: {
             access_token: "jwt-activo",
             refresh_token: "refresh-activo",
-            expires_at: 1761900000,
+            expires_at: 4102444800, // 2100-01-01: sesión vigente
             user: {
               id: "admin-1",
               email: "admin@purisima.es",

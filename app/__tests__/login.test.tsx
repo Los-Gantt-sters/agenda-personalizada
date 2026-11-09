@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import LoginScreen from "../login";
-import * as authService from "../../src/services/authService";
+import * as authService from "../../src/servicios/authService";
 
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
@@ -13,7 +13,7 @@ jest.mock("expo-router", () => ({
   }),
 }));
 
-jest.mock("../../src/services/authService", () => ({
+jest.mock("../../src/servicios/authService", () => ({
   signInSupervisor: jest.fn(),
   getRoleHomeRoute: jest.fn((role) => {
     if (role === "admin") return "/admin/dashboard";
