@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 import { RelojVisual } from "../RelojVisual";
 import { reproducirSonido } from "../../../servicios/sonidos";
+import { TEMAS, TemaProvider, type NombreTema } from "../../../temas";
 
 // Se sustituye el servicio de sonidos por una función falsa: así no se reproduce audio
 // de verdad y se puede comprobar cuántas veces se ha pedido sonar la campanita
@@ -88,5 +90,43 @@ describe("RelojVisual - HU-09 (Time Timer)", () => {
     await rerender(reloj(MINUTO));
 
     expect(reproducirSonido).not.toHaveBeenCalled();
+  });
+});
+
+describe("RelojVisual - colores del tema activo (NC-004)", () => {
+  const colorDelRotulo = () =>
+    StyleSheet.flatten(screen.getByText("Quedan 15 minutos").props.style).color;
+
+  it.each<NombreTema>(["oscuro", "altoContrasteOscuro", "claro", "pastel"])(
+    "en el tema %s el rótulo usa el color de texto del tema",
+    async (nombre) => {
+      await render(
+        <TemaProvider temaInicial={nombre}>
+          <RelojVisual duracionMs={30 * MINUTO} transcurridoMs={15 * MINUTO} />
+        </TemaProvider>,
+      );
+
+      expect(colorDelRotulo()).toBe(TEMAS[nombre].paleta.texto);
+    },
+  );
+
+  it("fuera de un tema mantiene los colores de siempre", async () => {
+    await render(<RelojVisual duracionMs={30 * MINUTO} transcurridoMs={15 * MINUTO} />);
+
+    expect(colorDelRotulo()).toBe("#14213d");
+  });
+
+  it("los colores pasados a mano siguen teniendo prioridad sobre el tema", async () => {
+    await render(
+      <TemaProvider temaInicial="oscuro">
+        <RelojVisual
+          duracionMs={30 * MINUTO}
+          transcurridoMs={15 * MINUTO}
+          colores={{ tinta: "#123456" }}
+        />
+      </TemaProvider>,
+    );
+
+    expect(colorDelRotulo()).toBe("#123456");
   });
 });
