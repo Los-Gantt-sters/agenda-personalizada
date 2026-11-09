@@ -186,23 +186,6 @@ export const ModalConfirmacionEstudiante: React.FC<ModalConfirmacionEstudiantePr
             >
               <Text style={estilos.textoBotonBorrar}>⌫ Borrar dibujo</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[estilos.botonAccion, estilos.botonConfirmar]}
-              accessibilityRole="button"
-              accessibilityLabel={`Sí, soy ${estudiante.nombre}`}
-              testID="btn-confirmar-estudiante"
-              onPress={() =>
-                alConfirmar(
-                  estudiante,
-                  secuenciaSeleccionada.length === LONGITUD_SECUENCIA_DIBUJOS
-                    ? secuenciaSeleccionada
-                    : (estudiante.secuenciaDibujosDemo ?? ["manzana", "perro", "estrella"]),
-                )
-              }
-            >
-              <Text style={estilos.textoBotonConfirmar}>✓ Sí, soy yo</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -394,13 +377,5 @@ const estilos = StyleSheet.create({
     color: "#2D3748",
     fontSize: 16,
     fontWeight: "700",
-  },
-  botonConfirmar: {
-    backgroundColor: "#2E7D32",
-  },
-  textoBotonConfirmar: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
   },
 });
