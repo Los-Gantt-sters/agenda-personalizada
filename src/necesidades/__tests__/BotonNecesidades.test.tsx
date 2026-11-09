@@ -77,4 +77,17 @@ describe("BotonNecesidades (SCRUM-86: T-18.1 Botón flotante accesible fijado)",
 
     expect(estilosAplanados.backgroundColor).toBe("#FF5A5A");
   });
+
+  it("adapta su contenido según el canal visual (soloPictograma vs soloTexto)", async () => {
+    const { rerender } = await render(
+      <BotonNecesidades onPress={jest.fn()} canal="soloPictograma" />,
+    );
+
+    expect(screen.getByText("✋")).toBeTruthy();
+    expect(screen.queryByText("Ayuda")).toBeNull();
+
+    await rerender(<BotonNecesidades onPress={jest.fn()} canal="soloTexto" />);
+    expect(screen.queryByText("✋")).toBeNull();
+    expect(screen.getByText("Ayuda")).toBeTruthy();
+  });
 });
