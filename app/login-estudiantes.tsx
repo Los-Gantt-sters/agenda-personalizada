@@ -119,7 +119,10 @@ export default function LoginEstudiantesScreen({
 
             <TouchableOpacity
               style={estilos.botonVolverInicio}
-              onPress={() => router.push("/")}
+              onPress={() => {
+                reproducirSonido("toque"); // T-01.3: feedback sonoro coherente en todos los botones
+                router.push("/");
+              }}
               accessibilityRole="button"
               accessibilityLabel="Volver a la pantalla de bienvenida"
             >
@@ -139,6 +142,7 @@ export default function LoginEstudiantesScreen({
               <TouchableOpacity
                 style={estilos.botonCambiarClase}
                 onPress={() => {
+                  reproducirSonido("toque"); // T-01.3: feedback sonoro coherente en todos los botones
                   setClaseSeleccionada(null);
                   setEstudiantePendiente(null);
                 }}
