@@ -22,6 +22,7 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
   posicion = "inferior-izquierda",
   tamanio = 84, // Tamaño estándar del prototipo 84x84 px (>= 48x48 px de WCAG RNF14.3)
   variante = "estandar",
+  canal = "ambos",
   etiqueta = "Ayuda",
   testID = "btn-necesidades-flotante",
 }) => {
@@ -37,6 +38,9 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
 
   const colorTexto = esAltoContraste ? "#000000" : "#FFFFFF";
   const colorBorde = esAltoContraste ? "#FFFFFF" : "#FFFFFF";
+
+  const verDibujo = canal !== "soloTexto";
+  const verTexto = canal !== "soloPictograma";
 
   return (
     <TouchableOpacity
@@ -58,10 +62,28 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
         },
       ]}
     >
-      <Text style={estilos.iconoMano}>✋</Text>
-      <Text style={[estilos.textoEtiqueta, { color: colorTexto }]} numberOfLines={1}>
-        {etiqueta}
-      </Text>
+      {verDibujo && (
+        <Text
+          style={[
+            estilos.iconoMano,
+            canal === "soloPictograma" && { fontSize: 40, lineHeight: 44 },
+          ]}
+        >
+          ✋
+        </Text>
+      )}
+      {verTexto && (
+        <Text
+          style={[
+            estilos.textoEtiqueta,
+            { color: colorTexto },
+            canal === "soloTexto" && { fontSize: 18 },
+          ]}
+          numberOfLines={1}
+        >
+          {etiqueta}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };
