@@ -247,6 +247,29 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
     tipo: "texto",
     pares: [["#FFFFFF", "#005A1E"]],
   },
+
+  // ---- Reloj visual (HU-09, NC-004): tinta = texto, disco = superficie, sector = peligro ----
+  {
+    id: "reloj-rotulo",
+    elemento: "Rótulo «Quedan X minutos» bajo el reloj",
+    usoEn: "RelojVisual",
+    tipo: "texto",
+    pares: [["texto", "fondo"]],
+  },
+  {
+    id: "reloj-sector",
+    elemento: "Sector de tiempo restante sobre el disco",
+    usoEn: "RelojVisual",
+    tipo: "componente",
+    pares: [["peligro", "superficie"]],
+  },
+  {
+    id: "reloj-marcas",
+    elemento: "Borde y marcas horarias sobre el disco",
+    usoEn: "RelojVisual",
+    tipo: "componente",
+    pares: [["texto", "superficie"]],
+  },
 ];
 
 export interface ResultadoContraste {
