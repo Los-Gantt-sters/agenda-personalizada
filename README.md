@@ -38,6 +38,25 @@ Los roles pueden rotar entre iteraciones, salvo el de gestor de calidad y el de 
 
 El proyecto sigue un desarrollo iterativo en tres iteraciones, con gestión ágil del proyecto (Scrum), historias de usuario, prototipado y evaluación con usuarios siguiendo un diseño centrado en el usuario. Los sprints, el Product Backlog y las tareas se gestionan en Jira.
 
+### Flujo de ramas
+
+Cada historia tiene su rama y cada subtarea va en una subrama que sale de la de su historia. Los nombres son los que genera Jira al crear la rama: `SCRUM-<número>-<título>`.
+
+```
+main
+└── SCRUM-49-hu-01-inicio-de-sesion-accesible-…        ← rama de la historia
+    ├── SCRUM-50-t-01-1-ux-frontend-cuadricula-…       ← subrama de una subtarea
+    └── SCRUM-51-t-01-2-backend-endpoint-de-login-…    ← subrama de otra subtarea
+```
+
+1. **Antes de empezar una subtarea**, comprueba si ya existe la rama de su historia. Si no existe, créala desde `main` actualizada.
+2. **Crea la subrama desde la rama de la historia** (no desde `main`) y trabaja en ella. Los commits citan la tarea: `SCRUM-51: …`.
+3. **Abre el pull request de la subtarea contra la rama de la historia.** El flujo automático debe quedar en verde y la revisión sigue el Plan de calidad.
+4. **Cuando todas las subtareas estén unidas**, se abre el pull request de la historia contra `main`.
+5. Las ramas ya unidas se borran para mantener limpio el repositorio.
+
+Los cambios que no pertenecen a ninguna historia (documentación, configuración) van en una rama propia desde `main`, por ejemplo `docs/…`.
+
 ## Tecnologías
 
 | Ámbito | Herramienta |
@@ -46,7 +65,7 @@ El proyecto sigue un desarrollo iterativo en tres iteraciones, con gestión ági
 | Front-end | Native |
 | Backend y base de datos | Supabase (base de datos PostgreSQL, autenticación, almacenamiento y tiempo real) |
 | Despliegue | Vercel |
-| Control de versiones | Git y GitHub, con `master` como rama del trabajo definitivo y una rama paralela por tarea |
+| Control de versiones | Git y GitHub, con `main` como rama del trabajo definitivo, una rama por historia y una subrama por subtarea (ver [Flujo de ramas](#flujo-de-ramas)) |
 | Calidad de código | ESLint y Prettier |
 | Integración continua | GitHub Actions: compila, ejecuta las pruebas y comprueba ESLint y Prettier en cada pull request |
 | Editor | Visual Studio Code |
