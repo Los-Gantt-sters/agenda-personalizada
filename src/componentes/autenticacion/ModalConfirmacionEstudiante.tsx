@@ -77,6 +77,7 @@ export const ModalConfirmacionEstudiante: React.FC<ModalConfirmacionEstudiantePr
   };
 
   const manejarCancelar = () => {
+    reproducirSonido("toque"); // T-01.3: «No soy yo» también suena, como el resto de botones
     setEstadoSecuencia({ alumnoId: null, dibujos: [] });
     alCancelar();
   };
@@ -198,14 +199,15 @@ export const ModalConfirmacionEstudiante: React.FC<ModalConfirmacionEstudiantePr
               accessibilityRole="button"
               accessibilityLabel={`Sí, soy ${estudiante.nombre}`}
               testID="btn-confirmar-estudiante"
-              onPress={() =>
+              onPress={() => {
+                reproducirSonido("acierto"); // T-01.3: mismo sonido que al completar los 3 dibujos
                 alConfirmar(
                   estudiante,
                   secuenciaSeleccionada.length === LONGITUD_SECUENCIA_DIBUJOS
                     ? secuenciaSeleccionada
                     : (estudiante.secuenciaDibujosDemo ?? ["manzana", "perro", "estrella"]),
-                )
-              }
+                );
+              }}
             >
               <Text style={estilos.textoBotonConfirmar}>✓ Sí, soy yo</Text>
             </TouchableOpacity>
