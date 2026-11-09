@@ -2,6 +2,7 @@
 // agenda se cargue desde Supabase (T-06.2). Los pictogramas son emojis; con datos reales,
 // pictograma_url apunta a ARASAAC o a una foto.
 // HU-08: «Lavarse las manos» y «Reprografía» piden pulsar «Empezar» antes de «Terminar» (RF6.8).
+// HU-16: agendaDemoAviso mueve las horas para probar el aviso de 5 minutos sin esperar.
 import type { EntradaAgenda, Tarea } from "./tipos";
 
 const T = (id: string, titulo: string, emoji: string, extra: Partial<Tarea> = {}): Tarea => ({
@@ -68,4 +69,21 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     tarea,
     requiere_inicio_fin: conInicioFin.has(tarea.id),
   }));
+}
+
+/**
+ * HU-16: la misma agenda con las horas movidas para que «Reprografía» empiece en el primer minuto
+ * en punto que esté a más de 5 min y 10 s. Así el aviso sale en menos de un minuto. Las tareas de
+ * antes ya han empezado, así que «Reprografía» es la siguiente.
+ */
+export function agendaDemoAviso(fecha: string, ahora: Date = new Date()): EntradaAgenda[] {
+  const inicio = new Date(Math.ceil((ahora.getTime() + 310_000) / 60_000) * 60_000);
+  const base = inicio.getHours() * 60 + inicio.getMinutes();
+  // Minutos respecto a «Reprografía» (cuarta tarea), respetando la duración de cada una.
+  const desfase = [-105, -75, -30, 0, 45, 75];
+  return agendaDemo(fecha).map((e, i) => {
+    const t = Math.max(0, base + desfase[i]);
+    const hora = `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+    return { ...e, hora_inicio: hora };
+  });
 }
