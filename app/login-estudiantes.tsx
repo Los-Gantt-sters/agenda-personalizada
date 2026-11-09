@@ -7,12 +7,19 @@ import {
   CuadriculaEstudiantes,
   ModalConfirmacionEstudiante,
 } from "../src/componentes/autenticacion";
+import { signInEstudianteConDibujos } from "../src/servicios/authService";
 import { reproducirSonido } from "../src/servicios/sonidos";
 import {
   obtenerAlumnoTableta,
   olvidarAlumnoTableta,
   recordarAlumnoTableta,
 } from "../src/servicios/tabletaPersonal";
+import type { AuthResult } from "../src/tipos/auth";
+
+// Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
+const MENSAJE_SECUENCIA_INCORRECTA = "No es esa. Prueba otra vez";
+// La agenda del alumno (HU-06) aún no está en esta rama; mientras tanto, la demo del reloj
+const RUTA_AGENDA_ESTUDIANTE = "/demo-reloj";
 
 export interface LoginEstudiantesScreenProps {
   /**
@@ -38,6 +45,9 @@ export default function LoginEstudiantesScreen({
   const [claseSeleccionada, setClaseSeleccionada] = useState<Clase | null>(null);
   const [estudiantePendiente, setEstudiantePendiente] = useState<Estudiante | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [mensajeError, setMensajeError] = useState<string | null>(null);
+  // Cambia en cada fallo para volver a montar el modal con la secuencia vacía
+  const [intentosFallidos, setIntentosFallidos] = useState(0);
 
   // Filtrar estudiantes por clase seleccionada
   const estudiantesDeClase = claseSeleccionada
@@ -67,24 +77,46 @@ export default function LoginEstudiantesScreen({
   };
 
   const handleSeleccionarEstudiante = (estudiante: Estudiante) => {
+    setMensajeError(null);
     setEstudiantePendiente(estudiante);
     setModalVisible(true);
   };
 
   const handleConfirmarEstudiante = async (estudiante: Estudiante, secuenciaDibujos: string[]) => {
-    setModalVisible(false);
-    if (modoTabletaPersonal) await recordarAlumnoTableta(estudiante.id);
     if (alCompletarCredencialVisual) {
+      setModalVisible(false);
+      if (modoTabletaPersonal) await recordarAlumnoTableta(estudiante.id);
       await alCompletarCredencialVisual(estudiante.id, secuenciaDibujos);
       return;
     }
-    // Acceso por defecto a la agenda del estudiante en modo prototipo
-    router.push("/demo-reloj");
+
+    // SCRUM-51: Supabase Auth comprueba la secuencia; la app nunca conoce la correcta
+    let resultado: AuthResult | null = null;
+    try {
+      resultado = await signInEstudianteConDibujos(estudiante.id, secuenciaDibujos);
+    } catch {
+      // Sin conexión u otro fallo: para el alumno es igual que una secuencia incorrecta
+      resultado = null;
+    }
+
+    if (!resultado?.success) {
+      setMensajeError(MENSAJE_SECUENCIA_INCORRECTA);
+      setIntentosFallidos((n) => n + 1);
+      return;
+    }
+
+    setMensajeError(null);
+    setModalVisible(false);
+    // La tableta solo recuerda al alumno cuando ha entrado de verdad
+    if (modoTabletaPersonal) await recordarAlumnoTableta(estudiante.id);
+    // replace: con «atrás» no se vuelve a la pantalla de acceso
+    router.replace(RUTA_AGENDA_ESTUDIANTE);
   };
 
   const handleCancelarConfirmacion = () => {
     // "No soy yo": la tableta deja de recordar a este alumno y se vuelve a la cuadrícula
     if (modoTabletaPersonal) void olvidarAlumnoTableta();
+    setMensajeError(null);
     setModalVisible(false);
     setEstudiantePendiente(null);
   };
@@ -173,10 +205,12 @@ export default function LoginEstudiantesScreen({
 
         {/* Modal de credencial visual de 3 dibujos al pulsar fotografía (RF1.1, RF1.2, RF1.7) */}
         <ModalConfirmacionEstudiante
+          key={`${estudiantePendiente?.id ?? "ninguno"}-${intentosFallidos}`}
           estudiante={estudiantePendiente}
           visible={modalVisible}
           alConfirmar={handleConfirmarEstudiante}
           alCancelar={handleCancelarConfirmacion}
+          mensajeError={mensajeError}
         />
       </View>
     </SafeAreaView>
