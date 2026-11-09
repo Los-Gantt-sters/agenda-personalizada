@@ -20,10 +20,14 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
   alConfirmarAvisoEnviado,
   nombreTutora = "Carmen",
   variante = "estandar",
+  canal = "ambos",
   mostrarImagenArasaac = true,
 }) => {
   const esAltoContraste = variante === "alto-contraste";
   const esPastel = variante === "pastel";
+
+  const verDibujo = canal !== "soloTexto";
+  const verTexto = canal !== "soloPictograma";
 
   // Colores dinámicos según tema (claro / pastel / alto contraste)
   const colorFondoHoja = esAltoContraste ? "#0B0B0B" : esPastel ? "#FBFFFD" : "#FFFFFF";
@@ -74,7 +78,17 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
             >
               {/* Cabecera del modal (ahead en tuagendita-prototipos.html) */}
               <View style={estilos.cabecera}>
-                <Text style={[estilos.tituloModal, { color: colorTexto }]}>¿Qué necesitas?</Text>
+                {verTexto ? (
+                  <Text style={[estilos.tituloModal, { color: colorTexto }]}>¿Qué necesitas?</Text>
+                ) : (
+                  <Text
+                    style={estilos.tituloModalPictograma}
+                    accessibilityLabel="¿Qué necesitas?"
+                    testID="titulo-modal-solo-picto"
+                  >
+                    ✋ ❓
+                  </Text>
+                )}
               </View>
 
               {/* Cuadrícula de 3 opciones gigantes ARASAAC: Baño, Agua, Descanso (needgrid) */}
@@ -96,21 +110,46 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
                       },
                     ]}
                   >
-                    <View style={estilos.contenedorPictograma}>
-                      {mostrarImagenArasaac && (
-                        <Image
-                          source={{ uri: opcion.urlPictograma }}
-                          style={estilos.imagenPictograma}
-                          accessibilityLabel={opcion.descripcionAlternativa}
-                          testID={`img-arasaac-${opcion.arasaacId}`}
-                        />
-                      )}
-                      <Text style={estilos.simboloPictograma}>{opcion.simbolo}</Text>
-                    </View>
+                    {verDibujo && (
+                      <View
+                        style={[
+                          estilos.contenedorPictograma,
+                          canal === "soloPictograma" && estilos.contenedorPictogramaGigante,
+                        ]}
+                      >
+                        {mostrarImagenArasaac && (
+                          <Image
+                            source={{ uri: opcion.urlPictograma }}
+                            style={[
+                              estilos.imagenPictograma,
+                              canal === "soloPictograma" && estilos.imagenPictogramaGigante,
+                            ]}
+                            accessibilityLabel={opcion.descripcionAlternativa}
+                            testID={`img-arasaac-${opcion.arasaacId}`}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            estilos.simboloPictograma,
+                            canal === "soloPictograma" && { fontSize: 56 },
+                          ]}
+                        >
+                          {opcion.simbolo}
+                        </Text>
+                      </View>
+                    )}
 
-                    <Text style={[estilos.etiquetaOpcion, { color: colorTexto }]}>
-                      {opcion.etiqueta}
-                    </Text>
+                    {verTexto && (
+                      <Text
+                        style={[
+                          estilos.etiquetaOpcion,
+                          { color: colorTexto },
+                          canal === "soloTexto" && { fontSize: 24, lineHeight: 30 },
+                        ]}
+                      >
+                        {opcion.etiqueta}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -130,8 +169,24 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
                   },
                 ]}
               >
-                <Text style={estilos.iconoUrgencia}>🆘</Text>
-                <Text style={[estilos.textoUrgencia, { color: colorTextoUrgencia }]}>Urgencia</Text>
+                {verDibujo && (
+                  <Text
+                    style={[estilos.iconoUrgencia, canal === "soloPictograma" && { fontSize: 44 }]}
+                  >
+                    🆘
+                  </Text>
+                )}
+                {verTexto && (
+                  <Text
+                    style={[
+                      estilos.textoUrgencia,
+                      { color: colorTextoUrgencia },
+                      canal === "soloTexto" && { fontSize: 26 },
+                    ]}
+                  >
+                    Urgencia
+                  </Text>
+                )}
               </TouchableOpacity>
 
               {/* Botón de cerrar modal */}
@@ -148,7 +203,9 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
                   },
                 ]}
               >
-                <Text style={[estilos.textoCerrar, { color: colorTexto }]}>✗ Cerrar</Text>
+                <Text style={[estilos.textoCerrar, { color: colorTexto }]}>
+                  {canal === "soloPictograma" ? "✗" : canal === "soloTexto" ? "Cerrar" : "✗ Cerrar"}
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           ) : (
@@ -164,10 +221,14 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
                     },
                   ]}
                 >
-                  <Text style={estilos.simboloGrandeConfirmacion}>{infoEnviada?.simbolo}</Text>
-                  <Text style={[estilos.pieFiguraConfirmacion, { color: colorTexto }]}>
-                    {infoEnviada?.etiqueta}
-                  </Text>
+                  {verDibujo && (
+                    <Text style={estilos.simboloGrandeConfirmacion}>{infoEnviada?.simbolo}</Text>
+                  )}
+                  {verTexto && (
+                    <Text style={[estilos.pieFiguraConfirmacion, { color: colorTexto }]}>
+                      {infoEnviada?.etiqueta}
+                    </Text>
+                  )}
                 </View>
 
                 <Text style={[estilos.flechaFlujo, { color: colorTexto }]}>➜</Text>
@@ -181,21 +242,25 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
                     },
                   ]}
                 >
-                  <Text style={estilos.simboloGrandeConfirmacion}>👩‍🏫</Text>
-                  <Text style={[estilos.pieFiguraConfirmacion, { color: colorTexto }]}>
-                    ✓{" "}
-                    {esUrgenciaEnviada
-                      ? `${nombreTutora} viene ahora`
-                      : `${nombreTutora} ya lo sabe`}
-                  </Text>
+                  {verDibujo && <Text style={estilos.simboloGrandeConfirmacion}>👩‍🏫</Text>}
+                  {verTexto && (
+                    <Text style={[estilos.pieFiguraConfirmacion, { color: colorTexto }]}>
+                      ✓{" "}
+                      {esUrgenciaEnviada
+                        ? `${nombreTutora} viene ahora`
+                        : `${nombreTutora} ya lo sabe`}
+                    </Text>
+                  )}
                 </View>
               </View>
 
-              <Text style={[estilos.mensajeTranquilizador, { color: colorTexto }]}>
-                {esUrgenciaEnviada
-                  ? "Quédate donde estás. Ya viene."
-                  : "Espera un momento, por favor."}
-              </Text>
+              {verTexto && (
+                <Text style={[estilos.mensajeTranquilizador, { color: colorTexto }]}>
+                  {esUrgenciaEnviada
+                    ? "Quédate donde estás. Ya viene."
+                    : "Espera un momento, por favor."}
+                </Text>
+              )}
 
               <TouchableOpacity
                 testID="btn-vale-confirmacion"
@@ -215,7 +280,7 @@ export const ModalNecesidades: React.FC<ModalNecesidadesProps> = ({
                     { color: esAltoContraste ? "#000000" : "#FFFFFF" },
                   ]}
                 >
-                  👍 Vale
+                  {canal === "soloPictograma" ? "👍" : canal === "soloTexto" ? "Vale" : "👍 Vale"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -265,6 +330,10 @@ const estilos = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
+  tituloModalPictograma: {
+    fontSize: 44,
+    textAlign: "center",
+  },
   cuadriculaOpciones: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -298,10 +367,18 @@ const estilos = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
+  contenedorPictogramaGigante: {
+    width: 128,
+    height: 128,
+  },
   imagenPictograma: {
     width: 96,
     height: 96,
     resizeMode: "contain",
+  },
+  imagenPictogramaGigante: {
+    width: 120,
+    height: 120,
   },
   simboloPictograma: {
     fontSize: 44,

@@ -134,4 +134,49 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
     await user.press(screen.getByTestId("btn-cerrar-modal-necesidades"));
     expect(handleCerrar).toHaveBeenCalledTimes(1);
   });
+
+  it("en modo soloPictograma oculta los textos visuales y conserva los pictogramas y etiquetas accesibles", async () => {
+    await render(
+      <ModalNecesidades
+        visible={true}
+        alSeleccionarNecesidad={jest.fn()}
+        alCerrar={jest.fn()}
+        canal="soloPictograma"
+      />,
+    );
+
+    // No se muestran textos visuales de las 3 opciones
+    expect(screen.queryByText("Quiero ir al baño")).toBeNull();
+    expect(screen.queryByText("Quiero agua")).toBeNull();
+    expect(screen.queryByText("Necesito descansar")).toBeNull();
+
+    // Símbolos e imágenes ARASAAC siguen presentes
+    expect(screen.getByTestId("img-arasaac-6929")).toBeTruthy();
+    expect(screen.getByTestId("img-arasaac-2248")).toBeTruthy();
+    expect(screen.getByTestId("img-arasaac-3299")).toBeTruthy();
+
+    // El lector de pantalla sigue anunciando las etiquetas completas (RF14.1)
+    expect(screen.getByTestId("opcion-necesidad-bano").props.accessibilityLabel).toBe(
+      "Quiero ir al baño",
+    );
+  });
+
+  it("en modo soloTexto oculta los pictogramas ARASAAC y muestra únicamente el texto ampliado", async () => {
+    await render(
+      <ModalNecesidades
+        visible={true}
+        alSeleccionarNecesidad={jest.fn()}
+        alCerrar={jest.fn()}
+        canal="soloTexto"
+      />,
+    );
+
+    expect(screen.getByText("Quiero ir al baño")).toBeTruthy();
+    expect(screen.getByText("Quiero agua")).toBeTruthy();
+    expect(screen.getByText("Necesito descansar")).toBeTruthy();
+
+    expect(screen.queryByTestId("img-arasaac-6929")).toBeNull();
+    expect(screen.queryByTestId("img-arasaac-2248")).toBeNull();
+    expect(screen.queryByTestId("img-arasaac-3299")).toBeNull();
+  });
 });

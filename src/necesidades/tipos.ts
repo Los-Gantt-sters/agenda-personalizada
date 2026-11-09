@@ -3,6 +3,8 @@ export type PosicionBotonNecesidades =
 
 export type VarianteColorNecesidades = "estandar" | "alto-contraste" | "pastel";
 
+export type ModoCanalNecesidades = "ambos" | "soloPictograma" | "soloTexto";
+
 export type ClaveNecesidadBasica = "bano" | "agua" | "descanso";
 
 export type ClaveNecesidad = ClaveNecesidadBasica | "urgencia";
@@ -21,6 +23,7 @@ export interface BotonNecesidadesProps {
   posicion?: PosicionBotonNecesidades;
   tamanio?: number; // Por defecto 84px, garantizando >= 48px
   variante?: VarianteColorNecesidades;
+  canal?: ModoCanalNecesidades;
   etiqueta?: string;
   testID?: string;
 }
@@ -33,5 +36,6 @@ export interface ModalNecesidadesProps {
   alConfirmarAvisoEnviado?: () => void;
   nombreTutora?: string;
   variante?: VarianteColorNecesidades;
+  canal?: ModoCanalNecesidades;
   mostrarImagenArasaac?: boolean;
 }
