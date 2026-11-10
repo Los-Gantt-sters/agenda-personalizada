@@ -11,33 +11,42 @@ function consultaFalsa(resultado: { data?: unknown; error: unknown }) {
 }
 
 jest.mock("../../lib/supabaseClient", () => ({
-  supabase: { from: jest.fn(), channel: jest.fn(), removeChannel: jest.fn() },
+  supabase: { from: jest.fn(), rpc: jest.fn(), channel: jest.fn(), removeChannel: jest.fn() },
 }));
 
-const sb = supabase as unknown as { from: jest.Mock; channel: jest.Mock; removeChannel: jest.Mock };
+const sb = supabase as unknown as {
+  from: jest.Mock;
+  rpc: jest.Mock;
+  channel: jest.Mock;
+  removeChannel: jest.Mock;
+};
 
 describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
   afterEach(() => jest.clearAllMocks());
 
-  it("pide las tareas del día del estudiante, sin canceladas, y normaliza la hora (RF4.1)", async () => {
-    const q = consultaFalsa({
-      data: [{ id: "e1", hora_inicio: "09:30:00", tarea: [{ id: "t1", titulo: "Desayuno" }] }],
+  it("pide la secuencia del día a secuencia_dia (SCRUM-71) y normaliza la hora (RF4.1)", async () => {
+    sb.rpc.mockResolvedValue({
+      data: [
+        { id: "a1", hora_inicio: "09:30:00", tarea: { id: "t1", titulo: "Desayuno", pasos: null } },
+        { id: "a2", hora_inicio: null, tarea: { id: "t2", titulo: "Recreo" } },
+      ],
       error: null,
     });
-    sb.from.mockReturnValue(q);
 
     const r = await obtenerSecuenciaDia("al1", "2026-11-05");
 
-    expect(sb.from).toHaveBeenCalledWith("entrada_agenda");
-    expect(q.eq).toHaveBeenCalledWith("estudiante_id", "al1");
-    expect(q.eq).toHaveBeenCalledWith("fecha", "2026-11-05");
-    expect(q.neq).toHaveBeenCalledWith("estado", "cancelada");
+    expect(sb.rpc).toHaveBeenCalledWith("secuencia_dia", {
+      p_estudiante: "al1",
+      p_fecha: "2026-11-05",
+    });
     expect(r[0].hora_inicio).toBe("09:30");
     expect(r[0].tarea.titulo).toBe("Desayuno");
+    expect(r[0].tarea.pasos).toEqual([]);
+    expect(r[1].hora_inicio).toBe(""); // sin hora fija
   });
 
   it("lanza el error de Supabase si la consulta falla", async () => {
-    sb.from.mockReturnValue(consultaFalsa({ data: null, error: new Error("sin red") }));
+    sb.rpc.mockResolvedValue({ data: null, error: new Error("sin red") });
     await expect(obtenerSecuenciaDia("al1", "2026-11-05")).rejects.toThrow("sin red");
   });
 
@@ -47,7 +56,8 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
 
     await marcarTareaHecha("e1");
 
-    expect(q.update).toHaveBeenCalledWith({ estado: "hecha" });
+    expect(sb.from).toHaveBeenCalledWith("asignaciones");
+    expect(q.update).toHaveBeenCalledWith({ estado: "hecho" });
     expect(q.eq).toHaveBeenCalledWith("id", "e1");
     expect(q.in).toHaveBeenCalledWith("estado", ["pendiente", "en_curso"]);
   });
@@ -81,7 +91,7 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
 
     const insert = manejadores.find((m) => m.filtro.event === "INSERT")!;
     expect(insert.filtro).toMatchObject({
-      table: "entrada_agenda",
+      table: "asignaciones",
       filter: "estudiante_id=eq.al1",
     });
     insert.f({});
@@ -94,8 +104,14 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     expect(alCambiar).toHaveBeenCalledTimes(2);
 
     // Al conectar se recarga por si hubo cambios sin conexión.
-    alSuscribir("SUBSCRIBED");
+    // Un cambio en los pasos de una tarea que está en la agenda también recarga.
+    const pasos = manejadores.find((m) => m.filtro.table === "pasos_tarea")!;
+    pasos.f({ new: { tarea_id: "otra" } });
+    pasos.f({ new: { tarea_id: "t1" } });
     expect(alCambiar).toHaveBeenCalledTimes(3);
+
+    alSuscribir("SUBSCRIBED");
+    expect(alCambiar).toHaveBeenCalledTimes(4);
 
     baja();
     expect(sb.removeChannel).toHaveBeenCalledWith(canal);

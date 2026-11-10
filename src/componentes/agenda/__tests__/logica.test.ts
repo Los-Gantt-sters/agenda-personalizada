@@ -116,3 +116,12 @@ describe("SCRUM-70 · RF4.3 avance al confirmar", () => {
     expect(confirmarFin(dia, "3")).toEqual(dia);
   });
 });
+
+describe("SCRUM-68 · tareas sin hora fija (secuencia_dia)", () => {
+  it("van al final del día y se muestran como «Sin hora»", () => {
+    const sinHora = { ...e("x", ""), hora_inicio: "" };
+    const s = ordenarSecuencia([sinHora, e("a", "12:00")]);
+    expect(s.map((x) => x.id)).toEqual(["a", "x"]);
+    expect(franjaHoraria(sinHora)).toBe("Sin hora fija");
+  });
+});

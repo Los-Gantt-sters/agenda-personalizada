@@ -3,13 +3,18 @@
 // Sin React ni Supabase, para poder probarla aparte.
 import type { BloquesAgenda, EntradaAgenda } from "./tipos";
 
-/** Normaliza "09:00:00" o "9:00" a "09:00". */
-export function normalizarHora(hora: string): string {
+/** Normaliza "09:00:00" o "9:00" a "09:00". Una tarea sin hora fija se queda con "". */
+export function normalizarHora(hora: string | null | undefined): string {
+  if (!hora) return "";
   const [h = "0", m = "0"] = hora.split(":");
   return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
 }
 
+/** Las tareas sin hora fija van al final del día (como en secuencia_dia, SCRUM-71). */
+const SIN_HORA = 24 * 60;
+
 function aMinutos(hora: string): number {
+  if (!hora) return SIN_HORA;
   const [h, m] = normalizarHora(hora).split(":").map(Number);
   return h * 60 + m;
 }
@@ -21,11 +26,13 @@ function deMinutos(total: number): string {
 
 /** "9:00 a 9:45", para mostrar en la tarjeta. */
 export function franjaHoraria(entrada: EntradaAgenda): string {
+  if (!entrada.hora_inicio) return "Sin hora fija";
   const inicio = aMinutos(entrada.hora_inicio);
   return `${deMinutos(inicio)} a ${deMinutos(inicio + entrada.duracion_prevista_min)}`;
 }
 
 export function horaCorta(entrada: EntradaAgenda): string {
+  if (!entrada.hora_inicio) return "Sin hora";
   return deMinutos(aMinutos(entrada.hora_inicio));
 }
 
