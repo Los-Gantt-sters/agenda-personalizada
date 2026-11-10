@@ -1,0 +1,194 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[margin=2.2cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{listings}
+\usepackage{hyperref}
+
+% Colores institucionales del equipo Los Gantt-sters
+\definecolor{gblue}{RGB}{27, 79, 114}     % Azul corporativo
+\definecolor{gnavy}{RGB}{21, 67, 96}      % Azul oscuro
+\definecolor{ggreen}{RGB}{39, 174, 96}    % Verde éxito
+\definecolor{ggray}{RGB}{245, 247, 250}   % Gris fondo
+\definecolor{gborder}{RGB}{208, 211, 212} % Gris borde
+\definecolor{gorange}{RGB}{211, 84, 0}    % Naranja advertencia
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=gblue,
+    urlcolor=gblue,
+    citecolor=gblue
+}
+
+% Cabeceras y pies
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray} Los Gantt-sters · Agensible (TuAgendita)}
+\fancyhead[R]{\small\color{gray} Estandarización Técnica Sprint 1}
+\fancyfoot[L]{\small\color{gray} DGP \& MDA --- UGR · Curso 2026/2027}
+\fancyfoot[R]{\small\color{gray} Página \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Formato de títulos
+\titleformat{\section}{\Large\bfseries\color{gblue}}{\thesection.}{0.8em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{gnavy}}{\thesubsection.}{0.6em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{gblue}}{\thesubsubsection.}{0.5em}{}
+
+\begin{document}
+
+% PORTADA OFICIAL
+\begin{titlepage}
+    \centering
+    \vspace*{0.5cm}
+    \includegraphics[width=0.36\textwidth]{logo.png}\\[1cm]
+    
+    {\Huge \bfseries \color{gblue} AGENSIBLE (TuAgendita)}\\[0.3cm]
+    {\large \bfseries \color{gray} Agenda Personalizada y Accesible para Estudiantes con Discapacidad Intelectual}\\[0.2cm]
+    {\normalsize CEE Fundación Purísima Concepción de Granada}\\[1.2cm]
+    
+    \begin{tcolorbox}[colback=gblue,colframe=gnavy,arc=4mm,width=0.95\textwidth,center]
+        \color{white}
+        \centering
+        \vspace{0.2cm}
+        {\LARGE \bfseries ESTÁNDAR TÉCNICO OFICIAL Y STACK COMÚN}\\[0.2cm]
+        {\large Revisión de Tareas, Directrices de Desarrollo y Homogeneización del Sprint 1}\\[0.2cm]
+    \end{tcolorbox}
+    
+    \vspace{1.5cm}
+    
+    \begin{minipage}{0.85\textwidth}
+        \centering
+        \textbf{Asignaturas:} Dirección y Gestión de Proyectos (DGP) \&\\ Metodologías de Desarrollo Ágil (MDA)\\[0.2cm]
+        \textbf{Grado:} Grado en Ingeniería Informática --- Universidad de Granada\\[0.2cm]
+        \textbf{Subgrupo 2:} \textit{Los Gantt-sters}\\[0.5cm]
+        \textbf{Coordinador del Proyecto:} Juan Luis Jiménez Urbano\\
+        \textbf{Fecha:} Noviembre 2026
+    \end{minipage}
+    
+    \vfill
+    {\footnotesize Documento de uso interno para la coordinación técnica y estandarización del equipo de desarrollo.}
+\end{titlepage}
+
+\newpage
+
+% ÍNDICE
+\tableofcontents
+\vspace{1cm}
+\hrule
+\vspace{1cm}
+
+\section{Propósito y Justificación de la Estandarización}
+
+Durante las primeras sesiones de desarrollo convivieron en el repositorio dos enfoques técnicos: la configuración inicial con \textbf{Vite} (en las tareas técnicas de infraestructura BaaS) y la configuración con \textbf{Expo + React Native Web} (para el soporte táctil y la suite de calidad).
+
+Para evitar inconsistencias, conflictos en la integración continua (\textit{CI/CD}) y garantizar que los 6 miembros del equipo trabajen sobre el mismo entorno, se formaliza la siguiente decisión:
+
+\begin{tcolorbox}[colback=ggray,colframe=gblue,title=\textbf{Decisión Oficial de Equipo: Adopción de Expo + React Native Web}]
+    \textbf{Se adopta formalmente EXPO + REACT NATIVE WEB (\texttt{expo-router}) como stack único de la aplicación.} Queda completamente descartado el uso de Vite.
+\end{tcolorbox}
+
+\subsection{Criterios de Idoneidad para el Cliente}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Dispositivo objetivo prioritario:} El colegio utilizará la aplicación en \textbf{tablets en formato horizontal} por estudiantes con necesidades educativas especiales. React Native Web previene el zoom accidental, gestiona toques táctiles y optimiza el diseño en franjas.
+    \item \textbf{Soporte multimedia nativo:} La aplicación requiere de avisos acústicos, síntesis de voz y renderizado de gráficos vectoriales (\textit{Time Timer} y pictogramas ARASAAC), cubiertos por \texttt{expo-audio} y \texttt{react-native-svg}.
+    \item \textbf{Despliegue dual:} Se compila limpiamente para despliegue web estático en \textbf{Vercel} (\texttt{npx expo export -p web}) y permite compilar una versión instalable (APK) sin cambiar código si el centro lo solicita.
+    \item \textbf{Integración Continua validada:} Los flujos de GitHub Actions (\texttt{build-and-test.yml} y \texttt{ci.yml}) están configurados para Node 22 y Jest-Expo, pasando actualmente con 100\% de éxito.
+\end{itemize}
+
+\section{Tabla Maestra del Stack Tecnológico Oficial}
+
+Todo desarrollo nuevo en el repositorio debe respetar estrictamente esta selección tecnológica:
+
+\begin{table}[h!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{p{3.5cm} p{4.2cm} X}
+\toprule
+\textbf{Ámbito} & \textbf{Tecnología Oficial} & \textbf{Detalles y Versión} \\
+\midrule
+Runtime / Entorno & \textbf{Node.js v22 LTS} & Fijado en \texttt{.nvmrc} y en GitHub Actions \\
+Gestor de paquetes & \textbf{npm} & Mantener coherente \texttt{package-lock.json} \\
+Lenguaje & \textbf{TypeScript (~6.0)} & Compilación estricta (\texttt{strict: true}) \\
+Frontend Base & \textbf{Expo Web (~58.0)} & Con \texttt{react-native-web \^{}0.21} y React 19 \\
+Enrutamiento & \textbf{Expo Router (~58.0)} & Enrutador basado en carpetas (\texttt{app/}) \\
+Estilos e Interfaz & \textbf{StyleSheet React Native} & Contrastes accesibles WCAG 2.1 AA \\
+Backend \& BaaS & \textbf{Supabase (PostgreSQL)} & Base de datos con RLS y Auth con JWT \\
+Comunicación Aumentativa & \textbf{API ARASAAC} & Catálogo oficial de pictogramas \\
+Testing Unitario & \textbf{Jest + Jest-Expo} & Con \texttt{@testing-library/react-native} \\
+Calidad \& Accesibilidad & \textbf{ESLint 9} & Con \texttt{eslint-plugin-jsx-a11y} \\
+Formateo & \textbf{Prettier} & Ejecución con \texttt{format:check} \\
+CI / CD & \textbf{GitHub Actions} & Workflows obligatorios en cada Pull Request \\
+Despliegue Cloud & \textbf{Vercel} & Conectado a la rama \texttt{main} \\
+\bottomrule
+\end{tabularx}
+\caption{Matriz de tecnologías oficiales y estandarizadas.}
+\end{table}
+
+\newpage
+
+\section{Auditoría y Revisión de Tareas Realizadas (Sprint 1)}
+
+Se ha realizado una auditoría completa del código implementado hasta la fecha para asegurar su total alineación con el estándar Expo y los criterios de aceptación en Jira:
+
+\subsection{HUT-01 / SCRUM-154: Infraestructura Cloud y Conexión Supabase}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{SCRUM-155 (T-T01.1):} Despliegue continuo en Vercel. Se adaptó la configuración para permitir el empaquetado de Expo Web sin dependencias residuales de Vite.
+    \item \textbf{SCRUM-157 (T-T01.3):} Conexión de cliente y variables de entorno. Se implementó retrocompatibilidad en \texttt{src/lib/supabaseClient.ts} para aceptar tanto variables con prefijo \texttt{EXPO\_PUBLIC\_} como las anteriores \texttt{VITE\_}.
+\end{itemize}
+
+\subsection{HU-02 / SCRUM-54: Inicio de Sesión Estándar para Supervisores (Golden Story)}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{SCRUM-56 (T-02.2 Backend):}
+    \begin{itemize}
+        \item Servicio de autenticación JWT y contraseñas cifradas en Supabase Auth (\texttt{RNF1.3}).
+        \item Control de roles RBAC (\texttt{tutor\_docente}, \texttt{familiar}, \texttt{admin}, \texttt{especialista}) con redirección dinámica (\texttt{RF1.4}).
+        \item Política de seguridad contra enumeración de usuarios (\texttt{RF1.8}): mensaje genérico \textit{"Credenciales incorrectas o usuario no autorizado."}
+        \item 11 tests unitarios automáticos cubriendo el 100\% de las ramas lógicas.
+    \end{itemize}
+    \item \textbf{SCRUM-55 (T-02.1 Frontend):}
+    \begin{itemize}
+        \item Pantalla de login accesible (\texttt{app/login.tsx}) desarrollada íntegramente con componentes de React Native Web.
+        \item Cumplimiento WCAG 2.1 AA con etiquetas accesibles, roles semánticos y mensajes de alerta para lectores de pantalla.
+        \item Validación reactiva de formulario y selector Demo para agilizar las pruebas de QA.
+        \item 6 tests de integración con \texttt{userEvent} simulando interacción real.
+    \end{itemize}
+    \item \textbf{SCRUM-57 (T-02.3 QA):} Asignada al Gestor de Calidad (Javier Miñán) para pruebas avanzadas de expiración de sesión y estrés de tokens JWT.
+\end{itemize}
+
+\subsection{DevOps y Configuración de Calidad}
+\begin{itemize}[leftmargin=*]
+    \item Se homogeneizó el archivo \texttt{tsconfig.json} incluyendo \texttt{"types": ["jest"]} para que el chequeo de tipos de TypeScript (\texttt{tsc --noEmit}) sea impecable.
+    \item Se actualizó \texttt{.prettierignore} para excluir artefactos de documentación y no entorpecer la validación del linter.
+\end{itemize}
+
+\section{Checklist de Entrega Obligatoria antes de cada Commit}
+
+Para evitar que se suban Pull Requests con errores que bloqueen el pipeline de GitHub Actions, cada desarrollador \textbf{debe ejecutar localmente los siguientes 4 comandos}:
+
+\begin{tcolorbox}[colback=ggray,colframe=gnavy,title=\textbf{Protocolo de Verificación Local (4 Checks Verdes)}]
+\texttt{1. npm test -{}- -{}-ci \qquad\qquad\quad\quad (Tests unitarios con Jest)}\\
+\texttt{2. npx tsc -{}-noEmit \qquad\qquad\quad\quad\ (Chequeo estricto TypeScript)}\\
+\texttt{3. npm run lint \qquad\qquad\quad\quad\quad (Calidad y accesibilidad ESLint)}\\
+\texttt{4. npm run format:check \qquad\quad (Formateo de código Prettier)}
+\end{tcolorbox}
+
+\noindent\textit{Nota: Si el comando de Prettier detecta desalineaciones, ejecutar simplemente \texttt{npm run format} para que corrija los archivos automáticamente antes de confirmar el commit.}
+
+\vspace{0.8cm}
+\begin{center}
+\textbf{Los Gantt-sters} --- Subgrupo 2 · UGR 2026/2027\\
+\textit{"Calidad, accesibilidad y rigor en el desarrollo ágil."}
+\end{center}
+
+\end{document}
