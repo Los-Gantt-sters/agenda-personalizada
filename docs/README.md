@@ -26,6 +26,11 @@ Versiones finales en PDF de los documentos de **TuAgendita**: una agenda visual 
 - [`manual-coordinacion.pdf`](dgp/manual-coordinacion.pdf): metodología, herramientas, comunicación y forma de trabajar del equipo.
 - [`plan-calidad.pdf`](dgp/plan-calidad.pdf): estándares, revisiones, criterios de entrega y métricas de calidad.
 - [`informe-accesibilidad.pdf`](dgp/informe-accesibilidad.pdf): checklist de accesibilidad por sprint (lectura fácil, tamaños mínimos de los elementos táctiles, contraste, uso con pulsador...).
+- [`planificacion-sprint1-v2.pdf`](dgp/planificacion-sprint1-v2.pdf): planificación temporal del Sprint 1 corregida (v2), con el diagrama de Gantt y el PERT con las actividades en los arcos.
+
+### Accesibilidad
+
+- [`auditoria-contraste-wcag.md`](accesibilidad/auditoria-contraste-wcag.md): auditoría de contraste WCAG 2.1 AA/AAA de los temas de color, los pictogramas y el panel de preferencias de la HU-04 (SCRUM-67), con las no conformidades encontradas.
 
 ### MDA (Metodologías de Desarrollo Ágil)
 
