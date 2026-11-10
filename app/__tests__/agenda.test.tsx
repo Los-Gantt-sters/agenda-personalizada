@@ -17,6 +17,9 @@ jest.setTimeout(20_000);
 // El reloj visual y el refuerzo usan sonidos; en las pruebas no suenan.
 jest.mock("../../src/servicios/sonidos", () => ({ reproducirSonido: jest.fn() }));
 
+// T-06.4 oculta la barra de estado; la de verdad deja colgadas las pruebas con temporizadores falsos.
+jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
+
 jest.mock("expo-router", () => ({
   Stack: { Screen: () => null },
   // Sin ?estudiante= la pantalla abre la demo con datos de ejemplo.

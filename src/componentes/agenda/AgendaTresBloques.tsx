@@ -201,7 +201,7 @@ function Mini({
     <Pressable
       testID={`mini-${entrada.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`${entrada.tarea.titulo}, a las ${horaCorta(entrada)}${hecha ? ", hecha" : ""}${bloqueada ? ", hoy no toca" : ""}`}
+      accessibilityLabel={`${entrada.tarea.titulo}, ${entrada.hora_inicio ? `a las ${horaCorta(entrada)}` : "sin hora fija"}${hecha ? ", hecha" : ""}${bloqueada ? ", hoy no toca" : ""}`}
       accessibilityHint="Abre la tarea"
       onPress={() => onAbrir(entrada)}
       style={({ pressed }) => [

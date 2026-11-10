@@ -9,3 +9,4 @@ export * from "./datosDemo";
 export * from "./useAgendaDia";
 export * from "./repositorioMemoria";
 export * from "./AgendaDelDia";
+export * from "./modoSinDistracciones";

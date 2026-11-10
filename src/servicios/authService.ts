@@ -2,26 +2,33 @@ import { supabase } from "../lib/supabaseClient";
 import {
   AuthResult,
   AuthSession,
-  SupervisorRole,
+  UserRole,
   SupervisorProfile,
   AUTH_GENERIC_ERROR_MESSAGE,
 } from "../tipos/auth";
+import { isSessionExpired } from "./sessionGuard";
 
 /**
  * Normaliza y valida el rol recibido de la metadata o base de datos.
  */
-export function normalizeRole(roleCandidate?: string | null): SupervisorRole {
-  const validRoles: SupervisorRole[] = ["tutor_docente", "familiar", "admin", "especialista"];
-  if (roleCandidate && validRoles.includes(roleCandidate as SupervisorRole)) {
-    return roleCandidate as SupervisorRole;
+export function normalizeRole(roleCandidate?: string | null): UserRole {
+  const validRoles: UserRole[] = [
+    "tutor_docente",
+    "familiar",
+    "admin",
+    "especialista",
+    "estudiante",
+  ];
+  if (roleCandidate && validRoles.includes(roleCandidate as UserRole)) {
+    return roleCandidate as UserRole;
   }
   return "tutor_docente";
 }
 
 /**
- * Determina la ruta de redirección según el rol del supervisor (RF1.4).
+ * Determina la ruta de redirección según el rol del usuario (RF1.4).
  */
-export function getRoleHomeRoute(role: SupervisorRole): string {
+export function getRoleHomeRoute(role: UserRole): string {
   switch (role) {
     case "admin":
       return "/admin/dashboard";
@@ -29,6 +36,8 @@ export function getRoleHomeRoute(role: SupervisorRole): string {
       return "/familiar/resumen";
     case "especialista":
       return "/especialista/terapias";
+    case "estudiante":
+      return "/estudiante/agenda";
     case "tutor_docente":
     default:
       return "/docente/agenda";
@@ -37,8 +46,6 @@ export function getRoleHomeRoute(role: SupervisorRole): string {
 
 /**
  * Inicia sesión estándar para supervisores (RF1.3, RF1.8, RNF1.3).
- * Utiliza Supabase Auth con cifrado seguro y emisión de tokens JWT.
- * Ante cualquier fallo de credenciales, emite un error genérico (RF1.8).
  */
 export async function signInSupervisor(email: string, password: string): Promise<AuthResult> {
   const sanitizedEmail = email?.trim() ?? "";
@@ -65,7 +72,7 @@ export async function signInSupervisor(email: string, password: string): Promise
     }
 
     const rawRole = data.user.user_metadata?.role;
-    const role: SupervisorRole = normalizeRole(rawRole);
+    const role: UserRole = normalizeRole(rawRole);
 
     const userProfile: SupervisorProfile = {
       id: data.user.id,
@@ -99,6 +106,65 @@ export async function signInSupervisor(email: string, password: string): Promise
 }
 
 /**
+ * Inicia sesión adaptada para estudiantes mediante su secuencia de 3 pictogramas (HU-01 / SCRUM-51).
+ * Convierte los 3 dibujos seleccionados en una contraseña hasheada y usa un email interno transparente.
+ */
+export async function signInEstudianteConDibujos(
+  alumnoId: string,
+  secuenciaDibujos: string[],
+): Promise<AuthResult> {
+  if (!alumnoId || !secuenciaDibujos || secuenciaDibujos.length !== 3) {
+    return {
+      success: false,
+      error: "Se requiere seleccionar la secuencia de 3 dibujos.",
+    };
+  }
+
+  // Correo técnico transparente que el alumno nunca ve ni escribe
+  const emailTecnico = `alu-${alumnoId.trim().toLowerCase()}@alumnos.agensible`;
+  // La contraseña se forma uniendo los slugs normalizados de los 3 dibujos
+  const passwordDibujos = secuenciaDibujos.map((d) => d.trim().toLowerCase()).join("-");
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: emailTecnico,
+      password: passwordDibujos,
+    });
+
+    if (error || !data.session || !data.user) {
+      return {
+        success: false,
+        error: "La secuencia de dibujos no coincide. Inténtalo de nuevo.",
+      };
+    }
+
+    const userProfile: SupervisorProfile = {
+      id: data.user.id,
+      email: emailTecnico,
+      fullName: data.user.user_metadata?.full_name || `Estudiante ${alumnoId}`,
+      role: "estudiante",
+      centroId: data.user.user_metadata?.centro_id,
+      createdAt: data.user.created_at,
+    };
+
+    return {
+      success: true,
+      session: {
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        expiresAt: data.session.expires_at,
+        user: userProfile,
+      },
+    };
+  } catch {
+    return {
+      success: false,
+      error: "Error de conexión al verificar los dibujos.",
+    };
+  }
+}
+
+/**
  * Cierre de sesión seguro invalidando el token JWT (RF1.8).
  */
 export async function signOutSupervisor(): Promise<{
@@ -117,33 +183,62 @@ export async function signOutSupervisor(): Promise<{
   }
 }
 
+type SupabaseSessionLike = {
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  user: {
+    id: string;
+    email?: string;
+    created_at?: string;
+    user_metadata?: Record<string, any>;
+  };
+};
+
+function mapSupabaseSession(raw: SupabaseSessionLike): AuthSession {
+  const { user } = raw;
+  return {
+    accessToken: raw.access_token,
+    refreshToken: raw.refresh_token,
+    expiresAt: raw.expires_at,
+    user: {
+      id: user.id,
+      email: user.email ?? "",
+      fullName: user.user_metadata?.full_name || user.user_metadata?.name || "Usuario Purísima",
+      role: normalizeRole(user.user_metadata?.role),
+      centroId: user.user_metadata?.centro_id,
+      createdAt: user.created_at,
+    },
+  };
+}
+
 /**
- * Recupera la sesión actual activa de Supabase.
+ * Recupera la sesión actual activa de Supabase (SCRUM-57).
+ * Si el token JWT ha expirado intenta renovarlo con el refresh token;
+ * si no es posible, cierra la sesión localmente y devuelve null (fail-closed).
  */
-export async function getCurrentSession(): Promise<AuthSession | null> {
+export async function getCurrentSession(nowMs: number = Date.now()): Promise<AuthSession | null> {
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) {
       return null;
     }
 
-    const { user } = data.session;
-    const role = normalizeRole(user.user_metadata?.role);
+    const session = mapSupabaseSession(data.session);
+    if (!isSessionExpired(session, nowMs)) {
+      return session;
+    }
 
-    return {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresAt: data.session.expires_at,
-      user: {
-        id: user.id,
-        email: user.email ?? "",
-        fullName:
-          user.user_metadata?.full_name || user.user_metadata?.name || "Supervisor Purísima",
-        role,
-        centroId: user.user_metadata?.centro_id,
-        createdAt: user.created_at,
-      },
-    };
+    const refreshed = await supabase.auth.refreshSession();
+    if (!refreshed.error && refreshed.data?.session) {
+      const renewed = mapSupabaseSession(refreshed.data.session);
+      if (!isSessionExpired(renewed, nowMs)) {
+        return renewed;
+      }
+    }
+
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    return null;
   } catch {
     return null;
   }

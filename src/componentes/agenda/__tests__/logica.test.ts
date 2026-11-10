@@ -156,3 +156,12 @@ describe("SCRUM-74 · RF6.1 y RF6.4 empezar y terminar (T-08.1)", () => {
     );
   });
 });
+
+describe("SCRUM-68 · tareas sin hora fija (secuencia_dia)", () => {
+  it("van al final del día y se muestran como «Sin hora»", () => {
+    const sinHora = { ...e("x", ""), hora_inicio: "" };
+    const s = ordenarSecuencia([sinHora, e("a", "12:00")]);
+    expect(s.map((x) => x.id)).toEqual(["a", "x"]);
+    expect(franjaHoraria(sinHora)).toBe("Sin hora fija");
+  });
+});

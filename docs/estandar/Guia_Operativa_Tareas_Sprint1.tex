@@ -1,0 +1,180 @@
+\documentclass[10.5pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[margin=1.8cm,top=2.2cm,bottom=2.2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+
+% Colores institucionales
+\definecolor{gblue}{RGB}{27, 79, 114}     % Azul corporativo
+\definecolor{gnavy}{RGB}{21, 67, 96}      % Azul oscuro
+\definecolor{ggreen}{RGB}{39, 174, 96}    % Verde éxito
+\definecolor{ggray}{RGB}{248, 249, 250}   % Gris fondo
+\definecolor{gborder}{RGB}{218, 222, 224} % Borde suave
+\definecolor{gdark}{RGB}{44, 62, 80}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=gblue,
+    urlcolor=gblue
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textbf{\color{gblue}Los Gantt-sters} · Guía Operativa de Tareas (Sprint 1)}
+\fancyhead[R]{\small\color{gray} Agensible (TuAgendita) · UGR}
+\fancyfoot[L]{\small\color{gray} DGP \& MDA · 2026/2027}
+\fancyfoot[R]{\small\color{gray} Página \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\titleformat{\section}{\large\bfseries\color{gblue}}{\thesection.}{0.6em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{gnavy}}{\thesubsection.}{0.5em}{}
+
+\begin{document}
+
+% PORTADA COMPACTA
+\begin{titlepage}
+    \centering
+    \vspace*{0.8cm}
+    \includegraphics[width=0.32\textwidth]{logo.png}\\[0.8cm]
+    
+    {\LARGE \bfseries \color{gblue} AGENSIBLE (TuAgendita)}\\[0.2cm]
+    {\normalsize \bfseries \color{gray} CEE Fundación Purísima Concepción de Granada}\\[1cm]
+    
+    \begin{tcolorbox}[colback=gblue,colframe=gnavy,arc=3mm,width=\textwidth,center]
+        \color{white}
+        \centering
+        \vspace{0.1cm}
+        {\Large \bfseries GUÍA TÉCNICA OPERATIVA DE TAREAS (SPRINT 1)}\\[0.15cm]
+        {\small Lo estrictamente necesario para cada miembro del equipo y cada tarea}\\[0.1cm]
+    \end{tcolorbox}
+    
+    \vspace{1.2cm}
+    
+    \begin{minipage}{0.9\textwidth}
+        \small
+        \centering
+        \textbf{Asignaturas:} Dirección y Gestión de Proyectos (DGP) \& Metodologías de Desarrollo Ágil (MDA)\\
+        \textbf{Equipo:} Subgrupo 2 --- \textit{Los Gantt-sters} · Universidad de Granada\\
+        \textbf{Coordinador:} Juan Luis Jiménez Urbano\\
+        \textbf{Fecha:} Noviembre 2026
+    \end{minipage}
+    
+    \vfill
+    {\footnotesize Resumen ejecutivo y directrices de implementación sin rodeos teóricos.}
+\end{titlepage}
+
+\newpage
+
+\section{Regla de Oro: Stack Común Obligatorio}
+
+\begin{tcolorbox}[colback=ggray,colframe=gblue,title=\textbf{Decisión Definitiva: Usar EXPO + REACT NATIVE WEB (Cero Vite)}]
+Para que los Pull Requests no fallen en GitHub Actions:
+\begin{itemize}[leftmargin=*,itemsep=1pt]
+    \item \textbf{Framework:} \textbf{Expo Router + React Native Web}. Todo componente visual se importa de \texttt{react-native} (\texttt{View}, \texttt{Text}, \texttt{TouchableOpacity}, \texttt{TextInput}, \texttt{StyleSheet}). No usar etiquetas HTML puras (\texttt{<div>}, \texttt{<button>}).
+    \item \textbf{Variables de Entorno:} En archivos de cliente se usa el prefijo \textbf{\texttt{EXPO\_PUBLIC\_}} (ej: \texttt{process.env.EXPO\_PUBLIC\_SUPABASE\_URL}).
+    \item \textbf{Node.js:} Usar exclusivamente \textbf{Node 22 LTS} (lo mismo que ejecuta el CI en GitHub).
+\end{itemize}
+\end{tcolorbox}
+
+\section{Guía Concreta por Compañero y por Tarea (Sprint 1)}
+
+\subsection{Germán Delgado --- Base de Datos, Modelo y CRUD (SCRUM-156, SCRUM-59, SCRUM-60, SCRUM-62)}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+    \item \textbf{Tarea SCRUM-156 (T-T01.2 / HUT-01):} Crear y documentar el esquema SQL relacional en Supabase con \textbf{Row Level Security (RLS)} activado.
+    \item \textbf{Tareas SCRUM-59 / SCRUM-60 / SCRUM-62 (HU-03):} 
+    \begin{itemize}[leftmargin=*]
+        \item Definir tablas: \texttt{alumnos}, \texttt{tutores\_docentes}, \texttt{familiares} y tabla de unión \texttt{vinculos\_alumno\_supervisor}.
+        \item Crear cliente en \texttt{src/services/} usando el cliente exportado en \texttt{src/lib/supabaseClient.ts}.
+        \item Segregar permisos por rol para cumplir el RGPD: el familiar solo consulta a su hijo; el tutor docente a su aula asignada; el admin a todo el centro.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Jaime Montávez --- Time Timer, Audio y Enrutamiento Base (SCRUM-78, SCRUM-79, SCRUM-80, SCRUM-163, SCRUM-165)}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+    \item \textbf{Tareas SCRUM-78 / SCRUM-79 / SCRUM-80 (HU-09 Time Timer):}
+    \begin{itemize}[leftmargin=*]
+        \item Usar \texttt{react-native-svg} para el disco regresivo en color rojo accesible.
+        \item Usar \texttt{expo-audio} para la señal sonora suave de fin de tiempo (sin pitidos estridentes).
+        \item Exportar el componente en \texttt{src/components/RelojVisual.tsx}.
+    \end{itemize}
+    \item \textbf{Tareas SCRUM-163 / SCRUM-165 (HUT-03 Arquitectura y Audio):} 
+    \begin{itemize}[leftmargin=*]
+        \item Wrapper de audio centralizado en \texttt{src/services/soundService.ts} para reproducir avisos sensoriales sin duplicar código.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Ana Meca --- Interfaces Táctiles y Avisos Inminentes (SCRUM-70, SCRUM-74, SCRUM-82, SCRUM-83)}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+    \item \textbf{Tarea SCRUM-74 (T-08.1 / Botones Gigantes):}
+    \begin{itemize}[leftmargin=*]
+        \item Botones \textbf{EMPEZAR} (verde) y \textbf{TERMINAR} (azul/naranja) con altura mínima de 64px para garantizar facilidad de pulsación motriz en tablet horizontal.
+        \item Integrar pictograma ARASAAC sobre el texto en cada botón.
+    \end{itemize}
+    \item \textbf{Tareas SCRUM-82 / SCRUM-83 (T-16 / Notificación 5 minutos antes):}
+    \begin{itemize}[leftmargin=*]
+        \item Modal emergente accesible con el pictograma de la actividad siguiente para anticipar la transición y evitar frustración en el alumno.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Álvaro Sanabria --- Accesibilidad y Preferencias de Alumno (SCRUM-66, SCRUM-164)}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+    \item \textbf{Tarea SCRUM-66 (T-04.3 / Panel de Preferencias Visuales):}
+    \begin{itemize}[leftmargin=*]
+        \item Selector de tamaño de fuente (normal / grande / gigante) y modo de alto contraste para alumnos con baja visión.
+    \end{itemize}
+    \item \textbf{Tarea SCRUM-164 (T-T03.2 / Design System):}
+    \begin{itemize}[leftmargin=*]
+        \item Archivo centralizado de temas y constantes (\texttt{src/theme/colors.ts}) con ratios de contraste WCAG 2.1 AA validados ($\ge 4.5:1$ en texto y $\ge 3:1$ en elementos táctiles).
+    \end{itemize}
+\end{itemize}
+
+\subsection{Javier Miñán --- Gestor de Calidad y Pruebas de Seguridad (SCRUM-57, SCRUM-84, SCRUM-159, SCRUM-161)}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+    \item \textbf{Tarea SCRUM-57 (T-02.3 Testing / HU-02):}
+    \begin{itemize}[leftmargin=*]
+        \item Sacar subrama desde la rama padre de la historia: \texttt{SCRUM-54-hu-02-inicio-de-sesion-estandar-para-supervisores}.
+        \item Añadir pruebas automáticas con Jest en \texttt{src/services/\_\_tests\_\_/} que verifiquen: expiración de token JWT, revocación al hacer logout y bloqueo de peticiones sin cabecera de autorización.
+        \item Abrir PR de la subtarea hacia la rama padre \texttt{SCRUM-54...}.
+    \end{itemize}
+    \item \textbf{Tarea SCRUM-161 (T-T02.3 DevOps):} Automatizar el despliegue de staging en Vercel con el comando oficial de Expo (\texttt{npx expo export -p web}).
+\end{itemize}
+
+\subsection{Juan Luis Jiménez --- Coordinación, Infraestructura y Auth (SCRUM-154, SCRUM-155, SCRUM-157, SCRUM-54)}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+    \item \textbf{Tareas Completadas al 100\%:}
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{SCRUM-56 (Backend Auth):} Implementado \texttt{signInSupervisor} con Supabase JWT, RBAC y error genérico anti-fuga (RF1.8). 11 tests pasando.
+        \item \textbf{SCRUM-55 (Frontend Login):} Pantalla \texttt{app/login.tsx} accesible en React Native Web con selector Demo. 6 tests pasando.
+        \item \textbf{Soporte de Tipos e Infraestructura:} Configurado \texttt{tsconfig.json} con \texttt{"types": ["jest"]} y \texttt{.prettierignore}. PR \#7 abierto hacia \texttt{main} a la espera del cierre de QA de Javier.
+    \end{itemize}
+\end{itemize}
+
+\section{Checklist de 4 Pasos Obligatorio antes de enviar un PR}
+
+Cada miembro \textbf{debe} ejecutar en su consola estos 4 comandos y comprobar que los 4 salen en verde:
+
+\begin{tcolorbox}[colback=ggray,colframe=gnavy,title=\textbf{Protocolo de Validación Local}]
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+    \item \texttt{npm test -{}- -{}-ci} \hfill \textit{(Pasan todas las pruebas automáticas)}
+    \item \texttt{npx tsc -{}-noEmit} \hfill \textit{(TypeScript compila sin errores de tipos)}
+    \item \texttt{npm run lint} \hfill \textit{(ESLint verifica reglas y accesibilidad)}
+    \item \texttt{npm run format:check} \hfill \textit{(Si falla, corregir con \texttt{npm run format})}
+\end{enumerate}
+\end{tcolorbox}
+
+\vspace{0.6cm}
+\begin{center}
+\small\textbf{Los Gantt-sters} · Subgrupo 2 · UGR 2026/2027 · Coordinador: Juan Luis Jiménez Urbano
+\end{center}
+
+\end{document}

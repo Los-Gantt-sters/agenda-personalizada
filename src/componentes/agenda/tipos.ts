@@ -31,7 +31,7 @@ export interface EntradaAgenda {
   tarea_id: string;
   /** Fecha local en formato AAAA-MM-DD. */
   fecha: string;
-  /** Hora de inicio en formato HH:MM (también se acepta HH:MM:SS). */
+  /** Hora de inicio en formato HH:MM (también se acepta HH:MM:SS); "" si la tarea no tiene hora fija. */
   hora_inicio: string;
   duracion_prevista_min: number;
   orden: number;

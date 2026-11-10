@@ -8,6 +8,7 @@ import {
   marcasReloj,
   trazadoSector,
 } from "./calculoReloj";
+import { useTemaOpcional } from "../../temas";
 import { textoTiempoRestante } from "./textoTiempo";
 import { useAlarmaSuave } from "./useAlarmaSuave";
 
@@ -16,14 +17,18 @@ const RADIO_BORDE = 96;
 const RADIO_DISCO = 88;
 const MARCAS = marcasReloj(92, 84);
 
-/** Colores del reloj. Por defecto, los del tema claro del prototipo. */
+/**
+ * Colores del reloj: `disco` es el sector que se reduce, `fondo` el círculo y `tinta` el borde,
+ * las marcas y el rótulo. Salen del tema activo; los fijos solo se usan fuera de <TemaProvider>.
+ */
 export type ColoresReloj = {
   disco: string;
   fondo: string;
   tinta: string;
 };
 
-const COLORES_TEMA_CLARO: ColoresReloj = {
+// Sin tema (p. ej. en tests), los del tema claro del prototipo
+const COLORES_SIN_TEMA: ColoresReloj = {
   disco: "#d1495b",
   fondo: "#ffffff",
   tinta: "#14213d",
@@ -36,6 +41,7 @@ type Props = {
   transcurridoMs: number;
   /** Ancho y alto del disco en píxeles. */
   tamano?: number;
+  /** Solo para casos especiales: por encima de los colores del tema activo. */
   colores?: Partial<ColoresReloj>;
   /** Muestra debajo el rótulo en Lectura Fácil («Quedan 3 minutos»). Se puede desactivar por alumno. */
   mostrarRotulo?: boolean;
@@ -62,7 +68,12 @@ export function RelojVisual({
   parpadeoAlTerminar = true,
   onTiempoAgotado,
 }: Props) {
-  const { disco, fondo, tinta } = { ...COLORES_TEMA_CLARO, ...colores };
+  // NC-004: con colores fijos, el rótulo no se leía en los temas oscuros (contraste 1,13:1)
+  const tema = useTemaOpcional();
+  const coloresTema: Partial<ColoresReloj> = tema
+    ? { disco: tema.colores.peligro, fondo: tema.colores.superficie, tinta: tema.colores.texto }
+    : {};
+  const { disco, fondo, tinta } = { ...COLORES_SIN_TEMA, ...coloresTema, ...colores };
   const fraccion = fraccionRestante(duracionMs, transcurridoMs);
   const sector = trazadoSector(fraccion, RADIO_DISCO);
   const rotulo = textoTiempoRestante(duracionMs - transcurridoMs);
