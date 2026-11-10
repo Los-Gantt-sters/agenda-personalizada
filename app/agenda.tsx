@@ -5,9 +5,11 @@
 // (hasta que el inicio de sesión del estudiante, HU-01, dé el id).
 // HU-08 (T-08.2): con ?confirmacion=simple se prueba el modo «¿Seguro?» en lugar de mantener
 // pulsado, hasta que salga del perfil del estudiante (SCRUM-66).
+// T-06.4: sin barras de scroll, cabecera, barra de estado ni gestos del navegador que distraigan.
 import { useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import {
   AgendaDelDia,
   agendaDemo,
@@ -15,6 +17,7 @@ import {
   colores,
   crearRepositorioMemoria,
   hoyISO,
+  useModoSinDistracciones,
 } from "../src/componentes/agenda";
 import { PREFERENCIAS_EJECUCION_POR_DEFECTO } from "../src/componentes/ejecucion-tarea";
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
@@ -37,6 +40,8 @@ export default function PantallaAgenda() {
         : PREFERENCIAS_EJECUCION_POR_DEFECTO,
     [confirmacion],
   );
+  // T-06.4: sin barras de scroll ni elementos de distracción mientras la agenda está abierta.
+  useModoSinDistracciones();
 
   const { repo, estudianteId, tutorDemo } = useMemo(() => {
     if (estudiante) {
@@ -55,6 +60,8 @@ export default function PantallaAgenda() {
     <View style={estilos.raiz}>
       {/* Sin cabecera de navegación: en la vista del alumno distrae (RNF4.1). */}
       <Stack.Screen options={{ headerShown: false, title: "Mi agenda" }} />
+      {/* T-06.4: tampoco se ve la barra de estado (hora, batería, notificaciones) en la tableta. */}
+      <StatusBar hidden />
       <AgendaDelDia repo={repo} estudianteId={estudianteId} preferencias={preferencias} />
     </View>
   );

@@ -16,7 +16,7 @@
 
 import { supabase } from "../lib/supabaseClient";
 import { AmbitoActuacion, Alumno } from "../tipos/alumnos";
-import { SupervisorRole, SupervisorProfile } from "../tipos/auth";
+import { SupervisorRole, SupervisorProfile, UserRole } from "../tipos/auth";
 import { Tarea } from "../tipos/tareas";
 import {
   AccionPermiso,
@@ -184,7 +184,8 @@ export function obtenerAmbitosEscritura(rol: SupervisorRole): AmbitoActuacion[] 
 /**
  * Retorna los ámbitos en los que el usuario tiene permisos de consulta / lectura.
  */
-export function obtenerAmbitosLectura(rol: SupervisorRole): AmbitoActuacion[] {
+// UserRole: la sesión también puede ser de un estudiante (HU-01), que aquí no recibe ningún ámbito
+export function obtenerAmbitosLectura(rol: UserRole): AmbitoActuacion[] {
   if (rol === "admin" || rol === "tutor_docente" || rol === "especialista" || rol === "familiar") {
     return ["centro", "hogar"];
   }
