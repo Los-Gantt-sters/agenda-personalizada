@@ -25,6 +25,10 @@ import { reproducirSonido } from "../../../servicios/sonidos";
 
 jest.mock("../../../servicios/sonidos", () => ({ reproducirSonido: jest.fn() }));
 
+// Estas pruebas pintan el login completo; la primera, en frío, supera los 5 s por defecto de Jest
+// en los servidores de GitHub Actions (en local tarda menos de 1 s)
+jest.setTimeout(20_000);
+
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({ useRouter: () => ({ push: mockPush }) }));
 
