@@ -1,5 +1,6 @@
 // Lógica de la agenda del día (T-06.1, HU-06): ordena las tareas (RF4.1) y las reparte en
 // «Hecho», «Ahora» y «Después» (RF4.2). T-06.2 añade el avance al confirmar (RF4.3).
+// T-08.1 (HU-08) añade «Empezar» (RF6.1) y guarda las horas reales de inicio y fin (RI6.1).
 // Sin React ni Supabase, para poder probarla aparte.
 import type { BloquesAgenda, EntradaAgenda } from "./tipos";
 
@@ -110,9 +111,38 @@ export function dividirEnBloques(
 export function confirmarFin(
   entradas: readonly EntradaAgenda[],
   idEntrada: string,
+  fin: string = new Date().toISOString(),
 ): EntradaAgenda[] {
-  const secuencia = ordenarSecuencia(entradas);
-  const actual = secuencia[indiceAhora(secuencia)];
+  const actual = entradaAhora(entradas);
   if (!actual || actual.id !== idEntrada) return entradas.slice();
-  return entradas.map((e) => (e.id === idEntrada ? { ...e, estado: "hecha" } : e));
+  return entradas.map((e) => (e.id === idEntrada ? { ...e, estado: "hecha", fin_real: fin } : e));
+}
+
+function entradaAhora(entradas: readonly EntradaAgenda[]): EntradaAgenda | undefined {
+  const secuencia = ordenarSecuencia(entradas);
+  return secuencia[indiceAhora(secuencia)];
+}
+
+/**
+ * RF6.8: la tarea de «Ahora» pide pulsar «Empezar» si el tutor lo ha marcado y todavía no se ha
+ * empezado. Si no, se enseña directamente «Terminar».
+ */
+export function necesitaEmpezar(entrada: EntradaAgenda): boolean {
+  return Boolean(entrada.requiere_inicio_fin) && entrada.estado === "pendiente";
+}
+
+/**
+ * RF6.1: pone en curso la tarea de «Ahora» y guarda la hora de inicio (RI6.1).
+ * Solo vale para la tarea de «Ahora» y si está pendiente; si no, no cambia nada.
+ */
+export function empezarTarea(
+  entradas: readonly EntradaAgenda[],
+  idEntrada: string,
+  inicio: string = new Date().toISOString(),
+): EntradaAgenda[] {
+  const actual = entradaAhora(entradas);
+  if (!actual || actual.id !== idEntrada || actual.estado !== "pendiente") return entradas.slice();
+  return entradas.map((e) =>
+    e.id === idEntrada ? { ...e, estado: "en_curso", inicio_real: inicio } : e,
+  );
 }

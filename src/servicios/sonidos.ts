@@ -5,11 +5,14 @@ import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import acierto from "../../assets/sonidos/acierto.wav";
 import borrar from "../../assets/sonidos/borrar.wav";
 import finTiempo from "../../assets/sonidos/fin-tiempo.wav";
+import refuerzo from "../../assets/sonidos/refuerzo.wav";
 import toque from "../../assets/sonidos/toque.wav";
 
 const SONIDOS = {
   /** Campanita de dos notas al acabarse el tiempo de una tarea (HU-09, RF6.7). */
   finTiempo,
+  /** Arpegio suave de cuatro notas al terminar una tarea (HU-08, RF6.4). */
+  refuerzo,
   /** "Pop" corto y suave al tocar una foto, una clase o un dibujo (HU-01, T-01.3). */
   toque,
   /** Dos notas ascendentes al completar los 3 dibujos de la credencial (HU-01, T-01.3). */

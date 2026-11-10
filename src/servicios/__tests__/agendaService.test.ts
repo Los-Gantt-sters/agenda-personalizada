@@ -1,10 +1,16 @@
-import { marcarTareaHecha, obtenerSecuenciaDia, suscribirseAgenda } from "../agendaService";
+import {
+  marcarTareaEnCurso,
+  marcarTareaHecha,
+  obtenerSecuenciaDia,
+  suscribirseAgenda,
+} from "../agendaService";
 import { supabase } from "../../lib/supabaseClient";
 
 // Consulta encadenable de Supabase: cada método devuelve la misma consulta y al final se resuelve.
 function consultaFalsa(resultado: { data?: unknown; error: unknown }) {
   const q: Record<string, jest.Mock> & { then?: unknown } = {} as never;
-  for (const m of ["select", "eq", "neq", "order", "update", "in"]) q[m] = jest.fn(() => q);
+  for (const m of ["select", "eq", "neq", "order", "update", "upsert", "in"])
+    q[m] = jest.fn(() => q);
   q.then = (ok: (r: unknown) => unknown, ko: (e: unknown) => unknown) =>
     Promise.resolve(resultado).then(ok, ko);
   return q;
@@ -50,16 +56,53 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     await expect(obtenerSecuenciaDia("al1", "2026-11-05")).rejects.toThrow("sin red");
   });
 
-  it("marca como hecha solo si seguía pendiente o en curso (RF4.3)", async () => {
-    const q = consultaFalsa({ error: null });
-    sb.from.mockReturnValue(q);
+  it("marca como hecha solo si seguía pendiente o en curso y guarda la hora de fin (RF4.3, RI6.1)", async () => {
+    const asig = consultaFalsa({ data: [{ id: "e1" }], error: null });
+    const ejec = consultaFalsa({ error: null });
+    sb.from.mockImplementation((t: string) => (t === "asignaciones" ? asig : ejec));
+
+    await marcarTareaHecha("e1", "2026-11-05T09:40:00.000Z");
+
+    expect(asig.update).toHaveBeenCalledWith({ estado: "hecho" });
+    expect(asig.eq).toHaveBeenCalledWith("id", "e1");
+    expect(asig.in).toHaveBeenCalledWith("estado", ["pendiente", "en_curso"]);
+    expect(sb.from).toHaveBeenCalledWith("ejecuciones");
+    expect(ejec.update).toHaveBeenCalledWith({ fin: "2026-11-05T09:40:00.000Z" });
+    expect(ejec.eq).toHaveBeenCalledWith("asignacion_id", "e1");
+  });
+
+  it("no guarda la hora de fin si la asignación ya no estaba pendiente ni en curso", async () => {
+    const asig = consultaFalsa({ data: [], error: null });
+    sb.from.mockReturnValue(asig);
 
     await marcarTareaHecha("e1");
 
-    expect(sb.from).toHaveBeenCalledWith("asignaciones");
-    expect(q.update).toHaveBeenCalledWith({ estado: "hecho" });
-    expect(q.eq).toHaveBeenCalledWith("id", "e1");
-    expect(q.in).toHaveBeenCalledWith("estado", ["pendiente", "en_curso"]);
+    expect(sb.from).not.toHaveBeenCalledWith("ejecuciones");
+  });
+
+  it("SCRUM-74: al empezar pone la tarea en curso, solo si seguía pendiente, y guarda la hora de inicio en ejecuciones (RF6.1, RI6.1)", async () => {
+    const asig = consultaFalsa({ data: [{ estudiante_id: "al1" }], error: null });
+    const ejec = consultaFalsa({ error: null });
+    sb.from.mockImplementation((t: string) => (t === "asignaciones" ? asig : ejec));
+
+    await marcarTareaEnCurso("e1", "2026-11-05T09:30:00.000Z");
+
+    expect(asig.update).toHaveBeenCalledWith({ estado: "en_curso" });
+    expect(asig.eq).toHaveBeenCalledWith("id", "e1");
+    expect(asig.eq).toHaveBeenCalledWith("estado", "pendiente");
+    expect(ejec.upsert).toHaveBeenCalledWith(
+      { asignacion_id: "e1", estudiante_id: "al1", inicio: "2026-11-05T09:30:00.000Z" },
+      { onConflict: "asignacion_id" },
+    );
+  });
+
+  it("al empezar no crea ejecución si la tarea ya no estaba pendiente", async () => {
+    const asig = consultaFalsa({ data: [], error: null });
+    sb.from.mockReturnValue(asig);
+
+    await marcarTareaEnCurso("e1", "2026-11-05T09:30:00.000Z");
+
+    expect(sb.from).not.toHaveBeenCalledWith("ejecuciones");
   });
 
   it("se suscribe a Realtime y avisa con los cambios del tutor (RF4.7)", () => {

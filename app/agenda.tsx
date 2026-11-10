@@ -3,6 +3,8 @@
 // «He terminado» y se actualiza sola con los cambios del tutor (Supabase Realtime).
 // Con /agenda?estudiante=<id> usa Supabase; sin ese parámetro abre la demo con datos de ejemplo
 // (hasta que el inicio de sesión del estudiante, HU-01, dé el id).
+// HU-08 (T-08.2): con ?confirmacion=simple se prueba el modo «¿Seguro?» en lugar de mantener
+// pulsado, hasta que salga del perfil del estudiante (SCRUM-66).
 // T-06.4: sin barras de scroll, cabecera, barra de estado ni gestos del navegador que distraigan.
 import { useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
@@ -17,10 +19,27 @@ import {
   hoyISO,
   useModoSinDistracciones,
 } from "../src/componentes/agenda";
+import { PREFERENCIAS_EJECUCION_POR_DEFECTO } from "../src/componentes/ejecucion-tarea";
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
 
 export default function PantallaAgenda() {
-  const { estudiante } = useLocalSearchParams<{ estudiante?: string }>();
+  const { estudiante, confirmacion } = useLocalSearchParams<{
+    estudiante?: string;
+    confirmacion?: string;
+  }>();
+  const preferencias = useMemo(
+    () =>
+      confirmacion === "simple"
+        ? {
+            ...PREFERENCIAS_EJECUCION_POR_DEFECTO,
+            confirmacion: {
+              ...PREFERENCIAS_EJECUCION_POR_DEFECTO.confirmacion,
+              modo: "simple" as const,
+            },
+          }
+        : PREFERENCIAS_EJECUCION_POR_DEFECTO,
+    [confirmacion],
+  );
   // T-06.4: sin barras de scroll ni elementos de distracción mientras la agenda está abierta.
   useModoSinDistracciones();
 
@@ -43,7 +62,7 @@ export default function PantallaAgenda() {
       <Stack.Screen options={{ headerShown: false, title: "Mi agenda" }} />
       {/* T-06.4: tampoco se ve la barra de estado (hora, batería, notificaciones) en la tableta. */}
       <StatusBar hidden />
-      <AgendaDelDia repo={repo} estudianteId={estudianteId} />
+      <AgendaDelDia repo={repo} estudianteId={estudianteId} preferencias={preferencias} />
     </View>
   );
 }

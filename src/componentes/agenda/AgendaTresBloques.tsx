@@ -2,13 +2,24 @@
 // RF4.2: «Hecho» a la izquierda, «Ahora» en el centro (60 %) y «Después» a la derecha.
 // RNF4.2: en vertical o en móvil los bloques se apilan en el mismo orden y «Ahora» sigue al 60 %.
 // RNF4.1: sin ScrollView; a cada lado solo se pintan las tarjetas que caben.
+// T-08.1 (HU-08): en «Ahora», botón «Empezar» (RF6.1, si el tutor lo pide: RF6.8) que pone en marcha
+// el reloj visual, y botón «Terminar» (RF6.4).
 import { useEffect, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { BloquesAgenda, EntradaAgenda } from "./tipos";
-import { franjaHoraria, horaCorta } from "./logica";
+import { franjaHoraria, horaCorta, necesitaEmpezar } from "./logica";
 import { colores, RADIO } from "./colores";
 import { PictogramaTarea } from "./PictogramaTarea";
-import { BotonMantener } from "./BotonMantener";
+import { BotonAccionTarea } from "../ejecucion-tarea/BotonAccionTarea";
+import { useTranscurrido } from "../ejecucion-tarea/useTranscurrido";
+import { RelojVisual } from "../reloj-visual/RelojVisual";
+import type { PreferenciasConfirmacion } from "../ejecucion-tarea/tipos";
+
+/** Hora local «9:32» de una fecha ISO. */
+function horaDe(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
 
 /** Proporción de los bloques: 1 + 3 + 1 → «Ahora» = 3/5 = 60 %. */
 export const PESO_LADO = 1;
@@ -55,12 +66,18 @@ export function calcularMedidas(width: number, height: number): Medidas {
 
 export function AgendaTresBloques({
   bloques,
+  onEmpezar = () => {},
   onConfirmarFin,
   onAbrir,
+  confirmacion,
 }: {
   bloques: BloquesAgenda;
+  /** RF6.1: «Empezar». Solo se usa si la tarea lo pide (RF6.8). */
+  onEmpezar?: (idEntrada: string) => void;
   onConfirmarFin: (idEntrada: string) => void;
   onAbrir: (entrada: EntradaAgenda) => void;
+  /** T-08.2: modo antitoques del perfil del estudiante (RNF6.1). */
+  confirmacion?: PreferenciasConfirmacion;
 }) {
   const ventana = useWindowDimensions();
   // Se mide el hueco real (puede no ser toda la ventana: márgenes seguros, etc.).
@@ -92,7 +109,9 @@ export function AgendaTresBloques({
         escala={escala}
         tam={m.ahora}
         onAbrir={onAbrir}
+        onEmpezar={onEmpezar}
         onConfirmarFin={onConfirmarFin}
+        confirmacion={confirmacion}
       />
       <Bloque
         tipo="despues"
@@ -233,15 +252,22 @@ function BloqueAhora({
   escala,
   tam,
   onAbrir,
+  onEmpezar,
   onConfirmarFin,
+  confirmacion,
 }: {
   bloques: BloquesAgenda;
   escala: number;
   tam: { width: number; height: number };
   onAbrir: (e: EntradaAgenda) => void;
+  onEmpezar: (id: string) => void;
   onConfirmarFin: (id: string) => void;
+  confirmacion?: PreferenciasConfirmacion;
 }) {
   const ahora = bloques.ahora;
+  // RF6.1: el reloj visual arranca al pulsar «Empezar» y cuenta desde la hora guardada.
+  const enCurso = ahora?.estado === "en_curso" && Boolean(ahora.inicio_real);
+  const transcurridoMs = useTranscurrido(enCurso ? ahora?.inicio_real : null);
 
   // Entrada suave de la nueva tarea al avanzar (sin saltos bruscos).
   const [aparicion] = useState(() => new Animated.Value(1));
@@ -263,12 +289,21 @@ function BloqueAhora({
     20 * 3 +
     16;
   const tamPicto = Math.max(48, Math.min(tam.width * 0.55, tam.height - fijo, 340));
+  // En curso, el dibujo y el reloj van uno al lado del otro (el reloj lleva su rótulo debajo).
+  const tamFila = enCurso
+    ? Math.max(48, Math.min(tamPicto - 36, (tam.width - 24 * 2 - 24) / 2))
+    : tamPicto;
+  const accion = ahora && necesitaEmpezar(ahora) ? "empezar" : "terminar";
 
   return (
     <View
       testID="bloque-ahora"
       accessibilityRole="summary"
-      accessibilityLabel={ahora ? `Ahora: ${ahora.tarea.titulo}` : "Has terminado todo por hoy"}
+      accessibilityLabel={
+        ahora
+          ? `Ahora: ${ahora.tarea.titulo}${ahora.estado === "en_curso" ? ", en curso" : ""}`
+          : "Has terminado todo por hoy"
+      }
       style={[estilos.bloque, estilos.bloqueAhora, tam]}
     >
       <Text style={[estilos.etiqueta, estilos.etiquetaAhora, { fontSize: 26 * escala }]}>
@@ -285,7 +320,16 @@ function BloqueAhora({
               onPress={() => onAbrir(ahora)}
               style={({ pressed }) => [estilos.ahoraTarjeta, pressed && estilos.pulsado]}
             >
-              <PictogramaTarea tarea={ahora.tarea} tam={tamPicto} />
+              <View style={estilos.filaPicto}>
+                <PictogramaTarea tarea={ahora.tarea} tam={tamFila} />
+                {enCurso && (
+                  <RelojVisual
+                    duracionMs={ahora.duracion_prevista_min * 60_000}
+                    transcurridoMs={transcurridoMs}
+                    tamano={tamFila}
+                  />
+                )}
+              </View>
               <Text
                 style={[estilos.ahoraTitulo, { fontSize: 44 * escala }]}
                 numberOfLines={bajo ? 1 : 2}
@@ -293,10 +337,20 @@ function BloqueAhora({
                 {ahora.tarea.titulo}
               </Text>
               <Text style={[estilos.ahoraHora, { fontSize: 24 * escala }]}>
-                {franjaHoraria(ahora)}
+                {enCurso && ahora.inicio_real
+                  ? `Empezaste a las ${horaDe(ahora.inicio_real)}`
+                  : franjaHoraria(ahora)}
               </Text>
             </Pressable>
-            <BotonMantener texto="✓ He terminado" onConfirmar={() => onConfirmarFin(ahora.id)} />
+            {/* key: al pasar de «Empezar» a «Terminar» el botón empieza de cero (sin relleno a medias). */}
+            <BotonAccionTarea
+              key={`${ahora.id}-${accion}`}
+              accion={accion}
+              confirmacion={confirmacion}
+              onConfirmar={() =>
+                accion === "empezar" ? onEmpezar(ahora.id) : onConfirmarFin(ahora.id)
+              }
+            />
           </>
         ) : (
           <View style={estilos.ahoraTarjeta}>
@@ -367,6 +421,7 @@ const estilos = StyleSheet.create({
     padding: 8,
     maxWidth: "100%",
   },
+  filaPicto: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 },
   ahoraTitulo: {
     fontWeight: "800",
     color: colores.texto,
