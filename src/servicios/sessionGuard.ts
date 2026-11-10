@@ -1,4 +1,4 @@
-import { AuthSession, SupervisorRole } from "../tipos/auth";
+import { AuthSession, UserRole } from "../tipos/auth";
 
 /**
  * Guardas de seguridad de sesión y acceso (SCRUM-57 / T-02.3).
@@ -23,8 +23,11 @@ export function isSessionExpired(
   return session.expiresAt - marginSeconds <= nowSeconds;
 }
 
-/** Zonas privadas de la app y roles autorizados en cada una (RBAC, RF1.4). */
-export const PROTECTED_ROUTES: Record<string, SupervisorRole[]> = {
+/**
+ * Zonas privadas de la app y roles autorizados en cada una (RBAC, RF1.4).
+ * Con UserRole porque la sesión también puede ser de un estudiante (HU-01), que no entra en ninguna.
+ */
+export const PROTECTED_ROUTES: Record<string, UserRole[]> = {
   "/admin": ["admin"],
   "/docente": ["tutor_docente", "admin"],
   "/familiar": ["familiar", "admin"],
