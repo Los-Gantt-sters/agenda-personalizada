@@ -1,14 +1,18 @@
 // Servicio de sonidos de la app (base de T-T03.3). Todos los sonidos son suaves y no estridentes.
 // T-01.3 (HU-01, SCRUM-52): se añaden los sonidos de feedback al pulsar en el inicio de sesión.
+// HU-16 (SCRUM-81): se añade el aviso 5 minutos antes de la siguiente tarea.
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 
 import acierto from "../../assets/sonidos/acierto.wav";
+import aviso from "../../assets/sonidos/aviso.wav";
 import borrar from "../../assets/sonidos/borrar.wav";
 import finTiempo from "../../assets/sonidos/fin-tiempo.wav";
 import refuerzo from "../../assets/sonidos/refuerzo.wav";
 import toque from "../../assets/sonidos/toque.wav";
 
 const SONIDOS = {
+  /** Dos notas suaves que suben, 5 minutos antes de la siguiente tarea (HU-16, RNF4.3). */
+  aviso,
   /** Campanita de dos notas al acabarse el tiempo de una tarea (HU-09, RF6.7). */
   finTiempo,
   /** Arpegio suave de cuatro notas al terminar una tarea (HU-08, RF6.4). */
