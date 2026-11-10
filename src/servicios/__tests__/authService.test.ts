@@ -146,7 +146,7 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
           session: {
             access_token: "jwt-activo",
             refresh_token: "refresh-activo",
-            expires_at: 1761900000,
+            expires_at: 4102444800, // 2100-01-01: sesión vigente
             user: {
               id: "admin-1",
               email: "admin@purisima.es",
