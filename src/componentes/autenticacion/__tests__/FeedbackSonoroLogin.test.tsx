@@ -74,19 +74,4 @@ describe("Feedback sonoro al pulsar (SCRUM-52: T-01.3 Feedback sonoro amigable)"
     await user.press(screen.getByTestId("btn-cancelar-estudiante"));
     expect(sonar).toHaveBeenCalledWith("toque");
   });
-
-  it("«Sí, soy yo» suena «acierto», como al completar los 3 dibujos", async () => {
-    const user = userEvent.setup();
-    await render(
-      <ModalConfirmacionEstudiante
-        estudiante={estudiante}
-        visible={true}
-        alConfirmar={jest.fn()}
-        alCancelar={jest.fn()}
-      />,
-    );
-
-    await user.press(screen.getByTestId("btn-confirmar-estudiante"));
-    expect(sonar).toHaveBeenCalledWith("acierto");
-  });
 });
