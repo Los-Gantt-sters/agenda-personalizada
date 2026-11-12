@@ -9,7 +9,9 @@ import {
   crearRepositorioMemoria,
   hoyISO,
 } from "../../src/componentes/agenda";
-import { PREFERENCIAS_EJECUCION_POR_DEFECTO } from "../../src/componentes/ejecucion-tarea";
+import { TAM_RELOJ_TAREA } from "../../src/componentes/agenda/PantallaTarea";
+import { PreferenciasProvider } from "../../src/preferencias";
+import { TemaProvider } from "../../src/temas";
 
 // La primera prueba compila el reloj (SVG) y la agenda: sin caché de Jest (CI) tarda más de 5 s.
 jest.setTimeout(20_000);
@@ -28,10 +30,23 @@ jest.mock("expo-router", () => ({
 }));
 
 const etiqueta = (id: string) => screen.getByTestId(id).props.accessibilityLabel;
-// T-08.2: un botón recién aparecido no hace caso durante 0,8 s (antitoques).
+// Un botón recién aparecido no hace caso durante 0,8 s (el mismo toque no vale para dos cosas).
 const pasaElBloqueo = () => act(() => new Promise<void>((r) => setTimeout(r, 850)));
-const activar = (boton: ReturnType<typeof screen.getByRole>) =>
-  fireEvent(boton, "accessibilityAction", { nativeEvent: { actionName: "activate" } });
+const tocar = (boton: ReturnType<typeof screen.getByRole>) => fireEvent.press(boton);
+
+/** Empieza «Lavarse las manos» (la demo la pide empezar) y espera a la pantalla de la tarea. */
+async function empezarLavarse() {
+  await pasaElBloqueo();
+  tocar(await screen.findByRole("button", { name: "Empezar" }));
+  await screen.findByTestId("pantalla-tarea-en-curso");
+}
+
+/** Pulsa «Terminar» en la pantalla de la tarea y espera a la felicitación. */
+async function terminarTarea() {
+  await pasaElBloqueo();
+  tocar(screen.getByRole("button", { name: "Terminar" }));
+  await screen.findByText("¡Muy bien!");
+}
 
 describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
   it("muestra los tres bloques con la tarea de ahora en el centro (T-06.1)", async () => {
@@ -44,74 +59,73 @@ describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
     expect(screen.getByRole("button", { name: "Empezar" })).toBeTruthy();
   });
 
-  it("al pulsar una tarjeta abre su detalle y se cierra con Cerrar (RF4.4)", async () => {
+  it("al pulsar una tarjeta abre su pantalla (sin ventana) y «Atrás» vuelve a la agenda (RF4.4)", async () => {
     const user = userEvent.setup();
     await render(<PantallaAgenda />);
 
     await user.press(await screen.findByTestId("mini-e3"));
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Desayuno");
     expect(screen.getByText("Tomamos el desayuno en clase.")).toBeTruthy();
+    expect(JSON.stringify(screen.toJSON())).not.toContain("RCTModalHostView");
+    // El detalle no tiene «Terminar»: solo se termina la tarea de «Ahora».
+    expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
 
-    await user.press(screen.getByRole("button", { name: "Cerrar" }));
+    await user.press(screen.getByTestId("btn-barra-atras"));
+    expect(await screen.findByTestId("bloque-ahora")).toBeTruthy();
     expect(screen.queryByText("Tomamos el desayuno en clase.")).toBeNull();
   });
 
-  it("al confirmar el fin, la tarea pasa a Hecho y la siguiente a Ahora (RF4.3, T-06.2)", async () => {
+  it("al terminar, la tarea pasa a Hecho y la siguiente a Ahora (RF4.3, T-06.2)", async () => {
     await render(<PantallaAgenda />);
-    // Con lector de pantalla basta con activar el botón (sin mantenerlo pulsado).
-    await pasaElBloqueo();
-    await activar(await screen.findByRole("button", { name: "Empezar" }));
-    await screen.findByRole("button", { name: "Terminar" });
-    await pasaElBloqueo();
-    await activar(screen.getByRole("button", { name: "Terminar" }));
+    await empezarLavarse();
+    await terminarTarea();
+    await userEvent.setup().press(screen.getByTestId("btn-barra-adelante"));
 
     await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
     expect(etiqueta("bloque-hecho")).toBe("Hecho: Asamblea, Lavarse las manos");
   });
 });
 
-describe("Pantalla agenda del día (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)", () => {
+describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque y Atrás)", () => {
   afterEach(() => jest.useRealTimers());
 
-  it("BDD: al mantener Empezar 1,5 s la tarea pasa a EN CURSO, se guarda la hora y arranca el reloj", async () => {
+  it("BDD: con un toque en Empezar solo se ve la tarea, con la hora, los pasos y un reloj pequeño", async () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 5, 9, 32) });
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     await render(<PantallaAgenda />);
+    const empezar = await screen.findByRole("button", { name: "Empezar" });
+    await act(() => jest.advanceTimersByTime(1000));
 
-    await user.longPress(await screen.findByRole("button", { name: "Empezar" }), {
-      duration: 1600,
-    });
+    await user.press(empezar);
 
-    await waitFor(() =>
-      expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos, en curso"),
-    );
+    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    // Arriba el nombre de la tarea; sin «Hecho» ni «Después».
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Lavarse las manos");
+    expect(screen.queryByTestId("bloque-hecho")).toBeNull();
+    expect(screen.queryByTestId("bloque-despues")).toBeNull();
     expect(screen.getByText("Empezaste a las 9:32")).toBeTruthy();
+    expect(screen.getByText("Antes del desayuno nos lavamos las manos.")).toBeTruthy();
+    expect(screen.getByText("Paso 1 de 4: Abre el grifo.")).toBeTruthy();
     expect(screen.getByLabelText(/^Reloj visual:/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Terminar" })).toBeTruthy();
   });
 
-  it("un toque corto en Empezar no hace nada (RNF6.1)", async () => {
-    jest.useFakeTimers();
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+  it("«Atrás» en la tarea empezada la deshace: vuelve a la agenda sin empezar", async () => {
+    const user = userEvent.setup();
     await render(<PantallaAgenda />);
+    await empezarLavarse();
 
-    await user.longPress(await screen.findByRole("button", { name: "Empezar" }), {
-      duration: 300,
-    });
-    await act(() => jest.advanceTimersByTime(2000));
+    await user.press(screen.getByTestId("btn-barra-atras"));
 
-    expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos");
-    expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
+    await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos"));
+    expect(screen.getByRole("button", { name: "Empezar" })).toBeTruthy();
   });
 
-  it("BDD: al pulsar Terminar sale el refuerzo positivo con sonido y Seguir vuelve a la agenda", async () => {
+  it("BDD: al pulsar Terminar sale el refuerzo con sonido y Seguir vuelve a la agenda", async () => {
     await render(<PantallaAgenda />);
-    await pasaElBloqueo();
-    await activar(await screen.findByRole("button", { name: "Empezar" }));
-    await screen.findByRole("button", { name: "Terminar" });
-    await pasaElBloqueo();
-    await activar(screen.getByRole("button", { name: "Terminar" }));
+    await empezarLavarse();
+    await terminarTarea();
 
-    expect(await screen.findByText("¡Muy bien!")).toBeTruthy();
     expect(screen.getByText("Has terminado: Lavarse las manos")).toBeTruthy();
     expect(reproducirSonido).toHaveBeenCalledWith("refuerzo", expect.any(Number));
 
@@ -120,51 +134,127 @@ describe("Pantalla agenda del día (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)
     expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno");
   });
 
-  it("si el tutor no pide registrar el inicio (RF6.8), sale directamente Terminar", async () => {
+  it("«Atrás» en la felicitación deshace Terminar: la tarea vuelve a estar en curso", async () => {
+    const user = userEvent.setup();
     await render(<PantallaAgenda />);
-    await pasaElBloqueo();
-    await activar(await screen.findByRole("button", { name: "Empezar" }));
-    await screen.findByRole("button", { name: "Terminar" });
-    await pasaElBloqueo();
-    await activar(screen.getByRole("button", { name: "Terminar" }));
-    await userEvent.setup().press(await screen.findByRole("button", { name: "Seguir" }));
+    await empezarLavarse();
+    await terminarTarea();
 
-    // «Desayuno» no lo pide.
+    await user.press(screen.getByTestId("btn-barra-atras"));
+
+    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Lavarse las manos");
+    expect(screen.queryByText("¡Muy bien!")).toBeNull();
+  });
+
+  it("si el tutor no pide registrar el inicio (RF6.8), sale directamente Terminar; Atrás lo deshace", async () => {
+    const user = userEvent.setup();
+    await render(<PantallaAgenda />);
+    await empezarLavarse();
+    await terminarTarea();
+    await user.press(screen.getByRole("button", { name: "Seguir" }));
+
+    // «Desayuno» no lo pide: Terminar en la agenda, sin pasar por la pantalla de la tarea.
+    await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
+    expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
+    await pasaElBloqueo();
+    tocar(screen.getByRole("button", { name: "Terminar" }));
+    await screen.findByText("Has terminado: Desayuno");
+
+    await user.press(screen.getByTestId("btn-barra-atras"));
     await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
     expect(screen.getByRole("button", { name: "Terminar" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
   });
 
   it("no hay ningún campo de texto para el estudiante (RNF6.4)", async () => {
     await render(<PantallaAgenda />);
-    await activar(await screen.findByRole("button", { name: "Empezar" }));
+    await empezarLavarse();
     expect(JSON.stringify(screen.toJSON())).not.toContain('"type":"TextInput"');
   });
 });
 
-describe("Pantalla agenda del día (SCRUM-75: T-08.2 Antitoques accidentales)", () => {
-  it("con el modo simple del perfil, Empezar pregunta «¿Seguro?» antes de ponerla en curso", async () => {
-    const user = userEvent.setup();
-    const { repo } = crearRepositorioMemoria(agendaDemo(hoyISO()));
+describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () => {
+  const repoEnCurso = () =>
+    crearRepositorioMemoria(
+      agendaDemo(hoyISO()).map((e) =>
+        e.id === "e2"
+          ? { ...e, estado: "en_curso" as const, inicio_real: new Date().toISOString() }
+          : e,
+      ),
+    ).repo;
+
+  it("una tarea en curso se ve sola al abrir la agenda (también tras recargar)", async () => {
+    await render(<AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} />);
+    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Lavarse las manos");
+  });
+
+  it("un adulto que abre la agenda con una tarea empezada ve la agenda; su Atrás no la deshace", async () => {
+    const repo = repoEnCurso();
+    const desmarcar = jest.spyOn(repo, "desmarcarEnCurso");
+    const volverAlPanel = jest.fn();
     await render(
       <AgendaDelDia
         repo={repo}
         estudianteId={ESTUDIANTE_DEMO}
-        preferencias={{
-          ...PREFERENCIAS_EJECUCION_POR_DEFECTO,
-          confirmacion: { ...PREFERENCIAS_EJECUCION_POR_DEFECTO.confirmacion, modo: "simple" },
-        }}
+        abrirTareaEnCurso={false}
+        marco={{ titulo: "Agenda del alumno", alAtras: volverAlPanel }}
       />,
     );
-    await screen.findByRole("button", { name: "Empezar" });
-    await pasaElBloqueo();
+    await screen.findByTestId("bloque-ahora");
+    expect(screen.queryByTestId("pantalla-tarea-en-curso")).toBeNull();
+    expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos, en curso");
 
-    await user.press(screen.getByRole("button", { name: "Empezar" }));
-    expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos");
-    await user.press(screen.getByRole("button", { name: "Sí, empezar" }));
-    await waitFor(() =>
-      expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos, en curso"),
+    fireEvent.press(screen.getByTestId("btn-barra-atras"));
+    expect(volverAlPanel).toHaveBeenCalledTimes(1);
+    expect(desmarcar).not.toHaveBeenCalled();
+  });
+
+  it("si el adulto pulsa él «Empezar», también pasa a la pantalla de la tarea", async () => {
+    await render(
+      <AgendaDelDia
+        repo={crearRepositorioMemoria(agendaDemo(hoyISO())).repo}
+        estudianteId={ESTUDIANTE_DEMO}
+        abrirTareaEnCurso={false}
+      />,
     );
+    await empezarLavarse();
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Lavarse las manos");
+  });
+
+  it("con la preferencia «Sin reloj» la tarea en curso no enseña reloj", async () => {
+    await render(
+      <AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} verReloj={false} />,
+    );
+    await screen.findByTestId("pantalla-tarea-en-curso");
+    expect(screen.queryByTestId("reloj-tarea")).toBeNull();
+    expect(screen.queryByLabelText(/^Reloj visual:/)).toBeNull();
+  });
+
+  it("el reloj es pequeño: mucho más que el dibujo de la tarea", async () => {
+    await render(<AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} />);
+    await screen.findByTestId("reloj-tarea");
+    expect(TAM_RELOJ_TAREA).toBeLessThanOrEqual(120);
+  });
+
+  it("el formato sale de las preferencias y se puede cambiar dentro de la tarea", async () => {
+    const user = userEvent.setup();
+    await render(
+      <TemaProvider>
+        <PreferenciasProvider preferenciasIniciales={{ canal: "soloPictograma" }}>
+          <AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} />
+        </PreferenciasProvider>
+      </TemaProvider>,
+    );
+    await screen.findByTestId("pantalla-tarea-en-curso");
+    expect(screen.getByTestId("formato-soloPictograma").props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    expect(screen.queryByTestId("tarea-titulo-grande")).toBeNull();
+
+    await user.press(screen.getByTestId("formato-soloTexto"));
+    expect(screen.getByTestId("tarea-titulo-grande")).toHaveTextContent("Lavarse las manos");
+    expect(screen.queryByLabelText("Dibujo de Lavarse las manos")).toBeNull();
   });
 });
 

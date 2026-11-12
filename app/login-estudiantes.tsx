@@ -5,6 +5,8 @@
 //   2. Clase Triángulo     → busca tu foto o dibujo y tócalo.
 //   3. ¿Eres Alejandro?    → toca tus 3 dibujos y pulsa «Entrar».
 // «Atrás» y «Adelante» van siempre en la barra de abajo (componente Pantalla).
+// Sin «Ayuda» en estos tres pasos (petición de la profesora): el hueco de la izquierda se queda
+// vacío para que las flechas no se muevan de sitio.
 import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -173,6 +175,7 @@ export default function LoginEstudiantesScreen({
         alAdelante={completa && !comprobando ? () => void entrar() : null}
         etiquetaAdelante="Adelante: entrar"
         conSonido
+        sinAyuda
       >
         <CredencialDibujos
           estudiante={alumno}
@@ -195,6 +198,7 @@ export default function LoginEstudiantesScreen({
         alAtras={volverAClases}
         etiquetaAtras="Atrás: elegir otra clase"
         conSonido
+        sinAyuda
       >
         <View style={e.paso}>
           {/* Instrucción: texto con dibujo, sin borde ni fondo para que no parezca un botón */}
@@ -224,6 +228,7 @@ export default function LoginEstudiantesScreen({
       alAdelante={claseAnterior ? () => setClase(claseAnterior) : null}
       etiquetaAdelante={claseAnterior ? `Adelante: clase ${claseAnterior.nombre}` : undefined}
       conSonido
+      sinAyuda
     >
       <View style={e.paso}>
         <View style={e.instruccion}>

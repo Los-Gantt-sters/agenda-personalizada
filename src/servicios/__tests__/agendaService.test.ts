@@ -1,4 +1,6 @@
 import {
+  desmarcarTareaEnCurso,
+  desmarcarTareaHecha,
   marcarTareaEnCurso,
   marcarTareaHecha,
   obtenerSecuenciaDia,
@@ -9,7 +11,7 @@ import { supabase } from "../../lib/supabaseClient";
 // Consulta encadenable de Supabase: cada método devuelve la misma consulta y al final se resuelve.
 function consultaFalsa(resultado: { data?: unknown; error: unknown }) {
   const q: Record<string, jest.Mock> & { then?: unknown } = {} as never;
-  for (const m of ["select", "eq", "neq", "order", "update", "upsert", "in"])
+  for (const m of ["select", "eq", "neq", "order", "update", "upsert", "in", "delete"])
     q[m] = jest.fn(() => q);
   q.then = (ok: (r: unknown) => unknown, ko: (e: unknown) => unknown) =>
     Promise.resolve(resultado).then(ok, ko);
@@ -103,6 +105,39 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     await marcarTareaEnCurso("e1", "2026-11-05T09:30:00.000Z");
 
     expect(sb.from).not.toHaveBeenCalledWith("ejecuciones");
+  });
+
+  it("profesora: deshacer Empezar devuelve la asignación a pendiente y borra su ejecución", async () => {
+    const asig = consultaFalsa({ data: [{ id: "e1" }], error: null });
+    const ejec = consultaFalsa({ error: null });
+    sb.from.mockImplementation((t: string) => (t === "asignaciones" ? asig : ejec));
+
+    await desmarcarTareaEnCurso("e1");
+
+    expect(asig.update).toHaveBeenCalledWith({ estado: "pendiente" });
+    expect(asig.eq).toHaveBeenCalledWith("id", "e1");
+    expect(asig.eq).toHaveBeenCalledWith("estado", "en_curso");
+    expect(ejec.delete).toHaveBeenCalled();
+    expect(ejec.eq).toHaveBeenCalledWith("asignacion_id", "e1");
+  });
+
+  it("profesora: deshacer Empezar no toca ejecuciones si la tarea ya no estaba en curso", async () => {
+    sb.from.mockReturnValue(consultaFalsa({ data: [], error: null }));
+    await desmarcarTareaEnCurso("e1");
+    expect(sb.from).not.toHaveBeenCalledWith("ejecuciones");
+  });
+
+  it("profesora: deshacer Terminar devuelve la asignación al estado pedido y borra la hora de fin", async () => {
+    const asig = consultaFalsa({ data: [{ id: "e1" }], error: null });
+    const ejec = consultaFalsa({ error: null });
+    sb.from.mockImplementation((t: string) => (t === "asignaciones" ? asig : ejec));
+
+    await desmarcarTareaHecha("e1", "en_curso");
+
+    expect(asig.update).toHaveBeenCalledWith({ estado: "en_curso" });
+    expect(asig.eq).toHaveBeenCalledWith("estado", "hecho");
+    expect(ejec.update).toHaveBeenCalledWith({ fin: null });
+    expect(ejec.eq).toHaveBeenCalledWith("asignacion_id", "e1");
   });
 
   it("se suscribe a Realtime y avisa con los cambios del tutor (RF4.7)", () => {

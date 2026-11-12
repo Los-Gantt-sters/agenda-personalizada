@@ -41,6 +41,8 @@ describe("PreferenciasProvider", () => {
       canal: "ambos",
       caja: "normal",
       tareasVisibles: "tres",
+      reloj: "si",
+      necesidades: ["bano", "agua", "descanso"],
     });
   });
 
@@ -96,6 +98,8 @@ describe("PreferenciasProvider", () => {
       canal: "ambos",
       caja: "normal",
       tareasVisibles: "tres",
+      reloj: "si",
+      necesidades: ["bano", "agua", "descanso"],
     });
     expect(ref.tema?.nombre).toBe("claro");
   });

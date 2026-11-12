@@ -2,11 +2,13 @@
 // Prototipo de referencia: 61-administracion-usuarios (vínculos) y 46-tutora-ficha-datos.
 // Como todas las pantallas, con cabecera y barra de abajo (Pantalla). Es una herramienta de adultos
 // con una lista que puede ser larga: aquí sí se deja hacer scroll dentro de la lista.
+// Sin ventanas emergentes (profesora, noviembre de 2026): «Cambiar» abre otra pantalla para elegir
+// y «Atrás» vuelve a la lista sin cambiar nada.
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 
-import { ModalElegirSupervisor } from "../../src/componentes/administracion/ModalElegirSupervisor";
+import { ElegirSupervisor } from "../../src/componentes/administracion/ElegirSupervisor";
 import { Pantalla } from "../../src/pantalla";
 import { useSesionOpcional } from "../../src/sesion";
 import type { Paleta } from "../../src/temas";
@@ -122,6 +124,30 @@ export default function ConsolaVinculos() {
     router.replace("/");
   };
 
+  // ---- Elegir tutor de aula o familia: una pantalla propia ----
+  if (edicion) {
+    return (
+      <Pantalla
+        titulo={`${edicion.tipo === "aula" ? "Tutor de aula" : "Familia"} de ${nombreCompleto(edicion.alumno)}`}
+        simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
+        alAtras={() => setEdicion(null)}
+        etiquetaAtras="Atrás: volver a la lista sin cambiar"
+      >
+        <ElegirSupervisor
+          opciones={edicion.tipo === "aula" ? tutores : familias}
+          actualId={
+            (edicion.tipo === "aula" ? edicion.alumno.tutorAula : edicion.alumno.familia)?.id ??
+            null
+          }
+          textoSinAsignar={edicion.tipo === "familiar" ? "Sin familia" : undefined}
+          guardando={guardando}
+          error={errorGuardar}
+          alElegir={elegir}
+        />
+      </Pantalla>
+    );
+  }
+
   return (
     <Pantalla
       titulo="Tutores y familias"
@@ -200,23 +226,6 @@ export default function ConsolaVinculos() {
               </View>
             ))}
           </ScrollView>
-        )}
-
-        {edicion && (
-          <ModalElegirSupervisor
-            visible
-            titulo={`${edicion.tipo === "aula" ? "Tutor de aula" : "Familia"} de ${nombreCompleto(edicion.alumno)}`}
-            opciones={edicion.tipo === "aula" ? tutores : familias}
-            actualId={
-              (edicion.tipo === "aula" ? edicion.alumno.tutorAula : edicion.alumno.familia)?.id ??
-              null
-            }
-            textoSinAsignar={edicion.tipo === "familiar" ? "Sin familia" : undefined}
-            guardando={guardando}
-            error={errorGuardar}
-            alElegir={elegir}
-            alCerrar={() => setEdicion(null)}
-          />
         )}
       </View>
     </Pantalla>

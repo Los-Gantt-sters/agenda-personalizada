@@ -1,5 +1,7 @@
 import {
   confirmarFin,
+  deshacerEmpezar,
+  deshacerFin,
   dividirEnBloques,
   empezarTarea,
   franjaHoraria,
@@ -154,6 +156,42 @@ describe("SCRUM-74 · RF6.1 y RF6.4 empezar y terminar (T-08.1)", () => {
     expect(necesitaEmpezar({ ...e("1", "09:00", "en_curso"), requiere_inicio_fin: true })).toBe(
       false,
     );
+  });
+});
+
+describe("Mejora de la profesora · «Atrás» deshace Empezar y Terminar", () => {
+  const INICIO = "2026-11-05T08:30:00.000Z";
+  const FIN = "2026-11-05T08:52:00.000Z";
+
+  it("deshacer Empezar devuelve la tarea a pendiente y olvida la hora de inicio", () => {
+    const r = deshacerEmpezar([{ ...e("1", "09:00", "en_curso"), inicio_real: INICIO }], "1");
+    expect(r[0]).toMatchObject({ estado: "pendiente", inicio_real: null });
+    expect(dividirEnBloques(r).ahora?.id).toBe("1");
+  });
+
+  it("deshacer Empezar no hace nada si la tarea no está en curso", () => {
+    const entradas = [e("1", "09:00"), e("2", "10:00", "hecha")];
+    expect(deshacerEmpezar(entradas, "1")).toEqual(entradas);
+    expect(deshacerEmpezar(entradas, "2")).toEqual(entradas);
+  });
+
+  it("deshacer Terminar vuelve a en curso si se había empezado y la tarea vuelve a Ahora", () => {
+    const hecha = { ...e("1", "09:00", "hecha"), inicio_real: INICIO, fin_real: FIN };
+    const r = deshacerFin([hecha, e("2", "10:00")], "1");
+    expect(r[0]).toMatchObject({ estado: "en_curso", inicio_real: INICIO, fin_real: null });
+    expect(dividirEnBloques(r).ahora?.id).toBe("1");
+  });
+
+  it("deshacer Terminar vuelve a pendiente si no se había empezado", () => {
+    const r = deshacerFin([{ ...e("1", "09:00", "hecha"), fin_real: FIN }, e("2", "10:00")], "1");
+    expect(r[0]).toMatchObject({ estado: "pendiente", fin_real: null });
+    expect(dividirEnBloques(r).ahora?.id).toBe("1");
+  });
+
+  it("deshacer Terminar no hace nada si no está hecha o si ya hay otra en curso", () => {
+    const entradas = [e("1", "09:00", "hecha"), { ...e("2", "10:00", "en_curso") }];
+    expect(deshacerFin(entradas, "1")).toEqual(entradas);
+    expect(deshacerFin(entradas, "2")).toEqual(entradas);
   });
 });
 

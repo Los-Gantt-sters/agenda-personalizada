@@ -76,7 +76,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 ## Fuera de alcance
 
 - Componentes de otras historias. El reloj visual (HU-09) se añadió después, al resolver la NC-004.
-- Sombras y velos semitransparentes (por ejemplo, el fondo oscurecido del modal de vista). No delimitan ningún componente: la tarjeta del modal tiene su propio borde de 4 px en color `primario`.
+- Sombras y velos semitransparentes. Desde noviembre de 2026 no hay ventanas emergentes ni fondos oscurecidos: Ayuda y Accesibilidad son pantallas completas con fondo opaco.
 - Imágenes de ARASAAC: son PNG con trazo negro sobre fondo blanco, y se muestran siempre sobre la tarjeta blanca.
 - Pantallas de demostración (`app/demo-*.tsx`), que se borrarán al integrar las pantallas reales.
 
@@ -85,7 +85,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Tema | Elemento | Tipo | Colores | Contraste | Mínimo | Resultado |
 |---|---|---|---|---|---|---|
 | Claro | Títulos y textos sobre el fondo de la pantalla | texto | `#22211F` / `#F1F1EF` | 14,23:1 | 4,50:1 | Cumple |
-| Claro | Texto de tarjetas, opciones y modal | texto | `#22211F` / `#FFFFFF` | 16,09:1 | 4,50:1 | Cumple |
+| Claro | Texto de tarjetas, opciones y pantalla de Accesibilidad | texto | `#22211F` / `#FFFFFF` | 16,09:1 | 4,50:1 | Cumple |
 | Claro | Texto de la opción elegida y de la tarea «Ahora» | texto | `#22211F` / `#EDE6E9` | 13,10:1 | 4,50:1 | Cumple |
 | Claro | Subtítulos y ayudas | texto | `#55524E` / `#F1F1EF` | 6,87:1 | 4,50:1 | Cumple |
 | Claro | Texto de apoyo dentro de tarjetas | texto | `#55524E` / `#FFFFFF` | 7,77:1 | 4,50:1 | Cumple |
@@ -103,7 +103,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Claro | Borde de grupos y de opciones sin elegir | componente | `#7B7772` / `#F1F1EF` | 3,93:1 | 3,00:1 | Cumple |
 | Claro | Borde de tarjetas, chips y botón suave | componente | `#7B7772` / `#FFFFFF` | 4,45:1 | 3,00:1 | Cumple |
 | Claro | Borde de la opción elegida, botón principal y botón flotante «Vista» | componente | `#7D1D4F` / `#F1F1EF` | 8,59:1 | 3,00:1 | Cumple |
-| Claro | Borde de la tarjeta del modal y del chip elegido | componente | `#7D1D4F` / `#FFFFFF` | 9,72:1 | 3,00:1 | Cumple |
+| Claro | Borde de la opción elegida y del chip elegido | componente | `#7D1D4F` / `#FFFFFF` | 9,72:1 | 3,00:1 | Cumple |
 | Claro | Anillo de foco sobre la pantalla | componente | `#155E63` / `#F1F1EF` | 6,60:1 | 3,00:1 | Cumple |
 | Claro | Anillo de foco sobre tarjetas | componente | `#155E63` / `#FFFFFF` | 7,46:1 | 3,00:1 | Cumple |
 | Claro | Caja blanca del pictograma (borde o relleno frente a la tarea) | componente | `#7B7772` / `#FFFFFF` | 4,45:1 | 3,00:1 | Cumple |
@@ -121,7 +121,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Claro | Forma de la clase Círculo | componente | `#2F62B8` / `#FFFFFF` | 5,90:1 | 3,00:1 | Cumple |
 | Claro | Forma de la clase Cuadrado | componente | `#2D6A3E` / `#FFFFFF` | 6,48:1 | 3,00:1 | Cumple |
 | Oscuro | Títulos y textos sobre el fondo de la pantalla | texto | `#EEF2F8` / `#11161F` | 16,14:1 | 4,50:1 | Cumple |
-| Oscuro | Texto de tarjetas, opciones y modal | texto | `#EEF2F8` / `#1B2230` | 14,18:1 | 4,50:1 | Cumple |
+| Oscuro | Texto de tarjetas, opciones y pantalla de Accesibilidad | texto | `#EEF2F8` / `#1B2230` | 14,18:1 | 4,50:1 | Cumple |
 | Oscuro | Texto de la opción elegida y de la tarea «Ahora» | texto | `#EEF2F8` / `#23314B` | 11,59:1 | 4,50:1 | Cumple |
 | Oscuro | Subtítulos y ayudas | texto | `#B8C2D6` / `#11161F` | 10,12:1 | 4,50:1 | Cumple |
 | Oscuro | Texto de apoyo dentro de tarjetas | texto | `#B8C2D6` / `#1B2230` | 8,90:1 | 4,50:1 | Cumple |
@@ -139,7 +139,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Oscuro | Borde de grupos y de opciones sin elegir | componente | `#7F8CA6` / `#11161F` | 5,36:1 | 3,00:1 | Cumple |
 | Oscuro | Borde de tarjetas, chips y botón suave | componente | `#7F8CA6` / `#1B2230` | 4,71:1 | 3,00:1 | Cumple |
 | Oscuro | Borde de la opción elegida, botón principal y botón flotante «Vista» | componente | `#86B7FF` / `#11161F` | 8,83:1 | 3,00:1 | Cumple |
-| Oscuro | Borde de la tarjeta del modal y del chip elegido | componente | `#86B7FF` / `#1B2230` | 7,76:1 | 3,00:1 | Cumple |
+| Oscuro | Borde de la opción elegida y del chip elegido | componente | `#86B7FF` / `#1B2230` | 7,76:1 | 3,00:1 | Cumple |
 | Oscuro | Anillo de foco sobre la pantalla | componente | `#FFFFFF` / `#11161F` | 18,13:1 | 3,00:1 | Cumple |
 | Oscuro | Anillo de foco sobre tarjetas | componente | `#FFFFFF` / `#1B2230` | 15,93:1 | 3,00:1 | Cumple |
 | Oscuro | Caja blanca del pictograma (borde o relleno frente a la tarea) | componente | `#FFFFFF` / `#23314B` | 13,02:1 | 3,00:1 | Cumple |
@@ -157,7 +157,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Oscuro | Forma de la clase Círculo | componente | `#2F62B8` / `#FFFFFF` | 5,90:1 | 3,00:1 | Cumple |
 | Oscuro | Forma de la clase Cuadrado | componente | `#2D6A3E` / `#FFFFFF` | 6,48:1 | 3,00:1 | Cumple |
 | Pastel | Títulos y textos sobre el fondo de la pantalla | texto | `#1D3832` / `#EAF5F1` | 11,32:1 | 4,50:1 | Cumple |
-| Pastel | Texto de tarjetas, opciones y modal | texto | `#1D3832` / `#FBFFFD` | 12,51:1 | 4,50:1 | Cumple |
+| Pastel | Texto de tarjetas, opciones y pantalla de Accesibilidad | texto | `#1D3832` / `#FBFFFD` | 12,51:1 | 4,50:1 | Cumple |
 | Pastel | Texto de la opción elegida y de la tarea «Ahora» | texto | `#1D3832` / `#D3ECE4` | 10,15:1 | 4,50:1 | Cumple |
 | Pastel | Subtítulos y ayudas | texto | `#3F5A53` / `#EAF5F1` | 6,73:1 | 4,50:1 | Cumple |
 | Pastel | Texto de apoyo dentro de tarjetas | texto | `#3F5A53` / `#FBFFFD` | 7,44:1 | 4,50:1 | Cumple |
@@ -175,7 +175,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Pastel | Borde de grupos y de opciones sin elegir | componente | `#5E8A7F` / `#EAF5F1` | 3,48:1 | 3,00:1 | Cumple |
 | Pastel | Borde de tarjetas, chips y botón suave | componente | `#5E8A7F` / `#FBFFFD` | 3,84:1 | 3,00:1 | Cumple |
 | Pastel | Borde de la opción elegida, botón principal y botón flotante «Vista» | componente | `#2C7363` / `#EAF5F1` | 5,04:1 | 3,00:1 | Cumple |
-| Pastel | Borde de la tarjeta del modal y del chip elegido | componente | `#2C7363` / `#FBFFFD` | 5,57:1 | 3,00:1 | Cumple |
+| Pastel | Borde de la opción elegida y del chip elegido | componente | `#2C7363` / `#FBFFFD` | 5,57:1 | 3,00:1 | Cumple |
 | Pastel | Anillo de foco sobre la pantalla | componente | `#14423A` / `#EAF5F1` | 10,07:1 | 3,00:1 | Cumple |
 | Pastel | Anillo de foco sobre tarjetas | componente | `#14423A` / `#FBFFFD` | 11,14:1 | 3,00:1 | Cumple |
 | Pastel | Caja blanca del pictograma (borde o relleno frente a la tarea) | componente | `#5E8A7F` / `#FFFFFF` | 3,88:1 | 3,00:1 | Cumple |
@@ -193,7 +193,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Pastel | Forma de la clase Círculo | componente | `#2F62B8` / `#FFFFFF` | 5,90:1 | 3,00:1 | Cumple |
 | Pastel | Forma de la clase Cuadrado | componente | `#2D6A3E` / `#FFFFFF` | 6,48:1 | 3,00:1 | Cumple |
 | Alto contraste claro | Títulos y textos sobre el fondo de la pantalla | texto | `#000000` / `#FFFFFF` | 21,00:1 | 7,00:1 | Cumple |
-| Alto contraste claro | Texto de tarjetas, opciones y modal | texto | `#000000` / `#FFFFFF` | 21,00:1 | 7,00:1 | Cumple |
+| Alto contraste claro | Texto de tarjetas, opciones y pantalla de Accesibilidad | texto | `#000000` / `#FFFFFF` | 21,00:1 | 7,00:1 | Cumple |
 | Alto contraste claro | Texto de la opción elegida y de la tarea «Ahora» | texto | `#000000` / `#E6E6FF` | 17,13:1 | 7,00:1 | Cumple |
 | Alto contraste claro | Subtítulos y ayudas | texto | `#1A1A1A` / `#FFFFFF` | 17,40:1 | 7,00:1 | Cumple |
 | Alto contraste claro | Texto de apoyo dentro de tarjetas | texto | `#1A1A1A` / `#FFFFFF` | 17,40:1 | 7,00:1 | Cumple |
@@ -211,7 +211,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Alto contraste claro | Borde de grupos y de opciones sin elegir | componente | `#000000` / `#FFFFFF` | 21,00:1 | 3,00:1 | Cumple |
 | Alto contraste claro | Borde de tarjetas, chips y botón suave | componente | `#000000` / `#FFFFFF` | 21,00:1 | 3,00:1 | Cumple |
 | Alto contraste claro | Borde de la opción elegida, botón principal y botón flotante «Vista» | componente | `#0000CC` / `#FFFFFF` | 11,22:1 | 3,00:1 | Cumple |
-| Alto contraste claro | Borde de la tarjeta del modal y del chip elegido | componente | `#0000CC` / `#FFFFFF` | 11,22:1 | 3,00:1 | Cumple |
+| Alto contraste claro | Borde de la opción elegida y del chip elegido | componente | `#0000CC` / `#FFFFFF` | 11,22:1 | 3,00:1 | Cumple |
 | Alto contraste claro | Anillo de foco sobre la pantalla | componente | `#000000` / `#FFFFFF` | 21,00:1 | 3,00:1 | Cumple |
 | Alto contraste claro | Anillo de foco sobre tarjetas | componente | `#000000` / `#FFFFFF` | 21,00:1 | 3,00:1 | Cumple |
 | Alto contraste claro | Caja blanca del pictograma (borde o relleno frente a la tarea) | componente | `#000000` / `#FFFFFF` | 21,00:1 | 3,00:1 | Cumple |
@@ -229,7 +229,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Alto contraste claro | Forma de la clase Círculo | componente | `#2F62B8` / `#FFFFFF` | 5,90:1 | 3,00:1 | Cumple |
 | Alto contraste claro | Forma de la clase Cuadrado | componente | `#2D6A3E` / `#FFFFFF` | 6,48:1 | 3,00:1 | Cumple |
 | Alto contraste oscuro | Títulos y textos sobre el fondo de la pantalla | texto | `#FFFFFF` / `#000000` | 21,00:1 | 7,00:1 | Cumple |
-| Alto contraste oscuro | Texto de tarjetas, opciones y modal | texto | `#FFFFFF` / `#0B0B0B` | 19,68:1 | 7,00:1 | Cumple |
+| Alto contraste oscuro | Texto de tarjetas, opciones y pantalla de Accesibilidad | texto | `#FFFFFF` / `#0B0B0B` | 19,68:1 | 7,00:1 | Cumple |
 | Alto contraste oscuro | Texto de la opción elegida y de la tarea «Ahora» | texto | `#FFFFFF` / `#1B1900` | 17,71:1 | 7,00:1 | Cumple |
 | Alto contraste oscuro | Subtítulos y ayudas | texto | `#F2F2F2` / `#000000` | 18,76:1 | 7,00:1 | Cumple |
 | Alto contraste oscuro | Texto de apoyo dentro de tarjetas | texto | `#F2F2F2` / `#0B0B0B` | 17,58:1 | 7,00:1 | Cumple |
@@ -247,7 +247,7 @@ Al probar los temas oscuros se vio un fallo en el reloj visual, que no es de est
 | Alto contraste oscuro | Borde de grupos y de opciones sin elegir | componente | `#FFFFFF` / `#000000` | 21,00:1 | 3,00:1 | Cumple |
 | Alto contraste oscuro | Borde de tarjetas, chips y botón suave | componente | `#FFFFFF` / `#0B0B0B` | 19,68:1 | 3,00:1 | Cumple |
 | Alto contraste oscuro | Borde de la opción elegida, botón principal y botón flotante «Vista» | componente | `#FFD400` / `#000000` | 14,67:1 | 3,00:1 | Cumple |
-| Alto contraste oscuro | Borde de la tarjeta del modal y del chip elegido | componente | `#FFD400` / `#0B0B0B` | 13,75:1 | 3,00:1 | Cumple |
+| Alto contraste oscuro | Borde de la opción elegida y del chip elegido | componente | `#FFD400` / `#0B0B0B` | 13,75:1 | 3,00:1 | Cumple |
 | Alto contraste oscuro | Anillo de foco sobre la pantalla | componente | `#FFD400` / `#000000` | 14,67:1 | 3,00:1 | Cumple |
 | Alto contraste oscuro | Anillo de foco sobre tarjetas | componente | `#FFD400` / `#0B0B0B` | 13,75:1 | 3,00:1 | Cumple |
 | Alto contraste oscuro | Caja blanca del pictograma (borde o relleno frente a la tarea) | componente | `#FFFFFF` / `#1B1900` | 17,71:1 | 3,00:1 | Cumple |

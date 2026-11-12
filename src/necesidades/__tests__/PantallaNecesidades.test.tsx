@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, userEvent } from "@testing-library/react-native";
-import { ModalNecesidades } from "../ModalNecesidades";
+import { PantallaNecesidades } from "../PantallaNecesidades";
 import {
   OPCIONES_NECESIDADES_BASICAS,
   construirUrlPictogramaArasaac,
@@ -9,7 +9,7 @@ import {
 
 jest.setTimeout(15000);
 
-describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASAAC)", () => {
+describe("PantallaNecesidades (SCRUM-87: T-18.2, 3 opciones gigantes ARASAAC)", () => {
   it("contiene exactamente las 3 opciones fisiológicas básicas con sus IDs de ARASAAC oficiales", () => {
     expect(OPCIONES_NECESIDADES_BASICAS).toHaveLength(3);
 
@@ -26,7 +26,11 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
 
   it("renderiza el título en Lectura Fácil y las 3 opciones gigantes: Baño, Agua y Descanso", async () => {
     await render(
-      <ModalNecesidades visible={true} alSeleccionarNecesidad={jest.fn()} alCerrar={jest.fn()} />,
+      <PantallaNecesidades
+        visible={true}
+        alSeleccionarNecesidad={jest.fn()}
+        alCerrar={jest.fn()}
+      />,
     );
 
     expect(screen.getByText("¿Qué necesitas?")).toBeTruthy();
@@ -42,7 +46,11 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
 
   it("garantiza dimensiones gigantes táctiles en las tarjetas de necesidad (>= 180x190 px)", async () => {
     await render(
-      <ModalNecesidades visible={true} alSeleccionarNecesidad={jest.fn()} alCerrar={jest.fn()} />,
+      <PantallaNecesidades
+        visible={true}
+        alSeleccionarNecesidad={jest.fn()}
+        alCerrar={jest.fn()}
+      />,
     );
 
     for (const opcion of OPCIONES_NECESIDADES_BASICAS) {
@@ -61,7 +69,7 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
     const handleSeleccionar = jest.fn();
 
     await render(
-      <ModalNecesidades
+      <PantallaNecesidades
         visible={true}
         alSeleccionarNecesidad={handleSeleccionar}
         alCerrar={jest.fn()}
@@ -86,7 +94,7 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
     const handleConfirmar = jest.fn();
 
     await render(
-      <ModalNecesidades
+      <PantallaNecesidades
         visible={true}
         alSeleccionarNecesidad={jest.fn()}
         alCerrar={jest.fn()}
@@ -107,7 +115,7 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
 
   it("muestra el aviso inmediato de urgencia cuando la necesidad enviada es urgencia", async () => {
     await render(
-      <ModalNecesidades
+      <PantallaNecesidades
         visible={true}
         alSeleccionarNecesidad={jest.fn()}
         alCerrar={jest.fn()}
@@ -121,25 +129,25 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
     expect(obtenerInfoNecesidad("urgencia").simbolo).toBe("🆘");
   });
 
-  it("permite cerrar el modal pulsando el botón Cerrar", async () => {
+  it("«Atrás» en la barra vuelve sin avisar a nadie", async () => {
     const user = userEvent.setup();
     const handleCerrar = jest.fn();
 
     await render(
-      <ModalNecesidades
+      <PantallaNecesidades
         visible={true}
         alSeleccionarNecesidad={jest.fn()}
         alCerrar={handleCerrar}
       />,
     );
 
-    await user.press(screen.getByTestId("btn-cerrar-modal-necesidades"));
+    await user.press(screen.getByTestId("btn-cerrar-necesidades"));
     expect(handleCerrar).toHaveBeenCalledTimes(1);
   });
 
   it("en modo soloPictograma oculta los textos visuales y conserva los pictogramas y etiquetas accesibles", async () => {
     await render(
-      <ModalNecesidades
+      <PantallaNecesidades
         visible={true}
         alSeleccionarNecesidad={jest.fn()}
         alCerrar={jest.fn()}
@@ -165,7 +173,7 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
 
   it("en modo soloTexto oculta los pictogramas ARASAAC y muestra únicamente el texto ampliado", async () => {
     await render(
-      <ModalNecesidades
+      <PantallaNecesidades
         visible={true}
         alSeleccionarNecesidad={jest.fn()}
         alCerrar={jest.fn()}
@@ -180,5 +188,48 @@ describe("ModalNecesidades (SCRUM-87: T-18.2 Modal con 3 opciones gigantes ARASA
     expect(screen.queryByTestId("img-arasaac-6929")).toBeNull();
     expect(screen.queryByTestId("img-arasaac-2248")).toBeNull();
     expect(screen.queryByTestId("img-arasaac-3299")).toBeNull();
+  });
+
+  it("profesora: es una pantalla completa con cabecera y barra, sin ventana ni scroll", async () => {
+    await render(
+      <PantallaNecesidades
+        visible={true}
+        alSeleccionarNecesidad={jest.fn()}
+        alCerrar={jest.fn()}
+      />,
+    );
+    expect(screen.getByTestId("titulo-necesidades")).toHaveTextContent("¿Qué necesitas?");
+    expect(screen.getByTestId("btn-cerrar-necesidades")).toBeTruthy();
+    // Dentro de «Ayuda» no hay otro botón de «Ayuda».
+    expect(screen.queryByTestId("btn-necesidades")).toBeNull();
+    const arbol = JSON.stringify(screen.toJSON());
+    expect(arbol).not.toContain("RCTScrollView");
+    expect(arbol).not.toContain("RCTModalHostView");
+  });
+
+  it("profesora: solo salen las necesidades que elige el tutor; Urgencia, siempre", async () => {
+    await render(
+      <PantallaNecesidades
+        visible={true}
+        alSeleccionarNecesidad={jest.fn()}
+        alCerrar={jest.fn()}
+        necesidades={["agua"]}
+      />,
+    );
+    expect(screen.getByTestId("opcion-necesidad-agua")).toBeTruthy();
+    expect(screen.queryByTestId("opcion-necesidad-bano")).toBeNull();
+    expect(screen.queryByTestId("opcion-necesidad-descanso")).toBeNull();
+    expect(screen.getByTestId("opcion-necesidad-urgencia")).toBeTruthy();
+  });
+
+  it("sin abrir no pinta nada", async () => {
+    await render(
+      <PantallaNecesidades
+        visible={false}
+        alSeleccionarNecesidad={jest.fn()}
+        alCerrar={jest.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("pantalla-necesidades")).toBeNull();
   });
 });

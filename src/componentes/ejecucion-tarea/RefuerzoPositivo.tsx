@@ -6,13 +6,13 @@
 // ARASAAC. Sin rebotes ni confeti; con «estrellas», unas pocas estrellas que aparecen quietas.
 // Mejora de la profesora (noviembre de 2026): junto a la felicitación se pregunta «¿Cómo te has
 // sentido?» con cinco caras. Contestar no es obligatorio: «Seguir» funciona siempre.
-// Es una pantalla más, con su cabecera y su barra de abajo (Ayuda, Atrás, Adelante, Accesibilidad).
+// Es una pantalla más, con su cabecera y su barra de abajo (Ayuda, Atrás, Adelante, Accesibilidad),
+// no una ventana emergente. «Atrás» deshace «Terminar» por si el alumno se ha equivocado.
 import { useEffect, useState } from "react";
 import {
   AccessibilityInfo,
   Animated,
   Easing,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -57,6 +57,7 @@ export function RefuerzoPositivo({
   nombre,
   preferencias,
   onSeguir,
+  onDeshacer,
   onEmocion,
 }: {
   /** Título de la tarea terminada; con null no se enseña nada. */
@@ -65,6 +66,8 @@ export function RefuerzoPositivo({
   nombre?: string;
   preferencias: PreferenciasRefuerzo;
   onSeguir: () => void;
+  /** «Atrás»: no había terminado. Sin él, «Atrás» está desactivado. */
+  onDeshacer?: () => void;
   /** Cómo se ha sentido el alumno (si lo contesta). Se llama al pulsar «Seguir». */
   onEmocion?: (emocion: Emocion) => void;
 }) {
@@ -103,7 +106,6 @@ export function RefuerzoPositivo({
     };
   }, [tarea, preferencias.sonido, conMovimiento]);
 
-  const visible = tarea !== null;
   const titulo = nombre ? `¡Muy bien, ${nombre}!` : "¡Muy bien!";
 
   const elegir = (clave: Emocion) => {
@@ -117,133 +119,128 @@ export function RefuerzoPositivo({
     onSeguir();
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={seguir}>
-      <View
-        testID="refuerzo-positivo"
-        style={estilos.fondo}
-        accessibilityViewIsModal
-        accessibilityLiveRegion="assertive"
-      >
-        <Pantalla
-          titulo="¡Tarea terminada!"
-          simbolo={<Icono nombre="check" color={colores.exito} tam={36} grosor={3.4} />}
-          alAtras={null}
-          alAdelante={seguir}
-          textoAdelante="Seguir"
-          etiquetaAdelante="Seguir con la agenda"
-          conSonido={preferencias.sonido}
-          enVentana
-        >
-          <View style={estilos.contenido}>
-            {/* Izquierda: la felicitación */}
-            <View style={estilos.columna}>
-              <View
-                accessible
-                accessibilityRole="image"
-                accessibilityLabel="Tarea terminada"
-                style={estilos.escenario}
-              >
-                <Svg width={LADO} height={LADO} style={StyleSheet.absoluteFill}>
-                  <Circle
-                    cx={LADO / 2}
-                    cy={LADO / 2}
-                    r={RADIO_ANILLO}
-                    stroke={colores.exito}
-                    strokeWidth={GROSOR}
-                    strokeLinecap="round"
-                    fill={colores.superficie}
-                    strokeDasharray={`${PERIMETRO} ${PERIMETRO}`}
-                    strokeDashoffset={PERIMETRO * (1 - avance)}
-                    transform={`rotate(-90 ${LADO / 2} ${LADO / 2})`}
-                  />
-                </Svg>
-                <PictogramaInterfaz nombre="muyBien" etiqueta="Muy bien" tam={132} />
-                <View style={[estilos.insignia, { opacity: avance }]}>
-                  <Icono nombre="check" color={colorSobre(colores.exito)} tam={28} grosor={3.4} />
-                </View>
-                {preferencias.animacion === "estrellas" &&
-                  Array.from({ length: ESTRELLAS }, (_, i) => {
-                    const angulo = (i / ESTRELLAS) * 2 * Math.PI - Math.PI / 2;
-                    const r = LADO / 2 + 28;
-                    return (
-                      <View
-                        key={i}
-                        style={[
-                          estilos.estrella,
-                          {
-                            opacity: avance,
-                            left: LADO / 2 + Math.cos(angulo) * r - 14,
-                            top: LADO / 2 + Math.sin(angulo) * r - 14,
-                          },
-                        ]}
-                      >
-                        <Icono nombre="estrella" color={colores.aviso} tam={28} grosor={2.2} />
-                      </View>
-                    );
-                  })}
-              </View>
-              <Texto style={estilos.titulo} accessibilityRole="header">
-                {titulo}
-              </Texto>
-              {tarea ? <Texto style={estilos.subtitulo}>Has terminado: {tarea}</Texto> : null}
-            </View>
+  if (tarea === null) return null;
 
-            {/* Derecha: ¿cómo te has sentido? (se puede no contestar) */}
-            <View style={estilos.columnaPregunta}>
-              <Texto style={estilos.pregunta}>¿Cómo te has sentido?</Texto>
-              <View
-                style={estilos.emociones}
-                accessibilityRole="radiogroup"
-                accessibilityLabel="¿Cómo te has sentido?"
-                testID="emociones-refuerzo"
-              >
-                {EMOCIONES.map((e) => {
-                  const elegida = emocion === e.clave;
+  return (
+    <Pantalla
+      titulo="¡Tarea terminada!"
+      simbolo={<Icono nombre="check" color={colores.exito} tam={36} grosor={3.4} />}
+      alAtras={onDeshacer ?? null}
+      etiquetaAtras="Atrás: todavía no he terminado"
+      alAdelante={seguir}
+      textoAdelante="Seguir"
+      etiquetaAdelante="Seguir con la agenda"
+      conSonido={preferencias.sonido}
+    >
+      <View testID="refuerzo-positivo" style={estilos.fondo} accessibilityLiveRegion="assertive">
+        <View style={estilos.contenido}>
+          {/* Izquierda: la felicitación */}
+          <View style={estilos.columna}>
+            <View
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel="Tarea terminada"
+              style={estilos.escenario}
+            >
+              <Svg width={LADO} height={LADO} style={StyleSheet.absoluteFill}>
+                <Circle
+                  cx={LADO / 2}
+                  cy={LADO / 2}
+                  r={RADIO_ANILLO}
+                  stroke={colores.exito}
+                  strokeWidth={GROSOR}
+                  strokeLinecap="round"
+                  fill={colores.superficie}
+                  strokeDasharray={`${PERIMETRO} ${PERIMETRO}`}
+                  strokeDashoffset={PERIMETRO * (1 - avance)}
+                  transform={`rotate(-90 ${LADO / 2} ${LADO / 2})`}
+                />
+              </Svg>
+              <PictogramaInterfaz nombre="muyBien" etiqueta="Muy bien" tam={132} />
+              <View style={[estilos.insignia, { opacity: avance }]}>
+                <Icono nombre="check" color={colorSobre(colores.exito)} tam={28} grosor={3.4} />
+              </View>
+              {preferencias.animacion === "estrellas" &&
+                Array.from({ length: ESTRELLAS }, (_, i) => {
+                  const angulo = (i / ESTRELLAS) * 2 * Math.PI - Math.PI / 2;
+                  const r = LADO / 2 + 28;
                   return (
-                    <Pressable
-                      key={e.clave}
-                      onPress={() => elegir(e.clave)}
-                      accessibilityRole="radio"
-                      accessibilityLabel={e.etiqueta}
-                      accessibilityState={{ checked: elegida, selected: elegida }}
-                      testID={`emocion-${e.clave}`}
-                      style={({ pressed }) => [
-                        estilos.emocion,
-                        elegida && estilos.emocionElegida,
-                        pressed && estilos.pulsado,
+                    <View
+                      key={i}
+                      style={[
+                        estilos.estrella,
+                        {
+                          opacity: avance,
+                          left: LADO / 2 + Math.cos(angulo) * r - 14,
+                          top: LADO / 2 + Math.sin(angulo) * r - 14,
+                        },
                       ]}
                     >
-                      <PictogramaInterfaz nombre={e.pictograma} etiqueta={e.etiqueta} tam={76} />
-                      <Texto style={estilos.etiquetaEmocion} numberOfLines={1}>
-                        {e.etiqueta}
-                      </Texto>
-                      {elegida ? (
-                        <View style={estilos.marca}>
-                          <Icono
-                            nombre="check"
-                            color={colores.textoSobrePrimario}
-                            tam={20}
-                            grosor={3.4}
-                          />
-                        </View>
-                      ) : null}
-                    </Pressable>
+                      <Icono nombre="estrella" color={colores.aviso} tam={28} grosor={2.2} />
+                    </View>
                   );
                 })}
-              </View>
-              <BotonGrande
-                texto="Seguir"
-                onPress={seguir}
-                icono={
-                  <Icono nombre="adelante" color={colores.textoSobrePrimario} tam={30} grosor={3} />
-                }
-              />
             </View>
+            <Texto style={estilos.titulo} accessibilityRole="header">
+              {titulo}
+            </Texto>
+            {tarea ? <Texto style={estilos.subtitulo}>Has terminado: {tarea}</Texto> : null}
           </View>
-        </Pantalla>
+
+          {/* Derecha: ¿cómo te has sentido? (se puede no contestar) */}
+          <View style={estilos.columnaPregunta}>
+            <Texto style={estilos.pregunta}>¿Cómo te has sentido?</Texto>
+            <View
+              style={estilos.emociones}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="¿Cómo te has sentido?"
+              testID="emociones-refuerzo"
+            >
+              {EMOCIONES.map((e) => {
+                const elegida = emocion === e.clave;
+                return (
+                  <Pressable
+                    key={e.clave}
+                    onPress={() => elegir(e.clave)}
+                    accessibilityRole="radio"
+                    accessibilityLabel={e.etiqueta}
+                    accessibilityState={{ checked: elegida, selected: elegida }}
+                    testID={`emocion-${e.clave}`}
+                    style={({ pressed }) => [
+                      estilos.emocion,
+                      elegida && estilos.emocionElegida,
+                      pressed && estilos.pulsado,
+                    ]}
+                  >
+                    <PictogramaInterfaz nombre={e.pictograma} etiqueta={e.etiqueta} tam={76} />
+                    <Texto style={estilos.etiquetaEmocion} numberOfLines={1}>
+                      {e.etiqueta}
+                    </Texto>
+                    {elegida ? (
+                      <View style={estilos.marca}>
+                        <Icono
+                          nombre="check"
+                          color={colores.textoSobrePrimario}
+                          tam={20}
+                          grosor={3.4}
+                        />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <BotonGrande
+              texto="Seguir"
+              onPress={seguir}
+              icono={
+                <Icono nombre="adelante" color={colores.textoSobrePrimario} tam={30} grosor={3} />
+              }
+            />
+          </View>
+        </View>
       </View>
-    </Modal>
+    </Pantalla>
   );
 }
 

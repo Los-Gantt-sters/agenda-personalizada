@@ -30,7 +30,7 @@ export interface BotonNecesidadesProps {
   enBarra?: { ancho: number; alto: number };
 }
 
-export interface ModalNecesidadesProps {
+export interface PantallaNecesidadesProps {
   visible: boolean;
   alSeleccionarNecesidad: (clave: ClaveNecesidad) => void;
   alCerrar: () => void;
@@ -40,4 +40,6 @@ export interface ModalNecesidadesProps {
   variante?: VarianteColorNecesidades;
   canal?: ModoCanalNecesidades;
   mostrarImagenArasaac?: boolean;
+  /** Necesidades que ve este alumno (las elige el tutor en Preferencias). Sin indicar, todas. */
+  necesidades?: readonly ClaveNecesidadBasica[];
 }

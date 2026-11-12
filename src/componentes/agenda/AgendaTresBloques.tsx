@@ -2,8 +2,9 @@
 // RF4.2: «Hecho» a la izquierda, «Ahora» en el centro (60 %) y «Después» a la derecha.
 // RNF4.2: en vertical o en móvil los bloques se apilan en el mismo orden y «Ahora» sigue al 60 %.
 // RNF4.1: sin ScrollView; a cada lado solo se pintan las tarjetas que caben.
-// T-08.1 (HU-08): en «Ahora», botón «Empezar» (RF6.1, si el tutor lo pide: RF6.8) que pone en marcha
-// el reloj visual, y botón «Terminar» (RF6.4).
+// T-08.1 (HU-08): en «Ahora», botón «Empezar» (RF6.1, si el tutor lo pide: RF6.8) y botón
+// «Terminar» (RF6.4). Al empezar, AgendaDelDia cambia a la pantalla de la tarea; aquí la tarea en
+// curso solo se ve así cuando la mira una familia (soloMirar), con el reloj si se quiere.
 // Mejora de la profesora (noviembre de 2026): cuántas tareas se ven en «Hecho» y «Después» sale del
 // perfil (1, hasta 3 o todas). Con «todas» las tarjetas son más bajas para que quepan más y, si aun
 // así no caben, se dice «y 4 más» en lugar de hacer scroll.
@@ -19,7 +20,6 @@ import { PictogramaTarea } from "./PictogramaTarea";
 import { BotonAccionTarea } from "../ejecucion-tarea/BotonAccionTarea";
 import { useTranscurrido } from "../ejecucion-tarea/useTranscurrido";
 import { RelojVisual } from "../reloj-visual/RelojVisual";
-import type { PreferenciasConfirmacion } from "../ejecucion-tarea/tipos";
 import type { Paleta } from "../../temas";
 import { Icono, PictogramaInterfaz, Texto, colorSobre, useApariencia, useEstilos } from "../../ui";
 import type { NombrePictogramaInterfaz } from "../../ui";
@@ -96,9 +96,9 @@ export function AgendaTresBloques({
   onEmpezar = () => {},
   onConfirmarFin,
   onAbrir,
-  confirmacion,
   maxTareas = 3,
   soloMirar = false,
+  verReloj = true,
 }: {
   bloques: BloquesAgenda;
   /** Cuántas tareas enseñar en «Hecho» y en «Después» (preferencia «Tareas que se ven»). */
@@ -109,8 +109,8 @@ export function AgendaTresBloques({
   onEmpezar?: (idEntrada: string) => void;
   onConfirmarFin: (idEntrada: string) => void;
   onAbrir: (entrada: EntradaAgenda) => void;
-  /** T-08.2: modo antitoques del perfil del estudiante (RNF6.1). */
-  confirmacion?: PreferenciasConfirmacion;
+  /** Preferencia «Reloj»: si se ve el reloj de la tarea en curso. */
+  verReloj?: boolean;
 }) {
   const ventana = useWindowDimensions();
   // Se mide el hueco real (puede no ser toda la ventana: márgenes seguros, etc.).
@@ -151,8 +151,8 @@ export function AgendaTresBloques({
         onAbrir={onAbrir}
         onEmpezar={onEmpezar}
         onConfirmarFin={onConfirmarFin}
-        confirmacion={confirmacion}
         soloMirar={soloMirar}
+        verReloj={verReloj}
       />
       <Bloque
         tipo="despues"
@@ -349,8 +349,8 @@ function BloqueAhora({
   onAbrir,
   onEmpezar,
   onConfirmarFin,
-  confirmacion,
   soloMirar,
+  verReloj,
 }: {
   bloques: BloquesAgenda;
   escala: number;
@@ -358,8 +358,8 @@ function BloqueAhora({
   onAbrir: (e: EntradaAgenda) => void;
   onEmpezar: (id: string) => void;
   onConfirmarFin: (id: string) => void;
-  confirmacion?: PreferenciasConfirmacion;
   soloMirar: boolean;
+  verReloj: boolean;
 }) {
   const ahora = bloques.ahora;
   const estilos = useEstilos(crearEstilos);
@@ -368,6 +368,7 @@ function BloqueAhora({
   const verTexto = canal !== "soloPictograma";
   // RF6.1: el reloj visual arranca al pulsar «Empezar» y cuenta desde la hora guardada.
   const enCurso = ahora?.estado === "en_curso" && Boolean(ahora.inicio_real);
+  const conReloj = enCurso && verReloj;
   const transcurridoMs = useTranscurrido(enCurso ? ahora?.inicio_real : null);
 
   // Entrada suave de la nueva tarea al avanzar: un fundido corto, sin saltos bruscos.
@@ -391,7 +392,7 @@ function BloqueAhora({
     16;
   const tamPicto = Math.max(48, Math.min(tam.width * 0.55, tam.height - fijo, 340));
   // En curso, el dibujo y el reloj van uno al lado del otro (el reloj lleva su rótulo debajo).
-  const tamFila = enCurso
+  const tamFila = conReloj
     ? Math.max(48, Math.min(tamPicto - 36, (tam.width - 24 * 2 - 24) / 2))
     : tamPicto;
   const accion = ahora && necesitaEmpezar(ahora) ? "empezar" : "terminar";
@@ -423,7 +424,7 @@ function BloqueAhora({
             >
               <View style={estilos.filaPicto}>
                 {verDibujo ? <PictogramaTarea tarea={ahora.tarea} tam={tamFila} /> : null}
-                {enCurso && (
+                {conReloj && (
                   <RelojVisual
                     duracionMs={ahora.duracion_prevista_min * 60_000}
                     transcurridoMs={transcurridoMs}
@@ -459,11 +460,10 @@ function BloqueAhora({
                 </Texto>
               </View>
             ) : (
-              /* key: al pasar de «Empezar» a «Terminar» el botón empieza de cero (sin relleno a medias). */
+              /* key: al cambiar de tarea o de acción, el botón vuelve a esperar un momento. */
               <BotonAccionTarea
                 key={`${ahora.id}-${accion}`}
                 accion={accion}
-                confirmacion={confirmacion}
                 onConfirmar={() =>
                   accion === "empezar" ? onEmpezar(ahora.id) : onConfirmarFin(ahora.id)
                 }

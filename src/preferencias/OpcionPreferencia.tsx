@@ -20,6 +20,8 @@ interface Props {
   estiloTexto?: TextStyle;
   accessibilityLabel?: string;
   testID?: string;
+  /** Se pueden elegir varias (casilla) en lugar de una sola (radio). */
+  multiple?: boolean;
 }
 
 const BORDE = 3;
@@ -34,6 +36,7 @@ export function OpcionPreferencia({
   estiloTexto,
   accessibilityLabel,
   testID,
+  multiple = false,
 }: Props) {
   const { colores } = useTema();
   const borde = elegida ? BORDE_ELEGIDA : BORDE;
@@ -42,7 +45,7 @@ export function OpcionPreferencia({
 
   return (
     <Pressable
-      accessibilityRole="radio"
+      accessibilityRole={multiple ? "checkbox" : "radio"}
       accessibilityLabel={accessibilityLabel ?? etiqueta}
       accessibilityState={{ checked: elegida }}
       onPress={onPress}

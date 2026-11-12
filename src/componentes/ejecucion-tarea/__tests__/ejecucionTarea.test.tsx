@@ -1,4 +1,4 @@
-import { act, render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import { AREA_TACTIL_MINIMA, BotonAccionTarea } from "../BotonAccionTarea";
 import { RefuerzoPositivo } from "../RefuerzoPositivo";
@@ -21,13 +21,13 @@ describe("Ejecución de tarea (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)", ()
     jest.clearAllMocks();
   });
 
-  it("los botones son texto grande con «Mantén pulsado» debajo, sin pictograma", async () => {
+  it("los botones son texto grande, sin pictograma y sin «Mantén pulsado» (basta un toque)", async () => {
     await render(<BotonAccionTarea accion="terminar" onConfirmar={() => {}} />);
     const texto = screen.getByText("Terminar");
     // Mayúsculas o minúsculas las elige el centro en las preferencias («Tipografía escolar»).
     expect(StyleSheet.flatten(texto.props.style).textTransform).toBeUndefined();
     expect(StyleSheet.flatten(texto.props.style).fontSize).toBeGreaterThanOrEqual(36);
-    expect(screen.getByText("Mantén pulsado")).toBeTruthy();
+    expect(screen.queryByText("Mantén pulsado")).toBeNull();
     expect(screen.queryByRole("image")).toBeNull();
   });
 
@@ -40,18 +40,14 @@ describe("Ejecución de tarea (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)", ()
     expect(estilo.minWidth).toBeGreaterThanOrEqual(AREA_TACTIL_MINIMA);
   });
 
-  it("confirma solo tras mantenerlo pulsado 1,5 s (RNF6.1)", async () => {
+  it("profesora: confirma con un toque (pasado el momento de aparecer)", async () => {
     jest.useFakeTimers();
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const onConfirmar = jest.fn();
     await render(<BotonAccionTarea accion="terminar" onConfirmar={onConfirmar} />);
-    const boton = screen.getByRole("button", { name: "Terminar" });
+    await act(() => jest.advanceTimersByTime(1000));
 
-    await user.longPress(boton, { duration: 800 });
-    await act(() => jest.advanceTimersByTime(2000));
-    expect(onConfirmar).not.toHaveBeenCalled();
-
-    await user.longPress(boton, { duration: 1600 });
+    await user.press(screen.getByRole("button", { name: "Terminar" }));
     expect(onConfirmar).toHaveBeenCalledTimes(1);
   });
 
@@ -132,25 +128,44 @@ describe("Ejecución de tarea (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)", ()
     expect(onEmocion).not.toHaveBeenCalled();
   });
 
-  it("«Ayuda» dentro de la felicitación abre una sola ventana, la de encima", async () => {
+  it("profesora: la felicitación es una pantalla (sin ventana) y «Atrás» deshace Terminar", async () => {
+    const user = userEvent.setup();
+    const onSeguir = jest.fn();
+    const onDeshacer = jest.fn();
+    await render(
+      <RefuerzoPositivo
+        tarea="Recreo"
+        preferencias={{ animacion: "ninguna", sonido: false }}
+        onSeguir={onSeguir}
+        onDeshacer={onDeshacer}
+      />,
+    );
+    expect(JSON.stringify(screen.toJSON())).not.toContain("RCTModalHostView");
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("¡Tarea terminada!");
+    await user.press(screen.getByTestId("btn-barra-atras"));
+    expect(onDeshacer).toHaveBeenCalledTimes(1);
+    expect(onSeguir).not.toHaveBeenCalled();
+  });
+
+  it("«Ayuda» desde la felicitación tapa la pantalla y al volver la felicitación sigue igual", async () => {
     const user = userEvent.setup();
     await render(
       <ProveedorNecesidades inicialmenteVisible={false}>
         <RefuerzoPositivo
           tarea="Recreo"
-          preferencias={{ animacion: "ninguna", sonido: false }}
+          preferencias={{ animacion: "ninguna", sonido: true }}
           onSeguir={() => {}}
         />
       </ProveedorNecesidades>,
     );
+    expect(reproducirSonido).toHaveBeenCalledTimes(1);
     await user.press(screen.getByTestId("btn-necesidades"));
-    expect(screen.getAllByTestId("btn-cerrar-modal-necesidades")).toHaveLength(1);
-    // Está dentro de la felicitación (encima), no en la raíz (debajo, sin verse).
-    expect(
-      within(screen.getByTestId("refuerzo-positivo")).getByTestId("btn-cerrar-modal-necesidades"),
-    ).toBeTruthy();
-    await user.press(screen.getByTestId("btn-cerrar-modal-necesidades"));
-    expect(screen.queryByTestId("btn-cerrar-modal-necesidades")).toBeNull();
+    expect(screen.getAllByTestId("btn-cerrar-necesidades")).toHaveLength(1);
+    await user.press(screen.getByTestId("btn-cerrar-necesidades"));
+    expect(screen.queryByTestId("btn-cerrar-necesidades")).toBeNull();
+    // No se ha vuelto a montar: no suena otra vez el refuerzo.
+    expect(screen.getByText("¡Muy bien!")).toBeTruthy();
+    expect(reproducirSonido).toHaveBeenCalledTimes(1);
   });
 
   it("sin sonido en el perfil, elegir emoción y Seguir tampoco suenan (RF6.4)", async () => {

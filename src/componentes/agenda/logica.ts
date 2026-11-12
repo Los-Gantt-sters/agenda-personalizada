@@ -146,3 +146,40 @@ export function empezarTarea(
     e.id === idEntrada ? { ...e, estado: "en_curso", inicio_real: inicio } : e,
   );
 }
+
+/**
+ * Mejora de la profesora (noviembre de 2026): «Atrás» deshace «Empezar» por si el alumno se ha
+ * equivocado. La tarea en curso vuelve a pendiente y se olvida la hora de inicio.
+ * Si la tarea no está en curso, no cambia nada.
+ */
+export function deshacerEmpezar(
+  entradas: readonly EntradaAgenda[],
+  idEntrada: string,
+): EntradaAgenda[] {
+  const actual = entradas.find((e) => e.id === idEntrada);
+  if (!actual || actual.estado !== "en_curso") return entradas.slice();
+  return entradas.map((e) =>
+    e.id === idEntrada ? { ...e, estado: "pendiente", inicio_real: null } : e,
+  );
+}
+
+/** A qué estado vuelve una tarea hecha al deshacer «Terminar»: en curso si se había empezado. */
+export function estadoAlDeshacerFin(entrada: EntradaAgenda): "en_curso" | "pendiente" {
+  return entrada.inicio_real ? "en_curso" : "pendiente";
+}
+
+/**
+ * Mejora de la profesora (noviembre de 2026): «Atrás» en la felicitación deshace «Terminar».
+ * La tarea vuelve a «Ahora» (en curso si se había empezado, si no pendiente) y se olvida la hora
+ * de fin. No cambia nada si la tarea no está hecha o si ya hay otra en curso.
+ */
+export function deshacerFin(
+  entradas: readonly EntradaAgenda[],
+  idEntrada: string,
+): EntradaAgenda[] {
+  const actual = entradas.find((e) => e.id === idEntrada);
+  if (!actual || actual.estado !== "hecha") return entradas.slice();
+  if (entradas.some((e) => e.id !== idEntrada && e.estado === "en_curso")) return entradas.slice();
+  const estado = estadoAlDeshacerFin(actual);
+  return entradas.map((e) => (e.id === idEntrada ? { ...e, estado, fin_real: null } : e));
+}

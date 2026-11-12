@@ -106,6 +106,7 @@ export default function LoginScreen() {
       // Se llega desde «¿Cuál es tu clase?»; si se entra directo a /login, Atrás lleva a esa pantalla
       alAtras={() => (router.canGoBack?.() ? router.back() : router.replace("/"))}
       etiquetaAtras="Atrás: volver a elegir clase"
+      sinAyuda
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}

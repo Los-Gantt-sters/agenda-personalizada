@@ -36,6 +36,14 @@ npm test -- UsabilidadNoLectores
 - La contraseña de 3 dibujos ocupa toda la pantalla y, tras tocar el tercero, hay que pulsar «Entrar» (o «Adelante» en la barra). Por eso el recorrido pasa de 5 a 6 toques: es un toque más, pero el alumno comprueba sus dibujos antes de entrar.
 - Todas las pantallas tienen cabecera con su nombre y una barra abajo con «Ayuda», «Atrás», «Adelante» y «Accesibilidad», siempre en el mismo sitio.
 
+### Segunda ronda
+
+- Sin ventanas emergentes. El detalle de una tarea, la felicitación, «Ayuda» y «Accesibilidad» son pantallas completas con su cabecera y su barra. «Ayuda» y «Accesibilidad» tapan la pantalla de la que vienen sin quitarla, así que al volver todo sigue igual. El aviso de 5 minutos ya no flota: es una franja arriba del contenido.
+- «Empezar» y «Terminar» van con un solo toque. Ya no hay que mantenerlos pulsados 1,5 s ni contestar «¿Seguro?»: si el alumno se equivoca, «Atrás» lo deshace (en la tarea empezada vuelve a la agenda sin empezar; en la felicitación, vuelve a la tarea sin terminar). Esto sustituye a los antitoques de T-08.2 (RNF6.1). Se mantiene que el botón no haga caso durante 0,8 s al aparecer, para que el mismo toque no valga para «Empezar» y «Terminar».
+- Al empezar una tarea solo se ve esa tarea: el nombre arriba, el dibujo en grande en medio, la descripción y los pasos al lado, un reloj pequeño y «Terminar». Dentro de la tarea se puede cambiar cómo se ve (dibujo y texto, solo dibujo o solo texto) sin tocar las preferencias.
+- Preferencias nuevas: «Reloj en la tarea» (con o sin reloj) y «Qué puede pedir en Ayuda» (baño, agua o descanso; «Urgencia» sale siempre).
+- En las pantallas de entrar (clase, foto, contraseña y acceso de adultos) no hay «Ayuda». El hueco se queda vacío para que «Atrás» y «Adelante» no cambien de sitio.
+
 ## Decisiones del equipo
 
 - Los móviles quedan fuera de alcance: la aplicación es para tabletas y ordenadores.

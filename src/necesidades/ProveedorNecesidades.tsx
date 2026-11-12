@@ -1,7 +1,12 @@
-import React, { createContext, useCallback, useContext, useState, ReactNode } from "react";
+// Estado de «Ayuda» para toda la app (SCRUM-87). El botón está en la barra de abajo de cada
+// pantalla (src/pantalla) y la pantalla «¿Qué necesitas?» se pinta aquí, encima de todo, sin quitar
+// la pantalla de debajo (mejora de la profesora, noviembre de 2026: nada de ventanas emergentes).
+// Qué necesidades salen lo elige el tutor en Preferencias.
+import React, { createContext, useContext, useState, ReactNode } from "react";
 import { View, StyleSheet } from "react-native";
+import { usePreferenciasOpcional } from "../preferencias/PreferenciasProvider";
 import { BotonNecesidades } from "./BotonNecesidades";
-import { ModalNecesidades } from "./ModalNecesidades";
+import { PantallaNecesidades } from "./PantallaNecesidades";
 import {
   PosicionBotonNecesidades,
   VarianteColorNecesidades,
@@ -23,15 +28,9 @@ interface NecesidadesContextType {
   cerrarModalNecesidades: () => void;
   ultimaNecesidadSolicitada: ClaveNecesidad | null;
   solicitarNecesidad: (clave: ClaveNecesidad) => void;
-  /** Necesidad recién enviada (la ventana enseña «Aviso enviado»). */
+  /** Necesidad recién enviada (la pantalla enseña «Aviso enviado»). */
   necesidadEnviada: ClaveNecesidad | null;
   nombreTutora: string;
-  /**
-   * Una pantalla que va dentro de otra ventana (p. ej. la felicitación al terminar una tarea) pinta
-   * su propia ventana de ayuda, porque la de aquí quedaría debajo y no se vería. Mientras esté
-   * registrada, la ventana de aquí no se abre. Devuelve la función para quitar el registro.
-   */
-  registrarVentanaLocal: () => () => void;
 }
 
 const NecesidadesContext = createContext<NecesidadesContextType | undefined>(undefined);
@@ -67,11 +66,8 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
   const [ultimaNecesidadSolicitada, setUltimaNecesidadSolicitada] = useState<ClaveNecesidad | null>(
     null,
   );
-  const [ventanasLocales, setVentanasLocales] = useState(0);
-  const registrarVentanaLocal = useCallback(() => {
-    setVentanasLocales((n) => n + 1);
-    return () => setVentanasLocales((n) => n - 1);
-  }, []);
+  // Necesidades que ha elegido el tutor (sin proveedor de preferencias, todas).
+  const necesidades = usePreferenciasOpcional()?.preferencias.necesidades;
 
   const abrirModalNecesidades = () => {
     setNecesidadEnviada(null);
@@ -112,11 +108,13 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
         solicitarNecesidad,
         necesidadEnviada,
         nombreTutora,
-        registrarVentanaLocal,
       }}
     >
       <View style={estilos.contenedorRaiz}>
-        {children}
+        {/* Con «¿Qué necesitas?» encima, lo de debajo no se lee con el lector de pantalla. */}
+        <View style={estilos.contenedorRaiz} aria-hidden={modalAbierto}>
+          {children}
+        </View>
 
         {mostrarBotonNecesidades && (
           <BotonNecesidades
@@ -127,8 +125,9 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
           />
         )}
 
-        <ModalNecesidades
-          visible={modalAbierto && ventanasLocales === 0}
+        <PantallaNecesidades
+          visible={modalAbierto}
+          necesidades={necesidades}
           alSeleccionarNecesidad={solicitarNecesidad}
           alCerrar={cerrarModalNecesidades}
           necesidadEnviada={necesidadEnviada}

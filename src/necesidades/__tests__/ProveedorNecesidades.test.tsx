@@ -2,6 +2,12 @@ import React from "react";
 import { Text, View } from "react-native";
 import { render, screen, userEvent } from "@testing-library/react-native";
 import { ProveedorNecesidades, useNecesidades } from "../ProveedorNecesidades";
+import { PreferenciasProvider } from "../../preferencias/PreferenciasProvider";
+import { TemaProvider } from "../../temas";
+
+// Con «¿Qué necesitas?» encima, lo de debajo queda oculto al lector de pantalla: las marcas de
+// prueba de la pantalla de debajo se leen incluyendo lo oculto.
+const oculto = { includeHiddenElements: true } as const;
 
 const ComponenteHijo = () => {
   const { modalAbierto, ultimaNecesidadSolicitada } = useNecesidades();
@@ -53,7 +59,7 @@ describe("ProveedorNecesidades", () => {
     await user.press(boton);
 
     expect(handlePulsar).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("modal-necesidades-abierto")).toBeTruthy();
+    expect(screen.getByTestId("modal-necesidades-abierto", oculto)).toBeTruthy();
     expect(screen.getByText("¿Qué necesitas?")).toBeTruthy();
     expect(screen.getByText("Quiero ir al baño")).toBeTruthy();
     expect(screen.getByText("Quiero agua")).toBeTruthy();
@@ -74,10 +80,30 @@ describe("ProveedorNecesidades", () => {
     await user.press(screen.getByTestId("opcion-necesidad-bano"));
 
     expect(handleSolicitar).toHaveBeenCalledWith("bano");
-    expect(screen.getByTestId("ultima-necesidad")).toHaveTextContent("bano");
+    expect(screen.getByTestId("ultima-necesidad", oculto)).toHaveTextContent("bano");
     expect(screen.getByText(/Carmen ya lo sabe/)).toBeTruthy();
 
     await user.press(screen.getByTestId("btn-vale-confirmacion"));
-    expect(screen.queryByTestId("modal-necesidades-abierto")).toBeNull();
+    expect(screen.queryByTestId("modal-necesidades-abierto", oculto)).toBeNull();
+    // Al volver, la pantalla de debajo sigue ahí y se puede leer otra vez.
+    expect(screen.getByText("Pantalla Principal")).toBeTruthy();
+  });
+
+  it("profesora: en «Ayuda» salen solo las necesidades elegidas en Preferencias", async () => {
+    const user = userEvent.setup();
+    await render(
+      <TemaProvider>
+        <PreferenciasProvider preferenciasIniciales={{ necesidades: ["bano", "descanso"] }}>
+          <ProveedorNecesidades>
+            <ComponenteHijo />
+          </ProveedorNecesidades>
+        </PreferenciasProvider>
+      </TemaProvider>,
+    );
+    await user.press(screen.getByRole("button", { name: /necesito ayuda/i }));
+    expect(screen.getByTestId("opcion-necesidad-bano")).toBeTruthy();
+    expect(screen.getByTestId("opcion-necesidad-descanso")).toBeTruthy();
+    expect(screen.queryByTestId("opcion-necesidad-agua")).toBeNull();
+    expect(screen.getByTestId("opcion-necesidad-urgencia")).toBeTruthy();
   });
 });

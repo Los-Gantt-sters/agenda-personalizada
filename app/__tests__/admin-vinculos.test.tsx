@@ -138,6 +138,8 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
     await user.press(screen.getByRole("radio", { name: "Familia Ruiz" }));
 
     expect(await screen.findByText("No se ha podido guardar el cambio.")).toBeTruthy();
+    // Elegir es una pantalla (no una ventana): «Atrás» vuelve a la lista sin cambiar nada.
+    await user.press(screen.getByTestId("btn-barra-atras"));
     expect(within(screen.getByTestId("fila-a2")).getByText("Sin familia")).toBeTruthy();
   });
 

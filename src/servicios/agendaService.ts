@@ -76,6 +76,49 @@ export async function marcarTareaHecha(
   if (errorEjecucion) throw errorEjecucion;
 }
 
+/**
+ * «Atrás» tras «Empezar» (mejora de la profesora, noviembre de 2026): la asignación en curso vuelve
+ * a pendiente y se borra su ejecución, porque la hora de inicio es obligatoria en ejecuciones.
+ */
+export async function desmarcarTareaEnCurso(idEntrada: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("asignaciones")
+    .update({ estado: "pendiente" })
+    .eq("id", idEntrada)
+    .eq("estado", "en_curso")
+    .select("id");
+  if (error) throw error;
+  if (!(data as unknown[] | null)?.length) return; // ya no estaba en curso
+  const { error: errorEjecucion } = await supabase
+    .from("ejecuciones")
+    .delete()
+    .eq("asignacion_id", idEntrada);
+  if (errorEjecucion) throw errorEjecucion;
+}
+
+/**
+ * «Atrás» tras «Terminar» (mejora de la profesora, noviembre de 2026): la asignación hecha vuelve a
+ * en curso (si se había empezado) o a pendiente, y se borra la hora de fin.
+ */
+export async function desmarcarTareaHecha(
+  idEntrada: string,
+  volverA: "pendiente" | "en_curso",
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("asignaciones")
+    .update({ estado: volverA })
+    .eq("id", idEntrada)
+    .eq("estado", "hecho")
+    .select("id");
+  if (error) throw error;
+  if (!(data as unknown[] | null)?.length) return; // ya no estaba hecha
+  const { error: errorEjecucion } = await supabase
+    .from("ejecuciones")
+    .update({ fin: null })
+    .eq("asignacion_id", idEntrada);
+  if (errorEjecucion) throw errorEjecucion;
+}
+
 /** RF4.7: suscripción Realtime a la agenda del estudiante. Devuelve la función para darse de baja. */
 export function suscribirseAgenda(
   estudianteId: string,
@@ -127,5 +170,7 @@ export const repositorioAgendaSupabase: RepositorioAgenda = {
   obtenerSecuenciaDia,
   marcarEnCurso: marcarTareaEnCurso,
   marcarHecha: marcarTareaHecha,
+  desmarcarEnCurso: desmarcarTareaEnCurso,
+  desmarcarHecha: desmarcarTareaHecha,
   suscribir: suscribirseAgenda,
 };

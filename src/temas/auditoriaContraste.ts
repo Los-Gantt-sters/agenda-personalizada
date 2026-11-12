@@ -48,15 +48,15 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   },
   {
     id: "texto-superficie",
-    elemento: "Texto de tarjetas, opciones y modal",
-    usoEn: "OpcionPreferencia, ModalVistaAccesible, BotonAccesible (suave), BotonVistaAccesible",
+    elemento: "Texto de tarjetas, opciones y pantalla de Accesibilidad",
+    usoEn: "OpcionPreferencia, PantallaVistaAccesible, BotonAccesible (suave), BotonVistaAccesible",
     tipo: "texto",
     pares: [["texto", "superficie"]],
   },
   {
     id: "texto-superficieDestacada",
     elemento: "Texto de la opción elegida y de la tarea «Ahora»",
-    usoEn: "OpcionPreferencia, ModalVistaAccesible, vista previa de PanelPreferencias",
+    usoEn: "OpcionPreferencia, PantallaVistaAccesible, vista previa de PanelPreferencias",
     tipo: "texto",
     pares: [["texto", "superficieDestacada"]],
   },
@@ -84,7 +84,7 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   {
     id: "textoSobrePrimario-primario",
     elemento: "Texto de los botones principales",
-    usoEn: "BotonAccesible (principal), botón «Listo» de ModalVistaAccesible",
+    usoEn: "BotonAccesible (principal), botón «Listo» de PantallaVistaAccesible (barra de abajo)",
     tipo: "texto",
     pares: [["textoSobrePrimario", "primario"]],
   },
@@ -163,7 +163,7 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   {
     id: "borde-superficie",
     elemento: "Borde de tarjetas, chips y botón suave",
-    usoEn: "ModalVistaAccesible, BotonAccesible (suave)",
+    usoEn: "PantallaVistaAccesible, BotonAccesible (suave)",
     tipo: "componente",
     pares: [["borde", "superficie"]],
   },
@@ -176,8 +176,8 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   },
   {
     id: "primario-superficie-componente",
-    elemento: "Borde de la tarjeta del modal y del chip elegido",
-    usoEn: "ModalVistaAccesible",
+    elemento: "Borde de la opción elegida y del chip elegido",
+    usoEn: "PantallaVistaAccesible",
     tipo: "componente",
     pares: [["primario", "superficie"]],
   },

@@ -30,6 +30,8 @@ const APARTADOS = [
   "Tamaño de los botones",
   "Forma de los botones",
   "Tareas que se ven",
+  "Reloj en la tarea",
+  "Qué puede pedir en Ayuda",
 ];
 
 const grupo = (nombre: string) => within(screen.getByLabelText(nombre));
@@ -48,7 +50,7 @@ const volverAlMenu = (user: ReturnType<typeof userEvent.setup>) =>
   user.press(screen.getByTestId("btn-barra-atras"));
 
 describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
-  it("primero pregunta qué quieres cambiar, con los 8 apartados y su valor actual (sin scroll)", async () => {
+  it("primero pregunta qué quieres cambiar, con los 10 apartados y su valor actual (sin scroll)", async () => {
     await montar();
     expect(screen.getByRole("header", { name: "¿Qué quieres cambiar?" })).toBeTruthy();
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Preferencias");
@@ -58,6 +60,10 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     expect(screen.getByRole("button", { name: "Fondo y colores: Claro" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Tipo de letra: Lexend" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Tareas que se ven: Hasta 3" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reloj en la tarea: Con reloj" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Qué puede pedir en Ayuda: Baño, Agua, Descanso" }),
+    ).toBeTruthy();
     expect(JSON.stringify(screen.toJSON())).not.toContain("RCTScrollView");
   });
 
@@ -73,6 +79,7 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
       ["Tamaño de los botones", 3],
       ["Forma de los botones", 3],
       ["Tareas que se ven", 3],
+      ["Reloj en la tarea", 2],
     ];
     for (const [titulo, n] of cuantas) {
       await abrir(user, titulo);
@@ -115,6 +122,10 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     await abrir(user, "Forma de los botones");
     await user.press(screen.getByTestId("btn-barra-adelante"));
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Tareas que se ven");
+    await user.press(screen.getByTestId("btn-barra-adelante"));
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Reloj en la tarea");
+    await user.press(screen.getByTestId("btn-barra-adelante"));
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Qué puede pedir en Ayuda");
     expect(screen.getByTestId("btn-barra-adelante").props.accessibilityState).toMatchObject({
       disabled: true,
     });
@@ -177,6 +188,44 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     expect(screen.getAllByTestId(/^muestra-Después-/)).toHaveLength(1);
     await user.press(grupo(tareas).getByRole("radio", { name: "Todas" }));
     expect(screen.getAllByTestId(/^muestra-Después-/).length).toBeGreaterThan(3);
+  });
+
+  it("«Reloj en la tarea»: se elige con o sin reloj y la muestra cambia al momento", async () => {
+    const user = userEvent.setup();
+    await montar();
+    await abrir(user, "Reloj en la tarea");
+    expect(elegida("Reloj en la tarea")).toEqual(["Con reloj"]);
+    expect(screen.getByTestId("muestra-reloj")).toBeTruthy();
+    await user.press(grupo("Reloj en la tarea").getByRole("radio", { name: "Sin reloj" }));
+    expect(screen.queryByTestId("muestra-reloj")).toBeNull();
+    await volverAlMenu(user);
+    expect(screen.getByRole("button", { name: "Reloj en la tarea: Sin reloj" })).toBeTruthy();
+  });
+
+  it("«Qué puede pedir en Ayuda»: varias a la vez y nunca ninguna", async () => {
+    const user = userEvent.setup();
+    await montar();
+    await abrir(user, "Qué puede pedir en Ayuda");
+    const casillas = grupo("Qué puede pedir en Ayuda").getAllByRole("checkbox");
+    expect(casillas).toHaveLength(3);
+    expect(casillas.every((c) => c.props.accessibilityState?.checked)).toBe(true);
+
+    await user.press(screen.getByTestId("necesidad-agua"));
+    await user.press(screen.getByTestId("necesidad-descanso"));
+    expect(screen.queryByTestId("muestra-necesidad-agua")).toBeNull();
+    expect(screen.getByTestId("muestra-necesidad-bano")).toBeTruthy();
+
+    // La última no se puede quitar: «Ayuda» no puede quedarse sin opciones.
+    await user.press(screen.getByTestId("necesidad-bano"));
+    expect(screen.getByTestId("necesidad-bano").props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+
+    await user.press(screen.getByTestId("necesidad-agua"));
+    await volverAlMenu(user);
+    expect(
+      screen.getByRole("button", { name: "Qué puede pedir en Ayuda: Baño, Agua" }),
+    ).toBeTruthy();
   });
 
   it("«Volver a lo de siempre» restablece todo", async () => {

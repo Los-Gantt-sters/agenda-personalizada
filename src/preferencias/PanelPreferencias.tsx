@@ -6,16 +6,20 @@
 //   eso, con la vista previa al lado. «Atrás» vuelve al menú; «Adelante» pasa al apartado siguiente.
 // - Dos apartados nuevos: «Mayúsculas o minúsculas» (cada colegio enseña a leer con una) y
 //   «Tareas que se ven» en «Hecho» y «Después» (hay quien se orienta con pocas y quien quiere todas).
+// - Segunda ronda: «Reloj en la tarea» (se ve o no; si se ve, es pequeño) y «Qué puede pedir en
+//   Ayuda» (qué necesidades salen; «Urgencia» sale siempre). Aún no se guardan por alumno.
 import React, { useState, type ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { urlImagenPictograma } from "../arasaac/urls";
 import { PictogramaTarea } from "../componentes/agenda/PictogramaTarea";
+import { RelojVisual } from "../componentes/reloj-visual/RelojVisual";
+import { OPCIONES_NECESIDADES_BASICAS } from "../necesidades/opcionesNecesidades";
 import { Pantalla } from "../pantalla/Pantalla";
 import { NOMBRES_TEMAS, TEMAS, type Paleta } from "../temas";
 import { Icono, type NombreIcono } from "../ui/Icono";
 import { Texto as Text } from "../ui/Texto";
-import { useApariencia, useEstilos } from "../ui/apariencia";
+import { colorSobre, useApariencia, useEstilos } from "../ui/apariencia";
 import { BotonAccesible } from "./BotonAccesible";
 import { OpcionPreferencia } from "./OpcionPreferencia";
 import { usePreferencias } from "./PreferenciasProvider";
@@ -24,21 +28,34 @@ import {
   FORMAS_BOTON,
   FUENTES,
   MODOS_CANAL,
+  NECESIDADES_AYUDA,
   ORDEN_CAJAS_LETRA,
   ORDEN_FORMAS,
   ORDEN_FUENTES,
   ORDEN_MODOS_CANAL,
+  ORDEN_NECESIDADES_AYUDA,
   ORDEN_TAMANOS_BOTON,
   ORDEN_TAMANOS_LETRA,
   ORDEN_TAREAS_VISIBLES,
+  ORDEN_VER_RELOJ,
   TAMANOS_BOTON,
   TAMANOS_LETRA,
   TAREAS_VISIBLES,
+  VER_RELOJ,
   type PreferenciasApariencia,
 } from "./opciones";
 
 type Apartado =
-  "canal" | "tema" | "fuente" | "caja" | "tamanoLetra" | "tamanoBoton" | "forma" | "tareasVisibles";
+  | "canal"
+  | "tema"
+  | "fuente"
+  | "caja"
+  | "tamanoLetra"
+  | "tamanoBoton"
+  | "forma"
+  | "tareasVisibles"
+  | "reloj"
+  | "necesidades";
 
 /** Apartados del menú, en el orden en que se recorren con «Adelante». */
 const APARTADOS: { clave: Apartado; titulo: string; ayuda: string; icono: NombreIcono }[] = [
@@ -85,6 +102,18 @@ const APARTADOS: { clave: Apartado; titulo: string; ayuda: string; icono: Nombre
     ayuda: "Cuántas tareas se ven en «Hecho» y en «Después».",
     icono: "calendario",
   },
+  {
+    clave: "reloj",
+    titulo: "Reloj en la tarea",
+    ayuda: "Un reloj pequeño enseña cuánto queda. A quien le agobie, mejor sin reloj.",
+    icono: "reloj",
+  },
+  {
+    clave: "necesidades",
+    titulo: "Qué puede pedir en Ayuda",
+    ayuda: "Lo que sale al pulsar «Ayuda». «Urgencia» sale siempre. Elige al menos una.",
+    icono: "campana",
+  },
 ];
 
 /** Texto del valor elegido en cada apartado, para el menú. */
@@ -106,6 +135,10 @@ function valorActual(apartado: Apartado, p: PreferenciasApariencia): string {
       return FORMAS_BOTON[p.forma].etiqueta;
     case "tareasVisibles":
       return TAREAS_VISIBLES[p.tareasVisibles].etiqueta;
+    case "reloj":
+      return VER_RELOJ[p.reloj].etiqueta;
+    case "necesidades":
+      return p.necesidades.map((n) => NECESIDADES_AYUDA[n].etiqueta).join(", ");
   }
 }
 
@@ -188,7 +221,8 @@ export function PanelPreferencias() {
           <Text style={e.ayuda}>{actual.ayuda}</Text>
           <View
             style={e.opciones}
-            accessibilityRole="radiogroup"
+            // «Qué puede pedir en Ayuda» admite varias: son casillas, no un grupo de radio.
+            accessibilityRole={abierto === "necesidades" ? undefined : "radiogroup"}
             accessibilityLabel={actual.titulo}
             testID={`opciones-${abierto}`}
           >
@@ -332,6 +366,56 @@ function Opciones({ apartado }: { apartado: Apartado }) {
           ))}
         </>
       );
+    case "reloj":
+      return (
+        <>
+          {ORDEN_VER_RELOJ.map((r) => (
+            <OpcionPreferencia
+              key={r}
+              etiqueta={VER_RELOJ[r].etiqueta}
+              elegida={p.reloj === r}
+              onPress={() => cambiar({ reloj: r })}
+            />
+          ))}
+        </>
+      );
+    case "necesidades":
+      // Se pueden elegir varias; la última que queda no se puede quitar (Ayuda nunca sale vacía).
+      return (
+        <>
+          {ORDEN_NECESIDADES_AYUDA.map((n) => {
+            const elegida = p.necesidades.includes(n);
+            const opcion = OPCIONES_NECESIDADES_BASICAS.find((o) => o.clave === n)!;
+            return (
+              <OpcionPreferencia
+                key={n}
+                multiple
+                testID={`necesidad-${n}`}
+                etiqueta={NECESIDADES_AYUDA[n].etiqueta}
+                elegida={elegida}
+                onPress={() => {
+                  if (elegida && p.necesidades.length === 1) return;
+                  cambiar({
+                    necesidades: elegida
+                      ? p.necesidades.filter((x) => x !== n)
+                      : [...p.necesidades, n],
+                  });
+                }}
+                muestra={
+                  <PictogramaTarea
+                    tarea={{
+                      titulo: opcion.etiqueta,
+                      emoji: opcion.simbolo,
+                      pictograma_url: opcion.urlPictograma,
+                    }}
+                    tam={56}
+                  />
+                }
+              />
+            );
+          })}
+        </>
+      );
   }
 }
 
@@ -414,6 +498,33 @@ function MuestraApartado({
       );
       break;
     }
+    case "reloj":
+      contenido = (
+        <View style={e.filaMuestra}>
+          <Icono
+            nombre="reloj"
+            color={p.reloj === "si" ? colores.primario : colores.textoSecundario}
+            tam={40}
+          />
+          {p.reloj === "no" ? (
+            <Icono nombre="cerrar" color={colores.textoSecundario} tam={28} grosor={3} />
+          ) : null}
+        </View>
+      );
+      break;
+    case "necesidades":
+      contenido = (
+        <View style={e.filaMuestra}>
+          {OPCIONES_NECESIDADES_BASICAS.filter((o) => p.necesidades.includes(o.clave)).map((o) => (
+            <PictogramaTarea
+              key={o.clave}
+              tarea={{ titulo: o.etiqueta, emoji: o.simbolo, pictograma_url: o.urlPictograma }}
+              tam={40}
+            />
+          ))}
+        </View>
+      );
+      break;
   }
   return (
     <View
@@ -443,6 +554,10 @@ function VistaPrevia({ apartado }: { apartado: Apartado }) {
       >
         {apartado === "tareasVisibles" ? (
           <BloquesMuestra />
+        ) : apartado === "reloj" ? (
+          <RelojMuestra />
+        ) : apartado === "necesidades" ? (
+          <AyudaMuestra />
         ) : (
           <>
             <View style={[e.tareaAhora, { borderRadius: estilos.radioTarjeta }]}>
@@ -547,6 +662,60 @@ function BloquesMuestra() {
   );
 }
 
+/** Muestra de «Reloj en la tarea»: la tarea con su reloj pequeño, o sin él. */
+function RelojMuestra() {
+  const e = useEstilos(crearEstilos);
+  const { preferencias } = usePreferencias();
+  return (
+    <View style={e.relojMuestra}>
+      <PictogramaTarea tarea={PICTOGRAMA_MUESTRA} tam={150} />
+      {preferencias.reloj === "si" ? (
+        <View testID="muestra-reloj">
+          <RelojVisual
+            duracionMs={10 * 60_000}
+            transcurridoMs={4 * 60_000}
+            tamano={110}
+            sonidoAlTerminar={false}
+            parpadeoAlTerminar={false}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** Muestra de «Qué puede pedir en Ayuda»: las necesidades elegidas y «Urgencia», siempre. */
+function AyudaMuestra() {
+  const { colores } = useApariencia();
+  const e = useEstilos(crearEstilos);
+  const { preferencias } = usePreferencias();
+  return (
+    <View style={e.ayudaMuestra}>
+      <View style={e.filaMuestra}>
+        {OPCIONES_NECESIDADES_BASICAS.filter((o) => preferencias.necesidades.includes(o.clave)).map(
+          (o) => (
+            <View key={o.clave} style={e.necesidadMuestra} testID={`muestra-necesidad-${o.clave}`}>
+              <PictogramaTarea
+                tarea={{ titulo: o.etiqueta, emoji: o.simbolo, pictograma_url: o.urlPictograma }}
+                tam={64}
+              />
+              <Text style={e.textoNecesidadMuestra} numberOfLines={1}>
+                {NECESIDADES_AYUDA[o.clave].etiqueta}
+              </Text>
+            </View>
+          ),
+        )}
+      </View>
+      <View style={[e.urgenciaMuestra, { backgroundColor: colores.peligro }]}>
+        <Icono nombre="alerta" color={colorSobre(colores.peligro)} tam={24} grosor={3} />
+        <Text style={[e.textoUrgenciaMuestra, { color: colorSobre(colores.peligro) }]}>
+          Urgencia
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /** Pictograma de ARASAAC de la vista previa (el mismo de «Lavarse las manos» en la agenda). */
 const PICTOGRAMA_MUESTRA = {
   titulo: "Lavarse las manos",
@@ -561,7 +730,8 @@ const crearEstilos = (c: Paleta) =>
     pregunta: { fontSize: 26, fontWeight: "700", color: c.texto },
     rejilla: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
     tarjeta: {
-      flexBasis: "23%",
+      // Cinco por fila: los diez apartados caben en dos filas, sin scroll.
+      flexBasis: "18%",
       flexGrow: 1,
       minHeight: 176,
       padding: 14,
@@ -661,4 +831,33 @@ const crearEstilos = (c: Paleta) =>
       backgroundColor: c.superficie,
     },
     tarjetaBloqueBaja: { height: 26 },
+    // Muestras de «Reloj» y «Ayuda»
+    relojMuestra: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 20,
+      minHeight: 200,
+    },
+    ayudaMuestra: { gap: 12, alignItems: "center", minHeight: 200, justifyContent: "center" },
+    necesidadMuestra: {
+      alignItems: "center",
+      gap: 4,
+      padding: 8,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: c.primario,
+      backgroundColor: c.fondo,
+    },
+    textoNecesidadMuestra: { fontSize: 16, fontWeight: "700", color: c.texto },
+    urgenciaMuestra: {
+      alignSelf: "stretch",
+      minHeight: 48,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      borderRadius: 10,
+    },
+    textoUrgenciaMuestra: { fontSize: 18, fontWeight: "700" },
   });

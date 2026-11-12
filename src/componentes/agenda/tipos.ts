@@ -68,6 +68,10 @@ export interface RepositorioAgenda {
   marcarEnCurso(idEntrada: string, inicio: string): Promise<void>;
   /** RF4.3 y RF6.4: marca la entrada como hecha y guarda la hora de fin (RI6.1). */
   marcarHecha(idEntrada: string, fin?: string): Promise<void>;
+  /** «Atrás» tras «Empezar»: la entrada en curso vuelve a pendiente y se borra la hora de inicio. */
+  desmarcarEnCurso(idEntrada: string): Promise<void>;
+  /** «Atrás» tras «Terminar»: la entrada hecha vuelve a `volverA` y se borra la hora de fin. */
+  desmarcarHecha(idEntrada: string, volverA: "pendiente" | "en_curso"): Promise<void>;
   /**
    * RF4.7: avisa cada vez que cambia algo de la agenda del estudiante (el tutor crea, modifica,
    * bloquea o borra una tarea). Devuelve la función para darse de baja.

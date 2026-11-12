@@ -58,6 +58,8 @@ describe("opciones del prototipo (FONTS, FS, BS, SHAPES y CANAL)", () => {
       canal: "ambos",
       caja: "normal",
       tareasVisibles: "tres",
+      reloj: "si",
+      necesidades: ["bano", "agua", "descanso"],
     });
   });
 });
@@ -79,6 +81,8 @@ describe("mayúsculas y tareas que se ven (mejoras de la profesora)", () => {
     expect(normalizarPreferencias({ caja: "cursiva", tareasVisibles: 7 })).toMatchObject({
       caja: "normal",
       tareasVisibles: "tres",
+      reloj: "si",
+      necesidades: ["bano", "agua", "descanso"],
     });
   });
 });
@@ -108,6 +112,33 @@ describe("normalizarPreferencias", () => {
       canal: "soloPictograma",
       caja: "normal",
       tareasVisibles: "tres",
+      reloj: "si",
+      necesidades: ["bano", "agua", "descanso"],
     });
+  });
+});
+
+describe("reloj y necesidades de Ayuda (segunda ronda de la profesora)", () => {
+  it("el reloj se ve por defecto y solo admite sí o no", () => {
+    expect(PREFERENCIAS_POR_DEFECTO.reloj).toBe("si");
+    expect(normalizarPreferencias({ reloj: "no" }).reloj).toBe("no");
+    expect(normalizarPreferencias({ reloj: "a veces" }).reloj).toBe("si");
+  });
+
+  it("las necesidades se quedan con las válidas, sin repetir y en orden; vacías, todas", () => {
+    expect(
+      normalizarPreferencias({ necesidades: ["descanso", "bano", "bano"] }).necesidades,
+    ).toEqual(["bano", "descanso"]);
+    expect(normalizarPreferencias({ necesidades: ["urgencia", "pizza"] }).necesidades).toEqual([
+      "bano",
+      "agua",
+      "descanso",
+    ]);
+    expect(normalizarPreferencias({ necesidades: [] }).necesidades).toEqual([
+      "bano",
+      "agua",
+      "descanso",
+    ]);
+    expect(normalizarPreferencias({ necesidades: "agua" }).necesidades).toHaveLength(3);
   });
 });
