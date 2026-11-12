@@ -60,7 +60,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     await abrirCredencialDeAlejandro(user);
     await tocarDibujos(user, "manzana", "perro", "estrella");
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/demo-reloj"));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/agenda"));
     expect(mockLogin).toHaveBeenCalledTimes(1);
     expect(mockLogin).toHaveBeenCalledWith("ale", ["manzana", "perro", "estrella"]);
   });
@@ -88,7 +88,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     await screen.findByText(`⚠️ ${MENSAJE}`);
     await tocarDibujos(user, "manzana", "perro", "estrella");
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/demo-reloj"));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/agenda"));
     expect(mockLogin).toHaveBeenLastCalledWith("ale", ["manzana", "perro", "estrella"]);
   });
 
