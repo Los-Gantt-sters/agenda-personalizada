@@ -18,8 +18,8 @@ import type { AuthResult } from "../src/tipos/auth";
 
 // Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
 const MENSAJE_SECUENCIA_INCORRECTA = "No es esa. Prueba otra vez";
-// La agenda del alumno (HU-06) aún no está en esta rama; mientras tanto, la demo del reloj
-const RUTA_AGENDA_ESTUDIANTE = "/demo-reloj";
+// Agenda estructurada del alumno (HU-06)
+const RUTA_AGENDA_ESTUDIANTE = "/agenda";
 
 export interface LoginEstudiantesScreenProps {
   /**
