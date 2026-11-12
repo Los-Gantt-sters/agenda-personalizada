@@ -38,8 +38,8 @@ export interface EntradaAgenda {
   estado: EstadoEntrada;
   tarea: Tarea;
   /**
-   * RF6.8: el tutor marca que en esta tarea el estudiante tiene que pulsar «Empezar» antes de
-   * «Terminar». Si es false o no viene, se enseña directamente «Terminar», como en HU-06.
+   * RF6.8: si el estudiante tiene que pulsar «Empezar» antes de «Terminar». Si no viene, sí (es
+   * lo normal); solo con false se enseña directamente «Terminar», como en HU-06.
    */
   requiere_inicio_fin?: boolean | null;
   /** RI6.1: momento en que el estudiante pulsó «Empezar» (ISO 8601). */

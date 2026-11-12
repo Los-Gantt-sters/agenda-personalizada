@@ -1,7 +1,7 @@
 // Datos de ejemplo de la agenda del día (T-06.1, HU-06). Se usan en app/agenda.tsx hasta que la
 // agenda se cargue desde Supabase (T-06.2). Los pictogramas son de ARASAAC; el emoji solo se ve si la
 // imagen no carga (sin conexión).
-// HU-08: «Lavarse las manos» y «Reprografía» piden pulsar «Empezar» antes de «Terminar» (RF6.8).
+// HU-08: todas las tareas piden pulsar «Empezar» antes de «Terminar» (lo normal, RF6.8).
 // HU-16: agendaDemoAviso mueve las horas para probar el aviso de 5 minutos sin esperar.
 import type { EntradaAgenda, Tarea } from "./tipos";
 import { urlImagenPictograma } from "../../arasaac/urls";
@@ -65,7 +65,6 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     ["11:30", 30, T("t5", "Recreo", "⚽", 7137, { descripcion: "Salimos al patio." }), "pendiente"],
     ["12:00", 60, T("t6", "Taller de cocina", "🍳", 2342), "pendiente"],
   ];
-  const conInicioFin = new Set(["t2", "t4"]);
   return tareas.map(([hora, dur, tarea, estado], i) => ({
     id: `e${i + 1}`,
     estudiante_id: ESTUDIANTE_DEMO,
@@ -76,7 +75,7 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     orden: i + 1,
     estado,
     tarea,
-    requiere_inicio_fin: conInicioFin.has(tarea.id),
+    requiere_inicio_fin: true,
   }));
 }
 

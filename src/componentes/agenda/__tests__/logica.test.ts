@@ -150,9 +150,12 @@ describe("SCRUM-74 · RF6.1 y RF6.4 empezar y terminar (T-08.1)", () => {
     expect(r[0]).toMatchObject({ estado: "hecha", inicio_real: INICIO, fin_real: FIN });
   });
 
-  it("solo pide Empezar si el tutor lo ha marcado y aún no se ha empezado (RF6.8)", () => {
-    expect(necesitaEmpezar(e("1", "09:00"))).toBe(false);
+  it("pide Empezar mientras no se ha empezado, salvo que el tutor lo quite (RF6.8)", () => {
+    // Por defecto (la base de datos no trae el dato) todas piden Empezar.
+    expect(necesitaEmpezar(e("1", "09:00"))).toBe(true);
+    expect(necesitaEmpezar({ ...e("1", "09:00"), requiere_inicio_fin: null })).toBe(true);
     expect(necesitaEmpezar({ ...e("1", "09:00"), requiere_inicio_fin: true })).toBe(true);
+    expect(necesitaEmpezar({ ...e("1", "09:00"), requiere_inicio_fin: false })).toBe(false);
     expect(necesitaEmpezar({ ...e("1", "09:00", "en_curso"), requiere_inicio_fin: true })).toBe(
       false,
     );

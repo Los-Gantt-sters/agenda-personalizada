@@ -124,11 +124,13 @@ function entradaAhora(entradas: readonly EntradaAgenda[]): EntradaAgenda | undef
 }
 
 /**
- * RF6.8: la tarea de «Ahora» pide pulsar «Empezar» si el tutor lo ha marcado y todavía no se ha
- * empezado. Si no, se enseña directamente «Terminar».
+ * La tarea de «Ahora» pide pulsar «Empezar» mientras no se ha empezado. Con la pantalla de la tarea
+ * de la profesora (al empezar solo se ve la tarea), todas empiezan así por defecto. RF6.8: solo si
+ * el tutor lo quita a propósito (requiere_inicio_fin = false) se enseña directamente «Terminar».
+ * La base de datos todavía no tiene esa columna, así que con Supabase todas piden «Empezar».
  */
 export function necesitaEmpezar(entrada: EntradaAgenda): boolean {
-  return Boolean(entrada.requiere_inicio_fin) && entrada.estado === "pendiente";
+  return entrada.requiere_inicio_fin !== false && entrada.estado === "pendiente";
 }
 
 /**

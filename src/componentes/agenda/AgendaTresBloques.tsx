@@ -2,7 +2,7 @@
 // RF4.2: «Hecho» a la izquierda, «Ahora» en el centro (60 %) y «Después» a la derecha.
 // RNF4.2: en vertical o en móvil los bloques se apilan en el mismo orden y «Ahora» sigue al 60 %.
 // RNF4.1: sin ScrollView; a cada lado solo se pintan las tarjetas que caben.
-// T-08.1 (HU-08): en «Ahora», botón «Empezar» (RF6.1, si el tutor lo pide: RF6.8) y botón
+// T-08.1 (HU-08): en «Ahora», botón «Empezar» (RF6.1; salvo que el tutor lo quite, RF6.8) y botón
 // «Terminar» (RF6.4). Al empezar, AgendaDelDia cambia a la pantalla de la tarea; aquí la tarea en
 // curso solo se ve así cuando la mira una familia (soloMirar), con el reloj si se quiere.
 // Mejora de la profesora (noviembre de 2026): cuántas tareas se ven en «Hecho» y «Después» sale del
@@ -105,7 +105,7 @@ export function AgendaTresBloques({
   maxTareas?: number;
   /** Familias: ven la agenda pero no pueden empezar ni terminar tareas. */
   soloMirar?: boolean;
-  /** RF6.1: «Empezar». Solo se usa si la tarea lo pide (RF6.8). */
+  /** RF6.1: «Empezar». Todas las tareas lo piden salvo que el tutor lo quite (RF6.8). */
   onEmpezar?: (idEntrada: string) => void;
   onConfirmarFin: (idEntrada: string) => void;
   onAbrir: (entrada: EntradaAgenda) => void;

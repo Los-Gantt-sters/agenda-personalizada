@@ -55,7 +55,7 @@ describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
     await screen.findByTestId("bloque-ahora");
     expect(etiqueta("bloque-hecho")).toBe("Hecho: Asamblea");
     expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos");
-    // En la demo, «Lavarse las manos» pide pulsar «Empezar» primero (HU-08, RF6.8).
+    // Todas las tareas piden pulsar «Empezar» primero (HU-08).
     expect(screen.getByRole("button", { name: "Empezar" })).toBeTruthy();
   });
 
@@ -147,22 +147,48 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
     expect(screen.queryByText("¡Muy bien!")).toBeNull();
   });
 
-  it("si el tutor no pide registrar el inicio (RF6.8), sale directamente Terminar; Atrás lo deshace", async () => {
+  it("error de la profesora: tras terminar una tarea, la siguiente también pide «Empezar»", async () => {
     const user = userEvent.setup();
     await render(<PantallaAgenda />);
     await empezarLavarse();
     await terminarTarea();
     await user.press(screen.getByRole("button", { name: "Seguir" }));
 
-    // «Desayuno» no lo pide: Terminar en la agenda, sin pasar por la pantalla de la tarea.
     await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
+    expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
+    await pasaElBloqueo();
+    tocar(screen.getByRole("button", { name: "Empezar" }));
+    await screen.findByTestId("pantalla-tarea-en-curso");
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Desayuno");
+  });
+
+  it("con Supabase (sin el dato requiere_inicio_fin) la tarea también pide «Empezar»", async () => {
+    const sinDato = agendaDemo(hoyISO()).map((e) => ({ ...e, requiere_inicio_fin: undefined }));
+    await render(
+      <AgendaDelDia repo={crearRepositorioMemoria(sinDato).repo} estudianteId={ESTUDIANTE_DEMO} />,
+    );
+    expect(await screen.findByRole("button", { name: "Empezar" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
+  });
+
+  it("si el tutor quita «Empezar» (RF6.8), sale directamente Terminar; Atrás lo deshace", async () => {
+    const user = userEvent.setup();
+    const sinEmpezar = agendaDemo(hoyISO()).map((e) => ({ ...e, requiere_inicio_fin: false }));
+    await render(
+      <AgendaDelDia
+        repo={crearRepositorioMemoria(sinEmpezar).repo}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
+    await screen.findByTestId("bloque-ahora");
+    // Sin pasar por la pantalla de la tarea: «Terminar» en la agenda.
     expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
     await pasaElBloqueo();
     tocar(screen.getByRole("button", { name: "Terminar" }));
-    await screen.findByText("Has terminado: Desayuno");
+    await screen.findByText("Has terminado: Lavarse las manos");
 
     await user.press(screen.getByTestId("btn-barra-atras"));
-    await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
+    await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos"));
     expect(screen.getByRole("button", { name: "Terminar" })).toBeTruthy();
   });
 

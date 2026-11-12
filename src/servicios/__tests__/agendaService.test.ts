@@ -53,6 +53,36 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     expect(r[1].hora_inicio).toBe(""); // sin hora fija
   });
 
+  it("añade la hora real de inicio y de fin guardada en ejecuciones (RI6.1)", async () => {
+    sb.rpc.mockResolvedValue({
+      data: [
+        { id: "a1", hora_inicio: "09:30:00", estado: "en_curso", tarea: { id: "t1" } },
+        { id: "a2", hora_inicio: "10:00:00", estado: "pendiente", tarea: { id: "t2" } },
+      ],
+      error: null,
+    });
+    const ejec = consultaFalsa({
+      data: [{ asignacion_id: "a1", inicio: "2026-11-05T09:31:00.000Z", fin: null }],
+      error: null,
+    });
+    sb.from.mockReturnValue(ejec);
+
+    const r = await obtenerSecuenciaDia("al1", "2026-11-05");
+
+    expect(sb.from).toHaveBeenCalledWith("ejecuciones");
+    expect(ejec.in).toHaveBeenCalledWith("asignacion_id", ["a1", "a2"]);
+    expect(r[0]).toMatchObject({ inicio_real: "2026-11-05T09:31:00.000Z", fin_real: null });
+    expect(r[1]).toMatchObject({ inicio_real: null, fin_real: null });
+  });
+
+  it("si no se pueden leer las horas reales, la agenda se enseña igual", async () => {
+    sb.rpc.mockResolvedValue({ data: [{ id: "a1", hora_inicio: null, tarea: {} }], error: null });
+    sb.from.mockReturnValue(consultaFalsa({ data: null, error: new Error("sin permiso") }));
+    const r = await obtenerSecuenciaDia("al1", "2026-11-05");
+    expect(r).toHaveLength(1);
+    expect(r[0].inicio_real).toBeNull();
+  });
+
   it("lanza el error de Supabase si la consulta falla", async () => {
     sb.rpc.mockResolvedValue({ data: null, error: new Error("sin red") });
     await expect(obtenerSecuenciaDia("al1", "2026-11-05")).rejects.toThrow("sin red");

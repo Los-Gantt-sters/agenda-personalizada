@@ -22,11 +22,44 @@ export async function obtenerSecuenciaDia(
     p_fecha: fecha,
   });
   if (error) throw error;
-  return ((data ?? []) as EntradaAgenda[]).map((fila) => ({
+  const filas = (data ?? []) as EntradaAgenda[];
+  const marcas = await obtenerMarcasTiempo(filas.map((f) => f.id));
+  return filas.map((fila) => ({
     ...fila,
     hora_inicio: normalizarHora(fila.hora_inicio),
     tarea: { ...fila.tarea, pasos: fila.tarea?.pasos ?? [] },
+    // RI6.1: la hora real de inicio y de fin está en ejecuciones (secuencia_dia no la trae). Sin
+    // ella, al recargar después de «Empezar» se perderían el reloj y «Empezaste a las...».
+    inicio_real: fila.inicio_real ?? marcas.get(fila.id)?.inicio ?? null,
+    fin_real: fila.fin_real ?? marcas.get(fila.id)?.fin ?? null,
   }));
+}
+
+/**
+ * Horas reales de inicio y fin (RI6.1) de las asignaciones del día. Si no se pueden leer, la agenda
+ * se enseña igual, solo que sin esas horas.
+ */
+async function obtenerMarcasTiempo(
+  ids: string[],
+): Promise<Map<string, { inicio: string | null; fin: string | null }>> {
+  const marcas = new Map<string, { inicio: string | null; fin: string | null }>();
+  if (ids.length === 0) return marcas;
+  try {
+    const { data, error } = await supabase
+      .from("ejecuciones")
+      .select("asignacion_id, inicio, fin")
+      .in("asignacion_id", ids);
+    if (error) return marcas;
+    for (const m of (data ?? []) as {
+      asignacion_id: string;
+      inicio: string | null;
+      fin: string | null;
+    }[])
+      marcas.set(m.asignacion_id, { inicio: m.inicio, fin: m.fin });
+  } catch {
+    // Sin las horas reales la agenda sigue funcionando.
+  }
+  return marcas;
 }
 
 /**
