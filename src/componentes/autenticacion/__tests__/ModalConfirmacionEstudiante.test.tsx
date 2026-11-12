@@ -22,6 +22,7 @@ describe("ModalConfirmacionEstudiante (SCRUM-50 · Credencial visual de 3 dibujo
     expect(screen.getByTestId("dibujo-credencial-perro")).toBeTruthy();
     expect(screen.getByTestId("dibujo-credencial-estrella")).toBeTruthy();
     expect(screen.getByText("⬅ No soy yo")).toBeTruthy();
+    expect(screen.queryByTestId("btn-confirmar-estudiante")).toBeNull();
   });
 
   it("al tocar 3 dibujos en orden invoca alConfirmar con el estudiante y el array de 3 dibujos", async () => {
