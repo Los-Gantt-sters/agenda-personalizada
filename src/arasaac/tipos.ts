@@ -68,7 +68,7 @@ export class ErrorArasaac extends Error {
 }
 
 const MENSAJES_USUARIO: Record<CodigoErrorArasaac, string> = {
-  termino_invalido: "Escribe al menos dos letras para buscar.",
+  termino_invalido: "Escribe entre 2 y 60 letras para buscar.",
   identificador_invalido: "Ese dibujo no existe.",
   sin_conexion: "No hay internet. Inténtalo otra vez.",
   tiempo_agotado: "Está tardando mucho. Inténtalo otra vez.",

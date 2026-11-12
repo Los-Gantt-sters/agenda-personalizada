@@ -104,9 +104,14 @@ describe("buscar", () => {
   it("rechaza textos demasiado cortos o largos sin llamar a la red", async () => {
     const f = fetchSimulado(respuesta([CASA]));
     const cliente = crearClienteArasaac({ fetchFn: comoFetch(f) });
-    expect((await capturarError(cliente.buscar("a"))).codigo).toBe("termino_invalido");
-    expect((await capturarError(cliente.buscar("   "))).codigo).toBe("termino_invalido");
-    expect((await capturarError(cliente.buscar("x".repeat(61)))).codigo).toBe("termino_invalido");
+    const errorCorto = await capturarError(cliente.buscar("a"));
+    const errorVacio = await capturarError(cliente.buscar("   "));
+    const errorLargo = await capturarError(cliente.buscar("x".repeat(61)));
+    expect(errorCorto.codigo).toBe("termino_invalido");
+    expect(errorVacio.codigo).toBe("termino_invalido");
+    expect(errorLargo.codigo).toBe("termino_invalido");
+    expect(errorCorto.mensajeUsuario).toBe("Escribe entre 2 y 60 letras para buscar.");
+    expect(errorLargo.mensajeUsuario).toBe("Escribe entre 2 y 60 letras para buscar.");
     expect(f).not.toHaveBeenCalled();
   });
 
