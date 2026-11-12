@@ -1,12 +1,16 @@
 // Consola de administración: asignar tutor de aula y familia a cada estudiante (HU-03, SCRUM-61).
 // Prototipo de referencia: 61-administracion-usuarios (vínculos) y 46-tutora-ficha-datos.
+// Como todas las pantallas, con cabecera y barra de abajo (Pantalla). Es una herramienta de adultos
+// con una lista que puede ser larga: aquí sí se deja hacer scroll dentro de la lista.
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
 
-import {
-  COLORES_CONSOLA as C,
-  ModalElegirSupervisor,
-} from "../../src/componentes/administracion/ModalElegirSupervisor";
+import { ModalElegirSupervisor } from "../../src/componentes/administracion/ModalElegirSupervisor";
+import { Pantalla } from "../../src/pantalla";
+import { useSesionOpcional } from "../../src/sesion";
+import type { Paleta } from "../../src/temas";
+import { Icono, Texto, useApariencia, useEstilos } from "../../src/ui";
 import {
   asignarSupervisor,
   listarAlumnosConVinculos,
@@ -36,6 +40,10 @@ async function obtenerDatos() {
 }
 
 export default function ConsolaVinculos() {
+  const { colores } = useApariencia();
+  const estilos = useEstilos(crearEstilos);
+  const router = useRouter();
+  const sesion = useSesionOpcional();
   const [alumnos, setAlumnos] = useState<AlumnoConVinculos[]>([]);
   const [tutores, setTutores] = useState<Supervisor[]>([]);
   const [familias, setFamilias] = useState<Supervisor[]>([]);
@@ -109,82 +117,109 @@ export default function ConsolaVinculos() {
   const nombreCompleto = (a: AlumnoConVinculos) =>
     [a.nombre, a.apellidos].filter(Boolean).join(" ");
 
+  const cerrarSesion = async () => {
+    await sesion?.cerrarSesion();
+    router.replace("/");
+  };
+
   return (
-    <View style={estilos.pantalla}>
-      <Text style={estilos.titulo} accessibilityRole="header">
-        Tutores y familias
-      </Text>
-      <Text style={estilos.subtitulo}>
-        Cada estudiante tiene un tutor de aula y, como mucho, una familia. Solo administración
-        cambia estos vínculos.
-      </Text>
+    <Pantalla
+      titulo="Tutores y familias"
+      simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
+      derecha={
+        sesion ? (
+          <Pressable
+            style={estilos.botonSalir}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar sesión"
+            onPress={() => void cerrarSesion()}
+          >
+            <Icono nombre="salir" color={colores.primario} tam={24} />
+            <Texto style={estilos.textoSalir}>Cerrar sesión</Texto>
+          </Pressable>
+        ) : null
+      }
+    >
+      <View style={estilos.pantalla}>
+        <Texto style={estilos.subtitulo}>
+          Cada estudiante tiene un tutor de aula y, como mucho, una familia. Solo administración
+          cambia estos vínculos.
+        </Texto>
 
-      {cargando && <Text style={estilos.estado}>Cargando estudiantes…</Text>}
+        {cargando && <Texto style={estilos.estado}>Cargando estudiantes…</Texto>}
 
-      {errorCarga && (
-        <View style={estilos.filaError}>
-          <Text style={estilos.error} accessibilityRole="alert">
-            ⚠️ {errorCarga}
-          </Text>
-          <Boton texto="Reintentar" etiqueta="Reintentar la carga" alPulsar={reintentar} />
-        </View>
-      )}
+        {errorCarga && (
+          <View style={estilos.filaError}>
+            <Icono nombre="alerta" color={colores.peligro} tam={22} />
+            <Texto style={estilos.error} accessibilityRole="alert">
+              {errorCarga}
+            </Texto>
+            <Boton texto="Reintentar" etiqueta="Reintentar la carga" alPulsar={reintentar} />
+          </View>
+        )}
 
-      {!cargando && !errorCarga && alumnos.length === 0 && (
-        <Text style={estilos.estado}>Todavía no hay estudiantes dados de alta.</Text>
-      )}
+        {!cargando && !errorCarga && alumnos.length === 0 && (
+          <Texto style={estilos.estado}>Todavía no hay estudiantes dados de alta.</Texto>
+        )}
 
-      {!cargando && !errorCarga && (
-        <ScrollView contentContainerStyle={estilos.lista}>
-          {alumnos.map((a) => (
-            <View key={a.id} style={estilos.fila} testID={`fila-${a.id}`}>
-              <View style={estilos.columnaAlumno}>
-                <Text style={estilos.nombre}>{nombreCompleto(a)}</Text>
-                <Text style={estilos.detalle}>{a.aula ?? "Sin aula"}</Text>
-                {a.requiereTutorPresencial && (
-                  <Text style={estilos.distintivo}>⚠️ Requiere tutor presencial</Text>
-                )}
-                {guardadoId === a.id && (
-                  <Text style={estilos.guardado} accessibilityLiveRegion="polite">
-                    ✓ Guardado
-                  </Text>
-                )}
+        {!cargando && !errorCarga && (
+          <ScrollView contentContainerStyle={estilos.lista}>
+            {alumnos.map((a) => (
+              <View key={a.id} style={estilos.fila} testID={`fila-${a.id}`}>
+                <View style={estilos.columnaAlumno}>
+                  <Texto style={estilos.nombre}>{nombreCompleto(a)}</Texto>
+                  <Texto style={estilos.detalle}>{a.aula ?? "Sin aula"}</Texto>
+                  {a.requiereTutorPresencial && (
+                    <View style={estilos.filaIcono}>
+                      <Icono nombre="alerta" color={colores.aviso} tam={20} />
+                      <Texto style={estilos.distintivo}>Requiere tutor presencial</Texto>
+                    </View>
+                  )}
+                  {guardadoId === a.id && (
+                    <View style={estilos.filaIcono}>
+                      <Icono nombre="check" color={colores.exito} tam={20} grosor={3} />
+                      <Texto style={estilos.guardado} accessibilityLiveRegion="polite">
+                        Guardado
+                      </Texto>
+                    </View>
+                  )}
+                </View>
+
+                <Vinculo
+                  titulo="Tutor de aula"
+                  valor={a.tutorAula?.nombre ?? "Sin asignar"}
+                  etiquetaBoton={`Cambiar tutor de aula de ${nombreCompleto(a)}`}
+                  alCambiar={() => abrir(a, "aula")}
+                />
+                <Vinculo
+                  titulo="Familia"
+                  valor={a.familia?.nombre ?? "Sin familia"}
+                  etiquetaBoton={`Cambiar familia de ${nombreCompleto(a)}`}
+                  alCambiar={() => abrir(a, "familiar")}
+                />
               </View>
+            ))}
+          </ScrollView>
+        )}
 
-              <Vinculo
-                titulo="Tutor de aula"
-                valor={a.tutorAula?.nombre ?? "Sin asignar"}
-                etiquetaBoton={`Cambiar tutor de aula de ${nombreCompleto(a)}`}
-                alCambiar={() => abrir(a, "aula")}
-              />
-              <Vinculo
-                titulo="Familia"
-                valor={a.familia?.nombre ?? "Sin familia"}
-                etiquetaBoton={`Cambiar familia de ${nombreCompleto(a)}`}
-                alCambiar={() => abrir(a, "familiar")}
-              />
-            </View>
-          ))}
-        </ScrollView>
-      )}
-
-      {edicion && (
-        <ModalElegirSupervisor
-          visible
-          titulo={`${edicion.tipo === "aula" ? "Tutor de aula" : "Familia"} de ${nombreCompleto(edicion.alumno)}`}
-          opciones={edicion.tipo === "aula" ? tutores : familias}
-          actualId={
-            (edicion.tipo === "aula" ? edicion.alumno.tutorAula : edicion.alumno.familia)?.id ??
-            null
-          }
-          textoSinAsignar={edicion.tipo === "familiar" ? "Sin familia" : undefined}
-          guardando={guardando}
-          error={errorGuardar}
-          alElegir={elegir}
-          alCerrar={() => setEdicion(null)}
-        />
-      )}
-    </View>
+        {edicion && (
+          <ModalElegirSupervisor
+            visible
+            titulo={`${edicion.tipo === "aula" ? "Tutor de aula" : "Familia"} de ${nombreCompleto(edicion.alumno)}`}
+            opciones={edicion.tipo === "aula" ? tutores : familias}
+            actualId={
+              (edicion.tipo === "aula" ? edicion.alumno.tutorAula : edicion.alumno.familia)?.id ??
+              null
+            }
+            textoSinAsignar={edicion.tipo === "familiar" ? "Sin familia" : undefined}
+            guardando={guardando}
+            error={errorGuardar}
+            alElegir={elegir}
+            alCerrar={() => setEdicion(null)}
+          />
+        )}
+      </View>
+    </Pantalla>
   );
 }
 
@@ -194,16 +229,18 @@ function Vinculo(props: {
   etiquetaBoton: string;
   alCambiar: () => void;
 }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <View style={estilos.columnaVinculo}>
-      <Text style={estilos.detalle}>{props.titulo}</Text>
-      <Text style={estilos.valor}>{props.valor}</Text>
+      <Texto style={estilos.detalle}>{props.titulo}</Texto>
+      <Texto style={estilos.valor}>{props.valor}</Texto>
       <Boton texto="Cambiar" etiqueta={props.etiquetaBoton} alPulsar={props.alCambiar} />
     </View>
   );
 }
 
 function Boton(props: { texto: string; etiqueta: string; alPulsar: () => void }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <Pressable
       style={estilos.boton}
@@ -211,44 +248,56 @@ function Boton(props: { texto: string; etiqueta: string; alPulsar: () => void })
       accessibilityLabel={props.etiqueta}
       onPress={props.alPulsar}
     >
-      <Text style={estilos.textoBoton}>{props.texto}</Text>
+      <Texto style={estilos.textoBoton}>{props.texto}</Texto>
     </Pressable>
   );
 }
 
-const estilos = StyleSheet.create({
-  pantalla: { flex: 1, backgroundColor: C.fondo, padding: 16, gap: 12 },
-  titulo: { fontSize: 28, fontWeight: "700", color: C.tinta },
-  subtitulo: { fontSize: 16, color: C.secundario, maxWidth: 760 },
-  estado: { fontSize: 18, color: C.secundario },
-  filaError: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
-  error: { fontSize: 16, fontWeight: "700", color: C.error },
-  lista: { gap: 10, paddingBottom: 24 },
-  fila: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: C.linea,
-    backgroundColor: C.tarjeta,
-  },
-  columnaAlumno: { flexGrow: 1, flexBasis: 220, gap: 4 },
-  columnaVinculo: { flexGrow: 1, flexBasis: 200, gap: 4 },
-  nombre: { fontSize: 20, fontWeight: "700", color: C.tinta },
-  detalle: { fontSize: 15, color: C.secundario },
-  valor: { fontSize: 18, fontWeight: "600", color: C.tinta },
-  distintivo: { fontSize: 15, fontWeight: "700", color: C.error },
-  guardado: { fontSize: 15, fontWeight: "700", color: C.exito },
-  boton: {
-    alignSelf: "flex-start",
-    minHeight: 48,
-    minWidth: 48,
-    justifyContent: "center",
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    backgroundColor: C.primario,
-  },
-  textoBoton: { fontSize: 16, fontWeight: "700", color: "#ffffff" },
-});
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    pantalla: { flex: 1, backgroundColor: c.fondo, padding: 16, gap: 12 },
+    botonSalir: {
+      minHeight: 48,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: c.primario,
+    },
+    textoSalir: { fontSize: 16, fontWeight: "700", color: c.primario },
+    subtitulo: { fontSize: 16, color: c.textoSecundario, maxWidth: 760 },
+    estado: { fontSize: 18, color: c.textoSecundario },
+    filaError: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
+    error: { fontSize: 16, fontWeight: "700", color: c.peligro },
+    lista: { gap: 10, paddingBottom: 24 },
+    fila: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 16,
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: c.borde,
+      backgroundColor: c.superficie,
+    },
+    columnaAlumno: { flexGrow: 1, flexBasis: 220, gap: 4 },
+    columnaVinculo: { flexGrow: 1, flexBasis: 200, gap: 4 },
+    nombre: { fontSize: 20, fontWeight: "700", color: c.texto },
+    detalle: { fontSize: 15, color: c.textoSecundario },
+    valor: { fontSize: 18, fontWeight: "700", color: c.texto },
+    filaIcono: { flexDirection: "row", alignItems: "center", gap: 6 },
+    distintivo: { fontSize: 15, fontWeight: "700", color: c.aviso },
+    guardado: { fontSize: 15, fontWeight: "700", color: c.exito },
+    boton: {
+      alignSelf: "flex-start",
+      minHeight: 48,
+      minWidth: 48,
+      justifyContent: "center",
+      paddingHorizontal: 18,
+      borderRadius: 10,
+      backgroundColor: c.primario,
+    },
+    textoBoton: { fontSize: 16, fontWeight: "700", color: c.textoSobrePrimario },
+  });

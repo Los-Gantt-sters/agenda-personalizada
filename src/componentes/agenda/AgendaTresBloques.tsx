@@ -4,16 +4,25 @@
 // RNF4.1: sin ScrollView; a cada lado solo se pintan las tarjetas que caben.
 // T-08.1 (HU-08): en «Ahora», botón «Empezar» (RF6.1, si el tutor lo pide: RF6.8) que pone en marcha
 // el reloj visual, y botón «Terminar» (RF6.4).
+// Mejora de la profesora (noviembre de 2026): cuántas tareas se ven en «Hecho» y «Después» sale del
+// perfil (1, hasta 3 o todas). Con «todas» las tarjetas son más bajas para que quepan más y, si aun
+// así no caben, se dice «y 4 más» en lugar de hacer scroll.
+// Con «soloMirar» (familias) no salen «Empezar» ni «Terminar»: la agenda se ve igual, sin tocarla.
+// RF3.1: «Qué se ve» (botón Accesibilidad o preferencias): solo dibujos, solo texto o los dos. La
+// ayuda de voz sigue leyendo el nombre de cada tarea aunque no se vea escrito.
 import { useEffect, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Animated, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import type { BloquesAgenda, EntradaAgenda } from "./tipos";
 import { franjaHoraria, horaCorta, necesitaEmpezar } from "./logica";
-import { colores, RADIO } from "./colores";
+import { RADIO } from "./colores";
 import { PictogramaTarea } from "./PictogramaTarea";
 import { BotonAccionTarea } from "../ejecucion-tarea/BotonAccionTarea";
 import { useTranscurrido } from "../ejecucion-tarea/useTranscurrido";
 import { RelojVisual } from "../reloj-visual/RelojVisual";
 import type { PreferenciasConfirmacion } from "../ejecucion-tarea/tipos";
+import type { Paleta } from "../../temas";
+import { Icono, PictogramaInterfaz, Texto, colorSobre, useApariencia, useEstilos } from "../../ui";
+import type { NombrePictogramaInterfaz } from "../../ui";
 
 /** Hora local «9:32» de una fecha ISO. */
 function horaDe(iso: string): string {
@@ -32,13 +41,19 @@ export interface Medidas {
   escala: number;
   /** Tarjetas que caben a cada lado sin scroll. */
   maxLado: number;
+  /** Tarjetas bajas (dibujo y nombre en una fila) para que quepan más. */
+  compacta: boolean;
   /** Tamaño exacto de cada bloque: «Ahora» = 60 % del espacio útil. */
   lado: { width: number; height: number };
   ahora: { width: number; height: number };
 }
 
-/** Decide la disposición y el tamaño de cada bloque para un área dada. */
-export function calcularMedidas(width: number, height: number): Medidas {
+/**
+ * Decide la disposición y el tamaño de cada bloque para un área dada.
+ * maxTareas: cuántas quiere ver el alumno a cada lado (perfil); con más de 3, tarjetas compactas.
+ */
+export function calcularMedidas(width: number, height: number, maxTareas = 3): Medidas {
+  const compacta = maxTareas > 3;
   const horizontal = width >= height;
   // Nunca por debajo de 0,8: en móvil la letra tiene que seguir leyéndose bien.
   const escala = Math.max(0.8, Math.min(1.35, Math.min(width / 1024, height / 768)));
@@ -52,17 +67,29 @@ export function calcularMedidas(width: number, height: number): Medidas {
     const util = utilAncho - MARGEN * 2; // dos huecos entre bloques
     lado = { width: (util * PESO_LADO) / total, height: utilAlto };
     ahora = { width: (util * PESO_AHORA) / total, height: utilAlto };
-    const altoMini = 150 * escala + 12; // tarjeta vertical: dibujo arriba, texto debajo
-    maxLado = Math.floor((utilAlto - 24 - 40 * escala) / altoMini);
+    // Normal: dibujo arriba y texto debajo. Compacta: dibujo y nombre en una fila.
+    const altoMini = compacta ? ALTO_COMPACTA * escala + 10 : 150 * escala + 12;
+    const hueco = utilAlto - 24 - 40 * escala - (compacta ? 30 * escala : 0); // «y 4 más»
+    maxLado = Math.floor(hueco / altoMini);
   } else {
     const util = utilAlto - MARGEN * 2;
     lado = { width: utilAncho, height: (util * PESO_LADO) / total };
     ahora = { width: utilAncho, height: (util * PESO_AHORA) / total };
-    maxLado = Math.floor((utilAncho - 24) / (220 * escala + 12));
+    maxLado = Math.floor((utilAncho - 24) / ((compacta ? 150 : 220) * escala + 12));
   }
-  // Más de 3 a cada lado ya no ayuda a anticipar, solo distrae.
-  return { horizontal, escala, maxLado: Math.max(1, Math.min(3, maxLado)), lado, ahora };
+  // Nunca más de las que pide el perfil, ni más de las que caben.
+  return {
+    horizontal,
+    escala,
+    maxLado: Math.max(1, Math.min(maxTareas, maxLado)),
+    compacta,
+    lado,
+    ahora,
+  };
 }
+
+/** Alto de la tarjeta compacta (a escala 1). */
+const ALTO_COMPACTA = 78;
 
 export function AgendaTresBloques({
   bloques,
@@ -70,8 +97,14 @@ export function AgendaTresBloques({
   onConfirmarFin,
   onAbrir,
   confirmacion,
+  maxTareas = 3,
+  soloMirar = false,
 }: {
   bloques: BloquesAgenda;
+  /** Cuántas tareas enseñar en «Hecho» y en «Después» (preferencia «Tareas que se ven»). */
+  maxTareas?: number;
+  /** Familias: ven la agenda pero no pueden empezar ni terminar tareas. */
+  soloMirar?: boolean;
   /** RF6.1: «Empezar». Solo se usa si la tarea lo pide (RF6.8). */
   onEmpezar?: (idEntrada: string) => void;
   onConfirmarFin: (idEntrada: string) => void;
@@ -82,8 +115,13 @@ export function AgendaTresBloques({
   const ventana = useWindowDimensions();
   // Se mide el hueco real (puede no ser toda la ventana: márgenes seguros, etc.).
   const [area, setArea] = useState<{ width: number; height: number } | null>(null);
-  const m = calcularMedidas(area?.width ?? ventana.width, area?.height ?? ventana.height);
-  const { horizontal, escala, maxLado } = m;
+  const m = calcularMedidas(
+    area?.width ?? ventana.width,
+    area?.height ?? ventana.height,
+    maxTareas,
+  );
+  const { horizontal, escala, maxLado, compacta } = m;
+  const estilos = useEstilos(crearEstilos);
 
   return (
     <View
@@ -96,10 +134,12 @@ export function AgendaTresBloques({
     >
       <Bloque
         tipo="hecho"
-        etiqueta="✓ Hecho"
+        etiqueta="Hecho"
         entradas={bloques.hecho.slice(-maxLado)}
-        vacio={{ texto: "Todavía nada", emoji: "⏳" }}
+        ocultas={Math.max(0, bloques.hecho.length - maxLado)}
+        vacio={{ texto: "Todavía nada", pictograma: "esperar" }}
         horizontal={horizontal}
+        compacta={compacta}
         escala={escala}
         tam={m.lado}
         onAbrir={onAbrir}
@@ -112,13 +152,16 @@ export function AgendaTresBloques({
         onEmpezar={onEmpezar}
         onConfirmarFin={onConfirmarFin}
         confirmacion={confirmacion}
+        soloMirar={soloMirar}
       />
       <Bloque
         tipo="despues"
-        etiqueta="→ Después"
+        etiqueta="Después"
         entradas={bloques.despues.slice(0, maxLado)}
-        vacio={{ texto: "Nada más hoy", emoji: "🏁" }}
+        ocultas={Math.max(0, bloques.despues.length - maxLado)}
+        vacio={{ texto: "Nada más hoy", pictograma: "terminar" }}
         horizontal={horizontal}
+        compacta={compacta}
         escala={escala}
         tam={m.lado}
         onAbrir={onAbrir}
@@ -131,8 +174,10 @@ function Bloque({
   tipo,
   etiqueta,
   entradas,
+  ocultas,
   vacio,
   horizontal,
+  compacta,
   escala,
   tam,
   onAbrir,
@@ -140,29 +185,36 @@ function Bloque({
   tipo: "hecho" | "despues";
   etiqueta: string;
   entradas: EntradaAgenda[];
-  vacio: { texto: string; emoji: string };
+  /** Tareas que no caben (se dice «y 2 más», sin scroll). */
+  ocultas: number;
+  vacio: { texto: string; pictograma: NombrePictogramaInterfaz };
   horizontal: boolean;
+  compacta: boolean;
   escala: number;
   tam: { width: number; height: number };
   onAbrir: (e: EntradaAgenda) => void;
 }) {
   const nombre = tipo === "hecho" ? "Hecho" : "Después";
+  const estilos = useEstilos(crearEstilos);
   return (
     <View
       testID={`bloque-${tipo}`}
       accessibilityRole="summary"
-      accessibilityLabel={`${nombre}: ${entradas.length ? entradas.map((e) => e.tarea.titulo).join(", ") : vacio.texto}`}
-      style={[estilos.bloque, tam, tipo === "hecho" && { opacity: 0.85 }]}
+      accessibilityLabel={`${nombre}: ${entradas.length ? entradas.map((e) => e.tarea.titulo).join(", ") : vacio.texto}${ocultas ? ` y ${ocultas} más` : ""}`}
+      style={[estilos.bloque, tam]}
     >
-      <Text style={[estilos.etiqueta, { fontSize: 22 * escala }]}>{etiqueta}</Text>
+      <Texto style={[estilos.etiqueta, { fontSize: 22 * escala }]}>{etiqueta}</Texto>
       <View style={[estilos.lista, { flexDirection: horizontal ? "column" : "row" }]}>
         {entradas.length === 0 ? (
           <View style={estilos.vacio}>
-            <PictogramaTarea
-              tarea={{ titulo: vacio.texto, emoji: vacio.emoji }}
-              tam={44 * escala}
+            <PictogramaInterfaz
+              nombre={vacio.pictograma}
+              etiqueta={vacio.texto}
+              tam={72 * escala}
             />
-            <Text style={[estilos.subTexto, { fontSize: 18 * escala }]}>{vacio.texto}</Text>
+            <Texto style={[estilos.subTexto, estilos.centrado, { fontSize: 18 * escala }]}>
+              {vacio.texto}
+            </Texto>
           </View>
         ) : (
           entradas.map((e) => (
@@ -171,11 +223,20 @@ function Bloque({
               entrada={e}
               escala={escala}
               horizontal={horizontal}
+              compacta={compacta}
               onAbrir={onAbrir}
             />
           ))
         )}
       </View>
+      {ocultas > 0 ? (
+        <Texto
+          style={[estilos.subTexto, estilos.centrado, estilos.mas, { fontSize: 17 * escala }]}
+          testID={`mas-${tipo}`}
+        >
+          {tipo === "hecho" ? `y ${ocultas} antes` : `y ${ocultas} más`}
+        </Texto>
+      ) : null}
     </View>
   );
 }
@@ -188,15 +249,36 @@ function Mini({
   entrada,
   escala,
   horizontal,
+  compacta,
   onAbrir,
 }: {
   entrada: EntradaAgenda;
   escala: number;
   horizontal: boolean;
+  compacta: boolean;
   onAbrir: (e: EntradaAgenda) => void;
 }) {
+  // Compacta: dibujo y nombre en una sola fila, para ver muchas tareas a la vez.
+  const enFila = !horizontal || compacta;
   const hecha = entrada.estado === "hecha";
   const bloqueada = entrada.estado === "bloqueada";
+  const estilos = useEstilos(crearEstilos);
+  const { colores, canal } = useApariencia();
+  const verDibujo = canal !== "soloTexto";
+  const verTexto = canal !== "soloPictograma";
+  const rellenoSello = hecha ? colores.exito : colores.aviso;
+  const sello = (hecha || bloqueada) && (
+    <View
+      style={[estilos.sello, !verDibujo && estilos.selloEnLinea, { backgroundColor: rellenoSello }]}
+    >
+      <Icono
+        nombre={hecha ? "check" : "candado"}
+        color={colorSobre(rellenoSello)}
+        tam={18}
+        grosor={3}
+      />
+    </View>
+  );
   return (
     <Pressable
       testID={`mini-${entrada.id}`}
@@ -206,43 +288,56 @@ function Mini({
       onPress={() => onAbrir(entrada)}
       style={({ pressed }) => [
         estilos.mini,
-        { padding: 10 * escala },
-        horizontal
+        { padding: (compacta ? 6 : 10) * escala },
+        horizontal && !compacta
           ? { flexDirection: "column", minHeight: 150 * escala }
-          : { flexDirection: "row", flex: 1, maxWidth: 360 },
-        hecha && { opacity: 0.8 },
+          : horizontal
+            ? { flexDirection: "row", minHeight: ALTO_COMPACTA * escala }
+            : { flexDirection: "row", flex: 1, maxWidth: 360 },
         bloqueada && { borderStyle: "dashed", borderColor: colores.aviso },
         pressed && estilos.pulsado,
       ]}
     >
-      <View>
-        <PictogramaTarea tarea={entrada.tarea} tam={64 * escala} />
-        {(hecha || bloqueada) && (
-          <Text style={[estilos.sello, { backgroundColor: hecha ? colores.exito : colores.aviso }]}>
-            {hecha ? "✓" : "🔒"}
-          </Text>
-        )}
-      </View>
-      <View
-        style={[
-          { minWidth: 0 },
-          horizontal ? { alignSelf: "stretch", alignItems: "center" } : { flex: 1 },
-        ]}
-      >
-        <Text
+      {verDibujo ? (
+        <View>
+          <PictogramaTarea
+            tarea={entrada.tarea}
+            tam={(compacta ? 48 : verTexto ? 64 : 96) * escala}
+          />
+          {sello}
+        </View>
+      ) : (
+        sello
+      )}
+      {verTexto ? (
+        <View
           style={[
-            estilos.miniTitulo,
-            { fontSize: 19 * escala },
-            horizontal && { textAlign: "center" },
+            { minWidth: 0 },
+            enFila ? { flex: 1 } : { alignSelf: "stretch", alignItems: "center" },
           ]}
-          numberOfLines={2}
         >
-          {entrada.tarea.titulo}
-        </Text>
-        <Text style={[estilos.subTexto, { fontSize: 16 * escala }]} numberOfLines={1}>
-          {bloqueada ? "Hoy no toca" : horaCorta(entrada)}
-        </Text>
-      </View>
+          <Texto
+            style={[
+              estilos.miniTitulo,
+              { fontSize: (compacta ? 16 : 19) * escala },
+              !enFila && { textAlign: "center" },
+            ]}
+            numberOfLines={2}
+          >
+            {entrada.tarea.titulo}
+          </Texto>
+          <Texto
+            style={[
+              estilos.subTexto,
+              { fontSize: (compacta ? 14 : 16) * escala },
+              !enFila && estilos.centrado,
+            ]}
+            numberOfLines={1}
+          >
+            {bloqueada ? "Hoy no toca" : horaCorta(entrada)}
+          </Texto>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -255,6 +350,7 @@ function BloqueAhora({
   onEmpezar,
   onConfirmarFin,
   confirmacion,
+  soloMirar,
 }: {
   bloques: BloquesAgenda;
   escala: number;
@@ -263,29 +359,34 @@ function BloqueAhora({
   onEmpezar: (id: string) => void;
   onConfirmarFin: (id: string) => void;
   confirmacion?: PreferenciasConfirmacion;
+  soloMirar: boolean;
 }) {
   const ahora = bloques.ahora;
+  const estilos = useEstilos(crearEstilos);
+  const { colores, canal, escalaLetra: L } = useApariencia();
+  const verDibujo = canal !== "soloTexto";
+  const verTexto = canal !== "soloPictograma";
   // RF6.1: el reloj visual arranca al pulsar «Empezar» y cuenta desde la hora guardada.
   const enCurso = ahora?.estado === "en_curso" && Boolean(ahora.inicio_real);
   const transcurridoMs = useTranscurrido(enCurso ? ahora?.inicio_real : null);
 
-  // Entrada suave de la nueva tarea al avanzar (sin saltos bruscos).
+  // Entrada suave de la nueva tarea al avanzar: un fundido corto, sin saltos bruscos.
   const [aparicion] = useState(() => new Animated.Value(1));
   useEffect(() => {
     aparicion.setValue(0);
-    Animated.timing(aparicion, { toValue: 1, duration: 350, useNativeDriver: false }).start();
+    Animated.timing(aparicion, { toValue: 1, duration: 200, useNativeDriver: false }).start();
   }, [ahora?.id, aparicion]);
 
   // El dibujo se queda con el alto que sobra tras etiqueta, título, hora y
-  // botón, para que el botón no quede nunca cortado (sin scroll).
+  // botón, para que el botón no quede nunca cortado (sin scroll). Los textos crecen con el tamaño
+  // de letra del perfil (L); con «Solo pictograma» no hay título ni hora y el dibujo es mayor.
   const bajo = tam.height < 400;
   const fijo =
     12 * 2 +
     12 +
-    36 * escala +
-    44 * escala * 1.25 * (bajo ? 1 : 2) +
-    24 * escala * 1.3 +
-    72 +
+    36 * escala * L +
+    (verTexto ? 44 * escala * 1.25 * (bajo ? 1 : 2) * L + 24 * escala * 1.3 * L : 0) +
+    72 * L +
     20 * 3 +
     16;
   const tamPicto = Math.max(48, Math.min(tam.width * 0.55, tam.height - fijo, 340));
@@ -306,9 +407,9 @@ function BloqueAhora({
       }
       style={[estilos.bloque, estilos.bloqueAhora, tam]}
     >
-      <Text style={[estilos.etiqueta, estilos.etiquetaAhora, { fontSize: 26 * escala }]}>
-        ▶ Ahora
-      </Text>
+      <Texto style={[estilos.etiqueta, estilos.etiquetaAhora, { fontSize: 26 * escala }]}>
+        Ahora
+      </Texto>
       <Animated.View style={[estilos.ahoraCuerpo, { opacity: aparicion }]}>
         {ahora ? (
           <>
@@ -321,7 +422,7 @@ function BloqueAhora({
               style={({ pressed }) => [estilos.ahoraTarjeta, pressed && estilos.pulsado]}
             >
               <View style={estilos.filaPicto}>
-                <PictogramaTarea tarea={ahora.tarea} tam={tamFila} />
+                {verDibujo ? <PictogramaTarea tarea={ahora.tarea} tam={tamFila} /> : null}
                 {enCurso && (
                   <RelojVisual
                     duracionMs={ahora.duracion_prevista_min * 60_000}
@@ -330,34 +431,51 @@ function BloqueAhora({
                   />
                 )}
               </View>
-              <Text
-                style={[estilos.ahoraTitulo, { fontSize: 44 * escala }]}
-                numberOfLines={bajo ? 1 : 2}
-              >
-                {ahora.tarea.titulo}
-              </Text>
-              <Text style={[estilos.ahoraHora, { fontSize: 24 * escala }]}>
-                {enCurso && ahora.inicio_real
-                  ? `Empezaste a las ${horaDe(ahora.inicio_real)}`
-                  : franjaHoraria(ahora)}
-              </Text>
+              {verTexto ? (
+                <>
+                  <Texto
+                    style={[
+                      estilos.ahoraTitulo,
+                      // Sin dibujo, el nombre de la tarea se ve más grande.
+                      { fontSize: (verDibujo ? 44 : 60) * escala },
+                    ]}
+                    numberOfLines={bajo ? 1 : 2}
+                  >
+                    {ahora.tarea.titulo}
+                  </Texto>
+                  <Texto style={[estilos.ahoraHora, { fontSize: 24 * escala }]}>
+                    {enCurso && ahora.inicio_real
+                      ? `Empezaste a las ${horaDe(ahora.inicio_real)}`
+                      : franjaHoraria(ahora)}
+                  </Texto>
+                </>
+              ) : null}
             </Pressable>
-            {/* key: al pasar de «Empezar» a «Terminar» el botón empieza de cero (sin relleno a medias). */}
-            <BotonAccionTarea
-              key={`${ahora.id}-${accion}`}
-              accion={accion}
-              confirmacion={confirmacion}
-              onConfirmar={() =>
-                accion === "empezar" ? onEmpezar(ahora.id) : onConfirmarFin(ahora.id)
-              }
-            />
+            {soloMirar ? (
+              <View style={estilos.soloMirar} testID="aviso-solo-mirar">
+                <Icono nombre="ojo" color={colores.textoSecundario} tam={26} />
+                <Texto style={[estilos.subTexto, { fontSize: 18 * escala }]}>
+                  Solo para mirar: la tarea la marca el alumno o su tutor
+                </Texto>
+              </View>
+            ) : (
+              /* key: al pasar de «Empezar» a «Terminar» el botón empieza de cero (sin relleno a medias). */
+              <BotonAccionTarea
+                key={`${ahora.id}-${accion}`}
+                accion={accion}
+                confirmacion={confirmacion}
+                onConfirmar={() =>
+                  accion === "empezar" ? onEmpezar(ahora.id) : onConfirmarFin(ahora.id)
+                }
+              />
+            )}
           </>
         ) : (
           <View style={estilos.ahoraTarjeta}>
-            <PictogramaTarea tarea={{ titulo: "Fin del día", emoji: "🎉" }} tam={tamPicto * 0.8} />
-            <Text style={[estilos.ahoraTitulo, { fontSize: 40 * escala }]}>
+            <PictogramaInterfaz nombre="celebrar" etiqueta="Fin del día" tam={tamPicto * 0.8} />
+            <Texto style={[estilos.ahoraTitulo, { fontSize: 40 * escala }]}>
               ¡Has terminado todo por hoy!
-            </Text>
+            </Texto>
           </View>
         )}
       </Animated.View>
@@ -365,68 +483,86 @@ function BloqueAhora({
   );
 }
 
-const estilos = StyleSheet.create({
-  raiz: { flex: 1, padding: 16, gap: 16, backgroundColor: colores.fondo, overflow: "hidden" },
-  bloque: {
-    backgroundColor: colores.superficie,
-    borderWidth: 3,
-    borderColor: colores.borde,
-    borderRadius: RADIO,
-    padding: 12,
-    gap: 10,
-    overflow: "hidden",
-    minWidth: 0,
-    minHeight: 0,
-  },
-  bloqueAhora: {
-    backgroundColor: colores.superficieDestacada,
-    borderColor: colores.primario,
-    borderWidth: 6,
-  },
-  etiqueta: { alignSelf: "center", fontWeight: "800", color: colores.textoSecundario },
-  etiquetaAhora: { color: colores.primario },
-  lista: { flex: 1, gap: 12, minHeight: 0 },
-  vacio: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6 },
-  mini: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: colores.superficieSuave,
-    borderWidth: 2,
-    borderColor: colores.borde,
-    borderRadius: RADIO * 0.7,
-  },
-  miniTitulo: { fontWeight: "700", color: colores.texto },
-  subTexto: { color: colores.textoSecundario, fontWeight: "600" },
-  sello: {
-    position: "absolute",
-    right: -6,
-    bottom: -6,
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 16,
-    width: 28,
-    height: 28,
-    lineHeight: 28,
-    textAlign: "center",
-    borderRadius: 14,
-    overflow: "hidden",
-  },
-  ahoraCuerpo: { flex: 1, alignItems: "center", justifyContent: "center", gap: 20, minHeight: 0 },
-  ahoraTarjeta: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    borderRadius: RADIO,
-    padding: 8,
-    maxWidth: "100%",
-  },
-  filaPicto: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 },
-  ahoraTitulo: {
-    fontWeight: "800",
-    color: colores.texto,
-    textAlign: "center",
-  },
-  ahoraHora: { fontWeight: "700", color: colores.textoSecundario },
-  pulsado: { transform: [{ scale: 0.98 }], opacity: 0.9 },
-});
+// Estilo «Piedra»: bloques planos con borde visible, sin sombras. «Ahora» se distingue por el borde
+// granate más grueso y el fondo suave, además de por su tamaño (no solo por el color, RNF14.4).
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    raiz: { flex: 1, padding: 16, gap: 16, backgroundColor: c.fondo, overflow: "hidden" },
+    bloque: {
+      backgroundColor: c.superficie,
+      borderWidth: 2,
+      borderColor: c.borde,
+      borderRadius: RADIO,
+      padding: 14,
+      gap: 12,
+      overflow: "hidden",
+      minWidth: 0,
+      minHeight: 0,
+    },
+    bloqueAhora: {
+      backgroundColor: c.superficieDestacada,
+      borderColor: c.primario,
+      borderWidth: 4,
+      paddingHorizontal: 22,
+    },
+    etiqueta: { fontWeight: "700", color: c.texto },
+    etiquetaAhora: { color: c.primario },
+    lista: { flex: 1, gap: 12, minHeight: 0 },
+    vacio: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+    centrado: { textAlign: "center" },
+    mini: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: c.fondo,
+      borderWidth: 2,
+      borderColor: c.borde,
+      borderRadius: 10,
+    },
+    miniTitulo: { fontWeight: "700", color: c.texto },
+    subTexto: { color: c.textoSecundario },
+    sello: {
+      position: "absolute",
+      right: -8,
+      bottom: -6,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      borderWidth: 2,
+      // Mismo color que la tarjeta: el sello se separa del pictograma blanco en todos los temas.
+      borderColor: c.fondo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    // «Solo texto»: sin dibujo, el sello va delante del nombre.
+    selloEnLinea: { position: "relative", right: 0, bottom: 0 },
+    ahoraCuerpo: { flex: 1, alignItems: "center", justifyContent: "center", gap: 20, minHeight: 0 },
+    ahoraTarjeta: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      borderRadius: RADIO,
+      padding: 8,
+      maxWidth: "100%",
+    },
+    filaPicto: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 },
+    ahoraTitulo: {
+      fontWeight: "700",
+      color: c.texto,
+      textAlign: "center",
+    },
+    ahoraHora: { color: c.textoSecundario },
+    mas: { fontWeight: "700" },
+    soloMirar: {
+      minHeight: 72,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: 18,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderStyle: "dashed",
+      borderColor: c.borde,
+    },
+    pulsado: { opacity: 0.85 },
+  });

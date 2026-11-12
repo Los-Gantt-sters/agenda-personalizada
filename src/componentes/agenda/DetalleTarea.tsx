@@ -6,14 +6,23 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";
+import type { ReactNode } from "react";
 import type { EntradaAgenda } from "./tipos";
 import { franjaHoraria } from "./logica";
-import { colores, RADIO } from "./colores";
+import { RADIO } from "./colores";
 import { PictogramaTarea } from "./PictogramaTarea";
+import type { Paleta } from "../../temas";
+import {
+  Icono,
+  PictogramaInterfaz,
+  Texto,
+  useApariencia,
+  useEstilos,
+  type NombreIcono,
+} from "../../ui";
 
 /** Lee en voz alta (web). En nativo se puede cambiar por expo-speech. */
 function leer(texto: string) {
@@ -41,6 +50,8 @@ export function DetalleTarea({
   onCerrar: () => void;
 }) {
   const { width, height } = useWindowDimensions();
+  const { colores } = useApariencia();
+  const estilos = useEstilos(crearEstilos);
   // El paso se guarda junto al id de la tarea: al abrir otra, vuelve al primero.
   const [estadoPaso, setEstadoPaso] = useState({ id: "", n: 0 });
   const paso = estadoPaso.id === entrada?.id ? estadoPaso.n : 0;
@@ -74,41 +85,55 @@ export function DetalleTarea({
           <View style={estilos.cabecera}>
             <PictogramaTarea tarea={t} tam={tamPicto} />
             <View style={{ flexShrink: 1, gap: 8 }}>
-              <Text style={estilos.titulo} accessibilityRole="header" numberOfLines={2}>
+              <Texto style={estilos.titulo} accessibilityRole="header" numberOfLines={2}>
                 {t.titulo}
-              </Text>
-              <Text style={estilos.hora}>🕘 {franjaHoraria(entrada)}</Text>
+              </Texto>
+              <Linea icono="reloj" color={colores.textoSecundario}>
+                {franjaHoraria(entrada)}
+              </Linea>
               {entrada.estado === "hecha" && (
-                <Text style={[estilos.hora, { color: colores.exito }]}>✓ Ya la has hecho</Text>
+                <Linea icono="check" color={colores.exito}>
+                  Ya la has hecho
+                </Linea>
               )}
               {entrada.estado === "bloqueada" && (
-                <Text style={[estilos.hora, { color: colores.aviso }]}>🔒 Hoy no toca</Text>
+                <Linea icono="candado" color={colores.aviso}>
+                  Hoy no toca
+                </Linea>
               )}
             </View>
           </View>
 
           {!!t.descripcion && (
-            <Text style={estilos.texto} numberOfLines={3}>
+            <Texto style={estilos.texto} numberOfLines={3}>
               {t.descripcion}
-            </Text>
+            </Texto>
           )}
 
           {p && (
             <View style={estilos.paso}>
-              <PictogramaTarea
-                tarea={{ titulo: p.texto, pictograma_url: p.pictograma_url, emoji: "👉" }}
-                tam={Math.min(tamPicto * 0.6, 120)}
-              />
-              <Text style={[estilos.texto, { flex: 1 }]} numberOfLines={3}>
+              {p.pictograma_url ? (
+                <PictogramaTarea
+                  tarea={{ titulo: p.texto, pictograma_url: p.pictograma_url, emoji: "" }}
+                  tam={Math.min(tamPicto * 0.6, 120)}
+                />
+              ) : (
+                // Sin dibujo del paso: el número grande ayuda a seguir el orden.
+                <View style={estilos.numeroPaso} accessibilityElementsHidden>
+                  <Texto style={estilos.numeroPasoTexto}>{paso + 1}</Texto>
+                </View>
+              )}
+              <Texto style={[estilos.texto, { flex: 1 }]} numberOfLines={3}>
                 Paso {paso + 1} de {pasos.length}: {p.texto}
-              </Text>
+              </Texto>
             </View>
           )}
 
           <View style={estilos.botones}>
             {pasos.length > 1 && (
               <Boton
-                texto="⬅ Anterior"
+                texto="Anterior"
+                antes={<Icono nombre="atras" color={colores.primario} tam={26} grosor={3} />}
                 fantasma
                 desactivado={paso === 0}
                 onPress={() => setPaso((n) => n - 1)}
@@ -116,21 +141,59 @@ export function DetalleTarea({
             )}
             {pasos.length > 1 && (
               <Boton
-                texto="Siguiente ➡"
+                texto="Siguiente"
+                despues={<Icono nombre="adelante" color={colores.primario} tam={26} grosor={3} />}
                 fantasma
                 desactivado={paso >= pasos.length - 1}
                 onPress={() => setPaso((n) => n + 1)}
               />
             )}
-            {puedeLeer && <Boton texto="🔊 Escuchar" fantasma onPress={() => leer(textoVoz)} />}
-            {!!t.video_url && (
-              <Boton texto="▶ Ver vídeo" fantasma onPress={() => Linking.openURL(t.video_url!)} />
+            {puedeLeer && (
+              <Boton
+                texto="Escuchar"
+                antes={<PictogramaInterfaz nombre="escuchar" etiqueta="Escuchar" tam={40} />}
+                fantasma
+                onPress={() => leer(textoVoz)}
+              />
             )}
-            <Boton texto="✕ Cerrar" onPress={onCerrar} />
+            {!!t.video_url && (
+              <Boton
+                texto="Ver vídeo"
+                antes={<Icono nombre="reproducir" color={colores.primario} tam={26} />}
+                fantasma
+                onPress={() => Linking.openURL(t.video_url!)}
+              />
+            )}
+            <Boton
+              texto="Cerrar"
+              antes={
+                <Icono nombre="cerrar" color={colores.textoSobrePrimario} tam={26} grosor={3} />
+              }
+              onPress={onCerrar}
+            />
           </View>
         </View>
       </View>
     </Modal>
+  );
+}
+
+/** Línea con un icono delante (hora, «Ya la has hecho», «Hoy no toca»). */
+function Linea({
+  icono,
+  color,
+  children,
+}: {
+  icono: NombreIcono;
+  color: string;
+  children: ReactNode;
+}) {
+  const estilos = useEstilos(crearEstilos);
+  return (
+    <View style={estilos.linea}>
+      <Icono nombre={icono} color={color} tam={26} />
+      <Texto style={[estilos.hora, { color }]}>{children}</Texto>
+    </View>
   );
 }
 
@@ -139,67 +202,95 @@ function Boton({
   onPress,
   fantasma,
   desactivado,
+  antes,
+  despues,
 }: {
   texto: string;
   onPress: () => void;
   fantasma?: boolean;
   desactivado?: boolean;
+  /** Icono o pictograma decorativo antes del texto. */
+  antes?: ReactNode;
+  /** Icono decorativo después del texto. */
+  despues?: ReactNode;
 }) {
+  const { colores } = useApariencia();
+  const estilos = useEstilos(crearEstilos);
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={texto}
       accessibilityState={{ disabled: !!desactivado }}
       disabled={desactivado}
       onPress={onPress}
       style={[estilos.boton, fantasma && estilos.botonFantasma, desactivado && { opacity: 0.4 }]}
     >
-      <Text style={[estilos.botonTexto, fantasma && { color: colores.primario }]}>{texto}</Text>
+      {antes}
+      <Texto style={[estilos.botonTexto, fantasma && { color: colores.primario }]}>{texto}</Texto>
+      {despues}
     </Pressable>
   );
 }
 
-const estilos = StyleSheet.create({
-  fondo: {
-    flex: 1,
-    backgroundColor: "rgba(20,33,61,0.55)",
-    padding: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  hoja: {
-    width: "100%",
-    maxWidth: 900,
-    maxHeight: "100%",
-    backgroundColor: colores.superficie,
-    borderRadius: RADIO,
-    padding: 24,
-    gap: 18,
-    overflow: "hidden",
-  },
-  cabecera: { flexDirection: "row", alignItems: "center", gap: 20 },
-  titulo: { fontSize: 38, fontWeight: "800", color: colores.texto },
-  hora: { fontSize: 22, fontWeight: "700", color: colores.textoSecundario },
-  texto: { fontSize: 24, lineHeight: 32, color: colores.texto },
-  paso: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    backgroundColor: colores.superficieSuave,
-    borderRadius: RADIO * 0.7,
-    padding: 12,
-  },
-  botones: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "flex-end" },
-  boton: {
-    minHeight: 60,
-    paddingHorizontal: 24,
-    borderRadius: 999,
-    backgroundColor: colores.primario,
-    justifyContent: "center",
-  },
-  botonFantasma: {
-    backgroundColor: colores.superficie,
-    borderWidth: 3,
-    borderColor: colores.primario,
-  },
-  botonTexto: { fontSize: 22, fontWeight: "700", color: colores.textoSobrePrimario },
-});
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    fondo: {
+      flex: 1,
+      backgroundColor: "rgba(34,33,31,0.6)",
+      padding: 16,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    hoja: {
+      width: "100%",
+      maxWidth: 900,
+      maxHeight: "100%",
+      backgroundColor: c.superficie,
+      borderWidth: 2,
+      borderColor: c.borde,
+      borderRadius: RADIO,
+      padding: 24,
+      gap: 18,
+      overflow: "hidden",
+    },
+    cabecera: { flexDirection: "row", alignItems: "center", gap: 20 },
+    titulo: { fontSize: 38, fontWeight: "700", color: c.texto },
+    linea: { flexDirection: "row", alignItems: "center", gap: 10 },
+    hora: { fontSize: 22, color: c.textoSecundario },
+    texto: { fontSize: 24, lineHeight: 34, color: c.texto },
+    paso: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      backgroundColor: c.fondo,
+      borderRadius: 10,
+      padding: 12,
+    },
+    numeroPaso: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      borderWidth: 3,
+      borderColor: c.primario,
+      backgroundColor: c.superficie,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    numeroPasoTexto: { fontSize: 34, fontWeight: "700", color: c.primario },
+    botones: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "flex-end" },
+    boton: {
+      minHeight: 60,
+      paddingHorizontal: 22,
+      borderRadius: 12,
+      backgroundColor: c.primario,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    botonFantasma: {
+      backgroundColor: c.superficie,
+      borderWidth: 2,
+      borderColor: c.primario,
+    },
+    botonTexto: { fontSize: 22, fontWeight: "700", color: c.textoSobrePrimario },
+  });

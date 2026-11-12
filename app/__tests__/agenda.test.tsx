@@ -22,6 +22,7 @@ jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
 
 jest.mock("expo-router", () => ({
   Stack: { Screen: () => null },
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
   // Sin ?estudiante= la pantalla abre la demo con datos de ejemplo.
   useLocalSearchParams: () => ({}),
 }));
@@ -50,7 +51,7 @@ describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
     await user.press(await screen.findByTestId("mini-e3"));
     expect(screen.getByText("Tomamos el desayuno en clase.")).toBeTruthy();
 
-    await user.press(screen.getByRole("button", { name: "✕ Cerrar" }));
+    await user.press(screen.getByRole("button", { name: "Cerrar" }));
     expect(screen.queryByText("Tomamos el desayuno en clase.")).toBeNull();
   });
 
@@ -114,7 +115,7 @@ describe("Pantalla agenda del día (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)
     expect(screen.getByText("Has terminado: Lavarse las manos")).toBeTruthy();
     expect(reproducirSonido).toHaveBeenCalledWith("refuerzo", expect.any(Number));
 
-    await userEvent.setup().press(screen.getByRole("button", { name: "Seguir ➜" }));
+    await userEvent.setup().press(screen.getByRole("button", { name: "Seguir" }));
     await waitFor(() => expect(screen.queryByText("¡Muy bien!")).toBeNull());
     expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno");
   });
@@ -126,7 +127,7 @@ describe("Pantalla agenda del día (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)
     await screen.findByRole("button", { name: "Terminar" });
     await pasaElBloqueo();
     await activar(screen.getByRole("button", { name: "Terminar" }));
-    await userEvent.setup().press(await screen.findByRole("button", { name: "Seguir ➜" }));
+    await userEvent.setup().press(await screen.findByRole("button", { name: "Seguir" }));
 
     // «Desayuno» no lo pide.
     await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
@@ -164,5 +165,49 @@ describe("Pantalla agenda del día (SCRUM-75: T-08.2 Antitoques accidentales)", 
     await waitFor(() =>
       expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos, en curso"),
     );
+  });
+});
+
+describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas que se ven)", () => {
+  const repoDemo = () => crearRepositorioMemoria(agendaDemo(hoyISO())).repo;
+
+  it("lleva cabecera «Mi agenda» y barra de abajo; el alumno no puede ir Atrás", async () => {
+    await render(<PantallaAgenda />);
+    await screen.findByTestId("bloque-ahora");
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Mi agenda");
+    expect(screen.getByTestId("btn-barra-atras").props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+  });
+
+  it("la familia ve la misma agenda pero sin Empezar ni Terminar (solo mirar)", async () => {
+    await render(<AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} soloMirar />);
+    await screen.findByTestId("bloque-ahora");
+    expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos");
+    expect(screen.getByTestId("aviso-solo-mirar")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
+  });
+
+  it("con «Solo 1», en Después se ve solo la tarea siguiente", async () => {
+    await render(
+      <AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} tareasVisibles={1} />,
+    );
+    await screen.findByTestId("bloque-ahora");
+    expect(etiqueta("bloque-despues")).toBe("Después: Desayuno");
+  });
+
+  it("con «Todas», Después enseña más de 3 tareas o dice «y N más»", async () => {
+    await render(
+      <AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} tareasVisibles={99} />,
+    );
+    await screen.findByTestId("bloque-ahora");
+    const despues = etiqueta("bloque-despues") as string;
+    const vistas = despues
+      .replace(/ y \d+ más$/, "")
+      .replace("Después: ", "")
+      .split(", ");
+    const ocultas = Number(/ y (\d+) más$/.exec(despues)?.[1] ?? 0);
+    expect(vistas.length + ocultas).toBeGreaterThan(3);
   });
 });

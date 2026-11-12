@@ -1,9 +1,10 @@
 // Botón con las medidas de .sbtn del prototipo, que obedece al tamaño y la forma elegidos.
 import React from "react";
-import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from "react-native";
+import { Pressable, StyleProp, StyleSheet, ViewStyle } from "react-native";
 
 import { useTema } from "../temas";
 import { usePreferencias } from "./PreferenciasProvider";
+import { Texto as Text } from "../ui/Texto";
 
 interface Props {
   etiqueta: string;
@@ -46,6 +47,7 @@ export function BotonAccesible({
       ]}
     >
       <Text
+        escalar={false}
         style={{
           color: principal ? colores.textoSobrePrimario : colores.texto,
           fontFamily: estilos.fuenteNegrita,

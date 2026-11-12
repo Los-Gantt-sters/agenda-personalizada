@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useCallback, useContext, useState, ReactNode } from "react";
 import { View, StyleSheet } from "react-native";
 import { BotonNecesidades } from "./BotonNecesidades";
 import { ModalNecesidades } from "./ModalNecesidades";
@@ -23,6 +23,15 @@ interface NecesidadesContextType {
   cerrarModalNecesidades: () => void;
   ultimaNecesidadSolicitada: ClaveNecesidad | null;
   solicitarNecesidad: (clave: ClaveNecesidad) => void;
+  /** Necesidad recién enviada (la ventana enseña «Aviso enviado»). */
+  necesidadEnviada: ClaveNecesidad | null;
+  nombreTutora: string;
+  /**
+   * Una pantalla que va dentro de otra ventana (p. ej. la felicitación al terminar una tarea) pinta
+   * su propia ventana de ayuda, porque la de aquí quedaría debajo y no se vería. Mientras esté
+   * registrada, la ventana de aquí no se abre. Devuelve la función para quitar el registro.
+   */
+  registrarVentanaLocal: () => () => void;
 }
 
 const NecesidadesContext = createContext<NecesidadesContextType | undefined>(undefined);
@@ -58,6 +67,11 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
   const [ultimaNecesidadSolicitada, setUltimaNecesidadSolicitada] = useState<ClaveNecesidad | null>(
     null,
   );
+  const [ventanasLocales, setVentanasLocales] = useState(0);
+  const registrarVentanaLocal = useCallback(() => {
+    setVentanasLocales((n) => n + 1);
+    return () => setVentanasLocales((n) => n - 1);
+  }, []);
 
   const abrirModalNecesidades = () => {
     setNecesidadEnviada(null);
@@ -96,6 +110,9 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
         cerrarModalNecesidades,
         ultimaNecesidadSolicitada,
         solicitarNecesidad,
+        necesidadEnviada,
+        nombreTutora,
+        registrarVentanaLocal,
       }}
     >
       <View style={estilos.contenedorRaiz}>
@@ -111,7 +128,7 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
         )}
 
         <ModalNecesidades
-          visible={modalAbierto}
+          visible={modalAbierto && ventanasLocales === 0}
           alSeleccionarNecesidad={solicitarNecesidad}
           alCerrar={cerrarModalNecesidades}
           necesidadEnviada={necesidadEnviada}
@@ -124,6 +141,10 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
     </NecesidadesContext.Provider>
   );
 };
+
+/** Igual que useNecesidades, pero devuelve null fuera del proveedor (componentes sueltos, tests). */
+export const useNecesidadesOpcional = (): NecesidadesContextType | null =>
+  useContext(NecesidadesContext) ?? null;
 
 export const useNecesidades = (): NecesidadesContextType => {
   const context = useContext(NecesidadesContext);

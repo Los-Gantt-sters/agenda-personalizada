@@ -8,6 +8,11 @@ import {
   type AlumnoConVinculos,
 } from "../../src/servicios/vinculosService";
 
+// La consola es una pantalla con barra de abajo (Atrás / Adelante): necesita el router.
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+}));
+
 jest.mock("../../src/servicios/vinculosService", () => ({
   listarAlumnosConVinculos: jest.fn(),
   listarSupervisores: jest.fn(),
@@ -76,10 +81,10 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
     await render(<ConsolaVinculos />);
 
     expect(
-      within(await screen.findByTestId("fila-a1")).getByText("⚠️ Requiere tutor presencial"),
+      within(await screen.findByTestId("fila-a1")).getByText("Requiere tutor presencial"),
     ).toBeTruthy();
     expect(
-      within(screen.getByTestId("fila-a2")).queryByText("⚠️ Requiere tutor presencial"),
+      within(screen.getByTestId("fila-a2")).queryByText("Requiere tutor presencial"),
     ).toBeNull();
   });
 
@@ -97,7 +102,7 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
     expect(mockAsignar).toHaveBeenCalledWith("a1", "aula", "t2");
     const fila = within(await screen.findByTestId("fila-a1"));
     await waitFor(() => expect(fila.getByText("Luis Prieto")).toBeTruthy());
-    expect(fila.getByText("✓ Guardado")).toBeTruthy();
+    expect(fila.getByText("Guardado")).toBeTruthy();
   });
 
   it("puede dejar a un estudiante sin familia", async () => {
@@ -132,7 +137,7 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
     await user.press(await screen.findByRole("button", { name: "Cambiar familia de Nora" }));
     await user.press(screen.getByRole("radio", { name: "Familia Ruiz" }));
 
-    expect(await screen.findByText("⚠️ No se ha podido guardar el cambio.")).toBeTruthy();
+    expect(await screen.findByText("No se ha podido guardar el cambio.")).toBeTruthy();
     expect(within(screen.getByTestId("fila-a2")).getByText("Sin familia")).toBeTruthy();
   });
 
@@ -142,7 +147,7 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
     await render(<ConsolaVinculos />);
 
     expect(
-      await screen.findByText("⚠️ No se han podido cargar los estudiantes. Inténtalo otra vez."),
+      await screen.findByText("No se han podido cargar los estudiantes. Inténtalo otra vez."),
     ).toBeTruthy();
     await user.press(screen.getByRole("button", { name: "Reintentar la carga" }));
 

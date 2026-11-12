@@ -1,19 +1,8 @@
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import type { Supervisor } from "../../servicios/vinculosService";
-
-// Contraste sobre blanco: tinta 15,97:1 · secundario 7,35:1 · error 6,57:1 · éxito 6,52:1.
-// Los bordes de los botones usan «secundario» para llegar al 3:1 de WCAG 1.4.11.
-export const COLORES_CONSOLA = {
-  fondo: "#f4f7fb",
-  tarjeta: "#ffffff",
-  tinta: "#14213d",
-  secundario: "#4a5670",
-  primario: "#1f5fa8",
-  linea: "#c6d1e2",
-  error: "#b42318",
-  exito: "#1e6b3a",
-};
+import type { Paleta } from "../../temas";
+import { Icono, Texto, useApariencia, useEstilos } from "../../ui";
 
 type Props = {
   visible: boolean;
@@ -41,6 +30,8 @@ export function ModalElegirSupervisor({
   alElegir,
   alCerrar,
 }: Props) {
+  const { colores } = useApariencia();
+  const estilos = useEstilos(crearEstilos);
   const lista: { id: string | null; nombre: string }[] = [
     ...opciones,
     ...(textoSinAsignar ? [{ id: null, nombre: textoSinAsignar }] : []),
@@ -50,9 +41,9 @@ export function ModalElegirSupervisor({
     <Modal transparent animationType="fade" visible={visible} onRequestClose={alCerrar}>
       <View style={estilos.fondoOscuro}>
         <View style={estilos.caja} accessibilityViewIsModal>
-          <Text style={estilos.titulo} accessibilityRole="header">
+          <Texto style={estilos.titulo} accessibilityRole="header">
             {titulo}
-          </Text>
+          </Texto>
 
           <ScrollView style={estilos.lista} accessibilityRole="radiogroup">
             {lista.map((opcion) => {
@@ -67,20 +58,23 @@ export function ModalElegirSupervisor({
                   disabled={guardando}
                   onPress={() => alElegir(opcion.id)}
                 >
-                  <Text style={estilos.textoOpcion}>
-                    {elegida ? "✓ " : ""}
+                  {elegida && <Icono nombre="check" color={colores.primario} tam={22} grosor={3} />}
+                  <Texto style={[estilos.textoOpcion, elegida && estilos.textoElegida]}>
                     {opcion.nombre}
-                  </Text>
+                  </Texto>
                 </Pressable>
               );
             })}
           </ScrollView>
 
-          {guardando && <Text style={estilos.estado}>Guardando…</Text>}
+          {guardando && <Texto style={estilos.estado}>Guardando…</Texto>}
           {error && (
-            <Text style={estilos.error} accessibilityRole="alert">
-              ⚠️ {error}
-            </Text>
+            <View style={estilos.filaError}>
+              <Icono nombre="alerta" color={colores.peligro} tam={22} />
+              <Texto style={estilos.error} accessibilityRole="alert">
+                {error}
+              </Texto>
+            </View>
           )}
 
           <Pressable
@@ -89,7 +83,7 @@ export function ModalElegirSupervisor({
             accessibilityLabel="Cerrar sin cambiar"
             onPress={alCerrar}
           >
-            <Text style={estilos.textoBotonCerrar}>Cerrar</Text>
+            <Texto style={estilos.textoBotonCerrar}>Cerrar</Texto>
           </Pressable>
         </View>
       </View>
@@ -97,47 +91,58 @@ export function ModalElegirSupervisor({
   );
 }
 
-const estilos = StyleSheet.create({
-  fondoOscuro: {
-    flex: 1,
-    backgroundColor: "rgba(20, 33, 61, 0.55)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  caja: {
-    width: "100%",
-    maxWidth: 520,
-    maxHeight: "90%",
-    backgroundColor: COLORES_CONSOLA.tarjeta,
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
-  },
-  titulo: { fontSize: 22, fontWeight: "700", color: COLORES_CONSOLA.tinta },
-  lista: { flexGrow: 0 },
-  opcion: {
-    minHeight: 52,
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORES_CONSOLA.secundario,
-    backgroundColor: COLORES_CONSOLA.tarjeta,
-  },
-  opcionElegida: { borderColor: COLORES_CONSOLA.primario, borderWidth: 3 },
-  textoOpcion: { fontSize: 18, color: COLORES_CONSOLA.tinta },
-  estado: { fontSize: 16, color: COLORES_CONSOLA.secundario },
-  error: { fontSize: 16, fontWeight: "700", color: COLORES_CONSOLA.error },
-  botonCerrar: {
-    minHeight: 48,
-    alignSelf: "flex-end",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORES_CONSOLA.secundario,
-  },
-  textoBotonCerrar: { fontSize: 16, fontWeight: "700", color: COLORES_CONSOLA.tinta },
-});
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    fondoOscuro: {
+      flex: 1,
+      backgroundColor: "rgba(34, 33, 31, 0.6)",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+    },
+    caja: {
+      width: "100%",
+      maxWidth: 520,
+      maxHeight: "90%",
+      backgroundColor: c.superficie,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: c.borde,
+      padding: 20,
+      gap: 12,
+    },
+    titulo: { fontSize: 22, fontWeight: "700", color: c.texto },
+    lista: { flexGrow: 0 },
+    opcion: {
+      minHeight: 52,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: 16,
+      marginBottom: 8,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: c.borde,
+      backgroundColor: c.superficie,
+    },
+    opcionElegida: {
+      borderColor: c.primario,
+      borderWidth: 3,
+      backgroundColor: c.superficieDestacada,
+    },
+    textoOpcion: { fontSize: 18, color: c.texto },
+    textoElegida: { fontWeight: "700" },
+    estado: { fontSize: 16, color: c.textoSecundario },
+    filaError: { flexDirection: "row", alignItems: "center", gap: 8 },
+    error: { flexShrink: 1, fontSize: 16, fontWeight: "700", color: c.peligro },
+    botonCerrar: {
+      minHeight: 48,
+      alignSelf: "flex-end",
+      justifyContent: "center",
+      paddingHorizontal: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: c.borde,
+    },
+    textoBotonCerrar: { fontSize: 16, fontWeight: "700", color: c.texto },
+  });

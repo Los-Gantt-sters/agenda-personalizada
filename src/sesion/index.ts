@@ -1,2 +1,2 @@
-export { SesionProvider, useSesion } from "./SesionProvider";
+export { SesionProvider, useSesion, useSesionOpcional } from "./SesionProvider";
 export { ZonaProtegida } from "./ZonaProtegida";

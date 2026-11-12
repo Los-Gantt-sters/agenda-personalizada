@@ -1,5 +1,7 @@
 import React from "react";
 import { TouchableOpacity, Text, View, StyleSheet, Image, Platform } from "react-native";
+import type { Paleta } from "../../temas";
+import { Texto, useApariencia, useEstilos } from "../../ui";
 import { Estudiante } from "../../tipos/estudiante";
 import { reproducirSonido } from "../../servicios/sonidos";
 
@@ -17,6 +19,8 @@ export const TarjetaEstudiante: React.FC<TarjetaEstudianteProps> = ({
   tamanioMinimo = 140,
 }) => {
   const dimensionFinal = Math.max(tamanioMinimo, 120);
+  const { colores } = useApariencia();
+  const estilos = useEstilos(crearEstilos);
 
   return (
     <TouchableOpacity
@@ -31,8 +35,8 @@ export const TarjetaEstudiante: React.FC<TarjetaEstudianteProps> = ({
         {
           minWidth: dimensionFinal,
           minHeight: dimensionFinal,
-          borderColor: seleccionado ? "#3182CE" : "#E2E8F0",
-          backgroundColor: seleccionado ? "#EBF8FF" : "#FFFFFF",
+          borderColor: seleccionado ? colores.primario : colores.borde,
+          backgroundColor: seleccionado ? colores.superficieDestacada : colores.superficie,
         },
         seleccionado && estilos.tarjetaSeleccionada,
       ]}
@@ -45,8 +49,9 @@ export const TarjetaEstudiante: React.FC<TarjetaEstudianteProps> = ({
         style={[
           estilos.avatarContenedor,
           {
-            backgroundColor: estudiante.color ? `${estudiante.color}15` : "#EDF2F7",
-            borderColor: estudiante.color || "#CBD5E0",
+            // Fondo blanco para que el dibujo se vea en cualquier tema; el aro, del color del alumno
+            backgroundColor: "#FFFFFF",
+            borderColor: estudiante.color || colores.borde,
           },
         ]}
       >
@@ -61,71 +66,59 @@ export const TarjetaEstudiante: React.FC<TarjetaEstudianteProps> = ({
         )}
       </View>
 
-      <Text style={estilos.nombreLecturaFacil} numberOfLines={2} adjustsFontSizeToFit>
+      <Texto style={estilos.nombreLecturaFacil} numberOfLines={2} adjustsFontSizeToFit>
         {estudiante.nombre}
-      </Text>
+      </Texto>
     </TouchableOpacity>
   );
 };
 
-const estilos = StyleSheet.create({
-  tarjeta: {
-    // RNF1.1: Al menos 120x120 px
-    minWidth: 140,
-    minHeight: 140,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    borderWidth: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    margin: 8,
-    // Sombra accesible y suave
-    ...Platform.select({
-      web: {
-        cursor: "pointer",
-        userSelect: "none",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        transition: "transform 0.15s ease, border-color 0.15s ease",
-      },
-      default: {
-        elevation: 3,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-    }),
-  },
-  tarjetaSeleccionada: {
-    borderWidth: 4,
-    transform: [{ scale: 1.03 }],
-  },
-  avatarContenedor: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  foto: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  iconoAvatar: {
-    fontSize: 48,
-    textAlign: "center",
-  },
-  nombreLecturaFacil: {
-    // Tipografía clara para Lectura Fácil (RNF1.1)
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1A202C",
-    textAlign: "center",
-    letterSpacing: 0.3,
-  },
-});
+// Sin sombras: la tarjeta se distingue por su borde (3:1). La elegida, por el borde granate de 4 px.
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    tarjeta: {
+      // RNF1.1: Al menos 120x120 px
+      minWidth: 140,
+      minHeight: 140,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      borderRadius: 14,
+      borderWidth: 2,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      margin: 8,
+      ...Platform.select({
+        web: { cursor: "pointer", userSelect: "none" },
+        default: {},
+      }),
+    },
+    tarjetaSeleccionada: {
+      borderWidth: 4,
+    },
+    avatarContenedor: {
+      width: 84,
+      height: 84,
+      borderRadius: 42,
+      borderWidth: 3,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    foto: {
+      width: 84,
+      height: 84,
+      borderRadius: 42,
+    },
+    iconoAvatar: {
+      fontSize: 48,
+      textAlign: "center",
+    },
+    nombreLecturaFacil: {
+      // Tipografía clara para Lectura Fácil (RNF1.1)
+      fontSize: 20,
+      fontWeight: "700",
+      color: c.texto,
+      textAlign: "center",
+    },
+  });

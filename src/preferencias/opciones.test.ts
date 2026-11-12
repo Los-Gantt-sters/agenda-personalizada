@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 
 import {
+  CAJAS_LETRA,
+  TAREAS_VISIBLES,
   FORMAS_BOTON,
   FUENTES,
   MODOS_CANAL,
@@ -49,11 +51,34 @@ describe("opciones del prototipo (FONTS, FS, BS, SHAPES y CANAL)", () => {
   it("los valores por defecto son los de la variante A del prototipo", () => {
     expect(PREFERENCIAS_POR_DEFECTO).toEqual({
       tema: "claro",
-      fuente: "atkinson",
+      fuente: "lexend",
       tamanoLetra: "normal",
       tamanoBoton: "L",
       forma: "round",
       canal: "ambos",
+      caja: "normal",
+      tareasVisibles: "tres",
+    });
+  });
+});
+
+describe("mayúsculas y tareas que se ven (mejoras de la profesora)", () => {
+  it("ofrece minúsculas o MAYÚSCULAS y 1, hasta 3 o todas las tareas", () => {
+    expect(CAJAS_LETRA.normal.etiqueta).toBe("Minúsculas");
+    expect(CAJAS_LETRA.mayusculas.etiqueta).toBe("MAYÚSCULAS");
+    expect(TAREAS_VISIBLES.una.maximo).toBe(1);
+    expect(TAREAS_VISIBLES.tres.maximo).toBe(3);
+    expect(TAREAS_VISIBLES.todas.maximo).toBeGreaterThan(20);
+  });
+
+  it("normalizarPreferencias conserva caja y tareas válidas y sanea las demás", () => {
+    expect(normalizarPreferencias({ caja: "mayusculas", tareasVisibles: "todas" })).toMatchObject({
+      caja: "mayusculas",
+      tareasVisibles: "todas",
+    });
+    expect(normalizarPreferencias({ caja: "cursiva", tareasVisibles: 7 })).toMatchObject({
+      caja: "normal",
+      tareasVisibles: "tres",
     });
   });
 });
@@ -76,11 +101,13 @@ describe("normalizarPreferencias", () => {
       }),
     ).toEqual({
       tema: "pastel",
-      fuente: "atkinson",
+      fuente: "lexend",
       tamanoLetra: "normal",
       tamanoBoton: "XL",
       forma: "round",
       canal: "soloPictograma",
+      caja: "normal",
+      tareasVisibles: "tres",
     });
   });
 });

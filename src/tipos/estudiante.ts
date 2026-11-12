@@ -19,8 +19,11 @@ export interface Clase {
 
 export interface DibujoCredencialVisual {
   slug: string;
+  /** Emoji de respaldo: solo se ve si el pictograma no carga (sin conexión). */
   icono: string;
   etiqueta: string;
+  /** Identificador del pictograma de ARASAAC que se enseña. */
+  pictograma?: number;
 }
 
 export const LONGITUD_SECUENCIA_DIBUJOS = 3;
@@ -30,15 +33,15 @@ export const LONGITUD_SECUENCIA_DIBUJOS = 3;
  * (alineado con docs/prototipo/03-estudiante-contrasena.html y SCRUM-50 / SCRUM-51).
  */
 export const DIBUJOS_CREDENCIAL_VISUAL: DibujoCredencialVisual[] = [
-  { slug: "manzana", icono: "🍎", etiqueta: "Manzana" },
-  { slug: "perro", icono: "🐶", etiqueta: "Perro" },
-  { slug: "estrella", icono: "⭐", etiqueta: "Estrella" },
-  { slug: "sol", icono: "🌞", etiqueta: "Sol" },
-  { slug: "coche", icono: "🚗", etiqueta: "Coche" },
-  { slug: "casa", icono: "🏠", etiqueta: "Casa" },
-  { slug: "arcoiris", icono: "🌈", etiqueta: "Arcoíris" },
-  { slug: "gato", icono: "🐱", etiqueta: "Gato" },
-  { slug: "pelota", icono: "⚽", etiqueta: "Pelota" },
+  { slug: "manzana", icono: "🍎", etiqueta: "Manzana", pictograma: 2462 },
+  { slug: "perro", icono: "🐶", etiqueta: "Perro", pictograma: 2517 },
+  { slug: "estrella", icono: "⭐", etiqueta: "Estrella", pictograma: 4644 },
+  { slug: "sol", icono: "🌞", etiqueta: "Sol", pictograma: 7252 },
+  { slug: "coche", icono: "🚗", etiqueta: "Coche", pictograma: 2339 },
+  { slug: "casa", icono: "🏠", etiqueta: "Casa", pictograma: 6964 },
+  { slug: "arcoiris", icono: "🌈", etiqueta: "Arcoíris", pictograma: 2986 },
+  { slug: "gato", icono: "🐱", etiqueta: "Gato", pictograma: 2406 },
+  { slug: "pelota", icono: "⚽", etiqueta: "Pelota", pictograma: 3241 },
 ];
 
 export const CLASES: Record<string, Clase> = {

@@ -30,7 +30,7 @@ describe("LoginScreen - SCRUM-55 (Frontend Formulario de Login)", () => {
   it("renderiza correctamente el título y los campos del formulario", async () => {
     await render(<LoginScreen />);
 
-    expect(screen.getByText("Acceso Supervisores")).toBeTruthy();
+    expect(screen.getByText("Acceso para adultos")).toBeTruthy();
     expect(screen.getByText("Correo electrónico")).toBeTruthy();
     expect(screen.getByText("Contraseña")).toBeTruthy();
     expect(screen.getByPlaceholderText("ejemplo@purisima.es")).toBeTruthy();

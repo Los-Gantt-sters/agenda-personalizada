@@ -62,3 +62,8 @@ export function useSesion(): ValorSesion {
   }
   return valor;
 }
+
+/** Igual que useSesion, pero devuelve null fuera de <SesionProvider> (pruebas, componentes sueltos). */
+export function useSesionOpcional(): ValorSesion | null {
+  return useContext(SesionContext);
+}

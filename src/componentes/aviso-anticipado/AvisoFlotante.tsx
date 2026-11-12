@@ -11,10 +11,11 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   Vibration,
 } from "react-native";
-import { colores, RADIO } from "../agenda/colores";
+import { RADIO } from "../agenda/colores";
+import type { Paleta } from "../../temas";
+import { Texto, useEstilos } from "../../ui";
 import { PictogramaTarea } from "../agenda/PictogramaTarea";
 import { reproducirSonido } from "../../servicios/sonidos";
 import { AVISO_POR_DEFECTO, type EventoAviso, type PreferenciasAviso } from "./tipos";
@@ -49,6 +50,7 @@ export function AvisoFlotante({
   onCerrar: () => void;
 }) {
   const reducir = useReducirMovimiento();
+  const estilos = useEstilos(crearEstilos);
   const [entrada] = useState(() => new Animated.Value(1));
   const { vibracion, duracionMs } = preferencias;
 
@@ -102,7 +104,7 @@ export function AvisoFlotante({
         {
           opacity: entrada,
           transform: [
-            { translateX: entrada.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) },
+            { translateX: entrada.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) },
           ],
         },
       ]}
@@ -116,44 +118,41 @@ export function AvisoFlotante({
         style={({ pressed }) => [estilos.tarjeta, pressed && { opacity: 0.85 }]}
       >
         <PictogramaTarea tarea={tarea} tam={64} />
-        <Text style={estilos.texto}>
+        <Texto style={estilos.texto}>
           {cuando}
           {"\n"}
-          <Text style={estilos.titulo}>{tarea.titulo}</Text>
+          <Texto style={estilos.titulo}>{tarea.titulo}</Texto>
           {"\n"}
-          <Text style={estilos.pista}>Toca para cerrar</Text>
-        </Text>
+          <Texto style={estilos.pista}>Toca para cerrar</Texto>
+        </Texto>
       </Pressable>
     </Animated.View>
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    zIndex: 15,
-    maxWidth: 420,
-  },
-  tarjeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: colores.superficie,
-    borderWidth: 4,
-    borderColor: colores.primario,
-    borderRadius: RADIO,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    minHeight: 48,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  texto: { flexShrink: 1, fontSize: 20, fontWeight: "700", color: colores.texto },
-  titulo: { fontSize: 24, fontWeight: "800" },
-  pista: { fontSize: 16, fontWeight: "400", color: colores.textoSecundario },
-});
+// Sin sombra: el aviso se separa de la agenda por el borde granate grueso.
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    contenedor: {
+      position: "absolute",
+      top: 16,
+      right: 16,
+      zIndex: 15,
+      maxWidth: 420,
+    },
+    tarjeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      backgroundColor: c.superficie,
+      borderWidth: 4,
+      borderColor: c.primario,
+      borderRadius: RADIO,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      minHeight: 48,
+    },
+    texto: { flexShrink: 1, fontSize: 20, color: c.texto },
+    titulo: { fontSize: 24, fontWeight: "700" },
+    pista: { fontSize: 16, color: c.textoSecundario },
+  });

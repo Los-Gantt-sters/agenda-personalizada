@@ -4,13 +4,14 @@
 // T-08.2: el modo antitoques (mantener 1,5 s o «¿Seguro?») también sale del perfil (RNF6.1).
 // T-16.2 (HU-16): aviso flotante 5 minutos antes de la siguiente tarea (RF4.6), según el perfil.
 import { useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import type { EntradaAgenda, RepositorioAgenda } from "./tipos";
 import { useAgendaDia } from "./useAgendaDia";
 import { AgendaTresBloques } from "./AgendaTresBloques";
 import { DetalleTarea } from "./DetalleTarea";
-import { colores } from "./colores";
+import { Texto, useApariencia } from "../../ui";
 import { RefuerzoPositivo } from "../ejecucion-tarea/RefuerzoPositivo";
+import type { Emocion } from "../ejecucion-tarea/emociones";
 import {
   PREFERENCIAS_EJECUCION_POR_DEFECTO,
   type PreferenciasEjecucion,
@@ -31,6 +32,9 @@ export function AgendaDelDia({
   preferencias = PREFERENCIAS_EJECUCION_POR_DEFECTO,
   preferenciasAviso = AVISO_POR_DEFECTO,
   onAviso,
+  onEmocion,
+  tareasVisibles = 3,
+  soloMirar = false,
 }: {
   repo: RepositorioAgenda;
   estudianteId: string;
@@ -42,22 +46,31 @@ export function AgendaDelDia({
   preferenciasAviso?: PreferenciasAviso;
   /** RI4.2: se llama con cada aviso emitido. */
   onAviso?: (evento: EventoAviso) => void;
+  /** «¿Cómo te has sentido?»: se llama si el alumno contesta al terminar una tarea. */
+  onEmocion?: (idEntrada: string, emocion: Emocion) => void;
+  /** Cuántas tareas se ven en «Hecho» y en «Después» (preferencia del alumno: 1, 3 o todas). */
+  tareasVisibles?: number;
+  /** Familias: la misma agenda, pero sin «Empezar» ni «Terminar». */
+  soloMirar?: boolean;
 }) {
-  // Se piden hasta 3 por lado; la vista enseña las que quepan en la pantalla.
+  // Se piden las que quiere ver el alumno; la vista enseña las que quepan en la pantalla.
   const { bloques, entradas, cargando, error, errorGuardado, empezar, confirmarFin } = useAgendaDia(
     repo,
     estudianteId,
     fecha,
     {
-      maxHecho: 3,
-      maxDespues: 3,
+      maxHecho: tareasVisibles,
+      maxDespues: tareasVisibles,
     },
   );
+  const { colores } = useApariencia();
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
   // Se guarda el id y no la entrada: si el tutor la cambia con el detalle abierto, se ve al momento.
   const abierta = entradas.find((e) => e.id === abiertaId) ?? null;
-  // Título de la tarea recién terminada mientras se enseña el refuerzo positivo.
-  const [terminada, setTerminada] = useState<string | null>(null);
+  // Tarea recién terminada mientras se enseña el refuerzo positivo.
+  // «¿Cómo te has sentido?»: la respuesta se entrega con onEmocion. Todavía no se guarda en el
+  // colegio ni se enseña: falta decidir con el centro quién la ve y dónde se guarda.
+  const [terminada, setTerminada] = useState<{ id: string; titulo: string } | null>(null);
   // Cerrar el aviso solo lo quita de la pantalla: la tarea en curso sigue igual.
   const { aviso, cerrar: cerrarAviso } = useAvisoAnticipado(entradas, preferenciasAviso, onAviso);
 
@@ -65,7 +78,7 @@ export function AgendaDelDia({
   // optimista); si no se guarda, la tarea vuelve a «Ahora» y se avisa abajo.
   const terminar = (idEntrada: string) => {
     if (bloques.ahora?.id !== idEntrada) return;
-    setTerminada(bloques.ahora.tarea.titulo);
+    setTerminada({ id: idEntrada, titulo: bloques.ahora.tarea.titulo });
     void confirmarFin(idEntrada);
   };
 
@@ -95,11 +108,13 @@ export function AgendaDelDia({
         onEmpezar={empezar}
         onConfirmarFin={terminar}
         confirmacion={preferencias.confirmacion}
+        maxTareas={tareasVisibles}
+        soloMirar={soloMirar}
         onAbrir={(e: EntradaAgenda) => setAbiertaId(e.id)}
       />
       {/* Aviso discreto solo si algo falla; no tapa la tarea de «Ahora». */}
       {(error || errorGuardado) && (
-        <Text
+        <Texto
           accessibilityLiveRegion="polite"
           style={{
             position: "absolute",
@@ -110,15 +125,18 @@ export function AgendaDelDia({
           }}
         >
           {errorGuardado ? "No se ha guardado. Prueba otra vez." : "Sin conexión con el colegio."}
-        </Text>
+        </Texto>
       )}
       <AvisoFlotante aviso={aviso} preferencias={preferenciasAviso} onCerrar={cerrarAviso} />
       <DetalleTarea entrada={abierta} onCerrar={() => setAbiertaId(null)} />
       <RefuerzoPositivo
-        tarea={terminada}
+        tarea={terminada?.titulo ?? null}
         nombre={nombre}
         preferencias={preferencias.refuerzo}
         onSeguir={() => setTerminada(null)}
+        onEmocion={(emocion) => {
+          if (terminada) onEmocion?.(terminada.id, emocion);
+        }}
       />
     </View>
   );

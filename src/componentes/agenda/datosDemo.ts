@@ -1,15 +1,24 @@
 // Datos de ejemplo de la agenda del día (T-06.1, HU-06). Se usan en app/agenda.tsx hasta que la
-// agenda se cargue desde Supabase (T-06.2). Los pictogramas son emojis; con datos reales,
-// pictograma_url apunta a ARASAAC o a una foto.
+// agenda se cargue desde Supabase (T-06.2). Los pictogramas son de ARASAAC; el emoji solo se ve si la
+// imagen no carga (sin conexión).
 // HU-08: «Lavarse las manos» y «Reprografía» piden pulsar «Empezar» antes de «Terminar» (RF6.8).
 // HU-16: agendaDemoAviso mueve las horas para probar el aviso de 5 minutos sin esperar.
 import type { EntradaAgenda, Tarea } from "./tipos";
+import { urlImagenPictograma } from "../../arasaac/urls";
 
-const T = (id: string, titulo: string, emoji: string, extra: Partial<Tarea> = {}): Tarea => ({
+const arasaac = (id: number) => urlImagenPictograma(id, 500);
+
+const T = (
+  id: string,
+  titulo: string,
+  emoji: string,
+  pictograma: number,
+  extra: Partial<Tarea> = {},
+): Tarea => ({
   id,
   titulo,
   emoji,
-  pictograma_url: null,
+  pictograma_url: arasaac(pictograma),
   ...extra,
 });
 
@@ -20,7 +29,7 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     [
       "09:00",
       30,
-      T("t1", "Asamblea", "🗣️", {
+      T("t1", "Asamblea", "🗣️", 27574, {
         descripcion: "Nos sentamos en círculo. Decimos qué día es hoy.",
       }),
       "hecha",
@@ -28,13 +37,13 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     [
       "09:30",
       45,
-      T("t2", "Lavarse las manos", "🧼", {
+      T("t2", "Lavarse las manos", "🧼", 8975, {
         descripcion: "Antes del desayuno nos lavamos las manos.",
         pasos: [
-          { orden: 1, texto: "Abre el grifo." },
-          { orden: 2, texto: "Pon jabón en las manos." },
-          { orden: 3, texto: "Frota las manos." },
-          { orden: 4, texto: "Aclara y seca las manos." },
+          { orden: 1, texto: "Abre el grifo.", pictograma_url: arasaac(2414) },
+          { orden: 2, texto: "Pon jabón en las manos.", pictograma_url: arasaac(2964) },
+          { orden: 3, texto: "Frota las manos.", pictograma_url: arasaac(8251) },
+          { orden: 4, texto: "Aclara y seca las manos.", pictograma_url: arasaac(2566) },
         ],
       }),
       "pendiente",
@@ -42,19 +51,19 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     [
       "10:15",
       30,
-      T("t3", "Desayuno", "🥪", { descripcion: "Tomamos el desayuno en clase." }),
+      T("t3", "Desayuno", "🥪", 4625, { descripcion: "Tomamos el desayuno en clase." }),
       "pendiente",
     ],
     [
       "10:45",
       45,
-      T("t4", "Reprografía", "🖨️", {
+      T("t4", "Reprografía", "🖨️", 9876, {
         descripcion: "Hacemos las fotocopias que nos pide la tutora.",
       }),
       "pendiente",
     ],
-    ["11:30", 30, T("t5", "Recreo", "⚽", { descripcion: "Salimos al patio." }), "pendiente"],
-    ["12:00", 60, T("t6", "Taller de cocina", "🍳"), "pendiente"],
+    ["11:30", 30, T("t5", "Recreo", "⚽", 7137, { descripcion: "Salimos al patio." }), "pendiente"],
+    ["12:00", 60, T("t6", "Taller de cocina", "🍳", 2342), "pendiente"],
   ];
   const conInicioFin = new Set(["t2", "t4"]);
   return tareas.map(([hora, dur, tarea, estado], i) => ({

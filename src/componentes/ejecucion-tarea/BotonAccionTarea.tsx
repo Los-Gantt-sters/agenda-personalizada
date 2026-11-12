@@ -8,9 +8,10 @@
 //   En los dos modos, el botón no hace caso durante un momento al aparecer (al pasar de «Empezar» a
 //   «Terminar», el mismo dedo no puede terminar sin querer) y solo confirma una vez.
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { BotonMantener } from "../agenda/BotonMantener";
-import { colores } from "../agenda/colores";
+import type { Paleta } from "../../temas";
+import { Icono, Texto, useApariencia, useEstilos } from "../../ui";
 import { CONFIRMACION_POR_DEFECTO, type AccionTarea, type PreferenciasConfirmacion } from "./tipos";
 
 /** Lado mínimo del área táctil (RNF6.3). */
@@ -18,13 +19,9 @@ export const AREA_TACTIL_MINIMA = 48;
 /** Si no contesta a «¿Seguro?» en este tiempo, vuelve al botón normal. */
 export const ESPERA_PREGUNTA_MS = 6000;
 
-const CONFIG: Record<AccionTarea, { texto: string; color: string; relleno: string }> = {
-  empezar: { texto: "Empezar", color: colores.primario, relleno: colores.exito },
-  terminar: { texto: "Terminar", color: colores.exito, relleno: colores.primario },
-};
-
-/** Gris oscuro para «No» (contraste AA con texto blanco). */
-const COLOR_NO = "#4A5568";
+// Los dos botones van en el color de acción del tema; mientras se mantienen pulsados se llenan con el
+// color de «hecho». Se distinguen por la palabra, que es grande y no cambia de sitio.
+const TEXTOS: Record<AccionTarea, string> = { empezar: "Empezar", terminar: "Terminar" };
 
 export function BotonAccionTarea({
   accion,
@@ -37,7 +34,9 @@ export function BotonAccionTarea({
   confirmacion?: PreferenciasConfirmacion;
   desactivado?: boolean;
 }) {
-  const c = CONFIG[accion];
+  const { colores } = useApariencia();
+  const estilos = useEstilos(crearEstilos);
+  const c = { texto: TEXTOS[accion], color: colores.primario, relleno: colores.exito };
   const [preguntando, setPreguntando] = useState(false);
   const aparecio = useRef(0);
   const confirmado = useRef(false);
@@ -96,14 +95,14 @@ export function BotonAccionTarea({
           desactivado && { opacity: 0.5 },
         ]}
       >
-        <Text style={[estilos.texto, estilos.textoGrande]}>{c.texto}</Text>
+        <Texto style={[estilos.texto, estilos.textoGrande]}>{c.texto}</Texto>
       </Pressable>
     );
   }
 
   return (
     <View testID={`pregunta-${accion}`} style={estilos.pregunta} accessibilityLiveRegion="polite">
-      <Text style={estilos.textoPregunta}>¿Seguro?</Text>
+      <Texto style={estilos.textoPregunta}>¿Seguro?</Texto>
       <View style={estilos.fila}>
         <Pressable
           accessibilityRole="button"
@@ -116,8 +115,8 @@ export function BotonAccionTarea({
             pressed && estilos.pulsado,
           ]}
         >
-          <Text style={estilos.simbolo}>✓</Text>
-          <Text style={estilos.texto}>Sí</Text>
+          <Icono nombre="check" color={colores.textoSobrePrimario} tam={32} grosor={3.2} />
+          <Texto style={estilos.texto}>Sí</Texto>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -126,38 +125,40 @@ export function BotonAccionTarea({
           style={({ pressed }) => [
             estilos.boton,
             estilos.botonRespuesta,
-            { backgroundColor: COLOR_NO },
+            estilos.botonNo,
             pressed && estilos.pulsado,
           ]}
         >
-          <Text style={estilos.simbolo}>✕</Text>
-          <Text style={estilos.texto}>No</Text>
+          <Icono nombre="cerrar" color={colores.texto} tam={32} grosor={3.2} />
+          <Texto style={[estilos.texto, { color: colores.texto }]}>No</Texto>
         </Pressable>
       </View>
     </View>
   );
 }
 
-const estilos = StyleSheet.create({
-  boton: {
-    minHeight: 72,
-    minWidth: 150,
-    borderRadius: 999,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 14,
-  },
-  botonGrande: { minHeight: 96, minWidth: 300 },
-  botonRespuesta: { minWidth: 150 },
-  pulsado: { transform: [{ scale: 0.98 }] },
-  texto: { color: colores.textoSobrePrimario, fontSize: 26, fontWeight: "700" },
-  textoGrande: { fontSize: 38, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" },
-  simbolo: { color: colores.textoSobrePrimario, fontSize: 30, fontWeight: "900" },
-  pregunta: { alignItems: "center", gap: 10 },
-  textoPregunta: { fontSize: 26, fontWeight: "800", color: colores.texto },
-  // Separación amplia entre «Sí» y «No» para no tocar el otro sin querer.
-  fila: { flexDirection: "row", gap: 32 },
-});
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    boton: {
+      minHeight: 72,
+      minWidth: 150,
+      borderRadius: 14,
+      paddingHorizontal: 28,
+      paddingVertical: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 14,
+    },
+    botonGrande: { minHeight: 96, minWidth: 300 },
+    botonRespuesta: { minWidth: 150 },
+    // «No» con borde y sin relleno: se ve distinto de «Sí» también sin mirar el color.
+    botonNo: { backgroundColor: c.superficie, borderWidth: 3, borderColor: c.borde },
+    pulsado: { opacity: 0.88 },
+    texto: { color: c.textoSobrePrimario, fontSize: 26, fontWeight: "700" },
+    textoGrande: { fontSize: 36, fontWeight: "700", letterSpacing: 0.5 },
+    pregunta: { alignItems: "center", gap: 10 },
+    textoPregunta: { fontSize: 26, fontWeight: "700", color: c.texto },
+    // Separación amplia entre «Sí» y «No» para no tocar el otro sin querer.
+    fila: { flexDirection: "row", gap: 32 },
+  });

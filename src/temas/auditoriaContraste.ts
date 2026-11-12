@@ -270,6 +270,69 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
     tipo: "componente",
     pares: [["texto", "superficie"]],
   },
+
+  // ---- Rediseño «Piedra»: iconos sobre rellenos de color (blanco o negro con colorSobre) ----
+  {
+    id: "sello-hecha",
+    elemento: "Marca de tarea hecha sobre el sello verde",
+    usoEn: "AgendaTresBloques (sello), RefuerzoPositivo (insignia)",
+    tipo: "texto",
+    pares: [
+      ["#FFFFFF", "exito"],
+      ["#000000", "exito"],
+    ],
+  },
+  {
+    id: "sello-bloqueada",
+    elemento: "Candado de tarea bloqueada sobre el sello de aviso",
+    usoEn: "AgendaTresBloques (sello)",
+    tipo: "texto",
+    pares: [
+      ["#FFFFFF", "aviso"],
+      ["#000000", "aviso"],
+    ],
+  },
+  {
+    id: "boton-ayuda",
+    elemento: "Texto «Ayuda» del botón de necesidades",
+    usoEn: "BotonNecesidades (relleno peligro)",
+    tipo: "texto",
+    pares: [
+      ["#FFFFFF", "peligro"],
+      ["#000000", "peligro"],
+    ],
+  },
+  // ---- Formas de clase (colores fijos copiados de FormaClase) ----
+  {
+    id: "forma-triangulo",
+    elemento: "Forma de la clase Triángulo",
+    usoEn: "FormaClase (en los temas oscuros va sobre una placa blanca)",
+    tipo: "componente",
+    pares: [
+      ["#B3261E", "superficie"],
+      ["#B3261E", "#FFFFFF"],
+    ],
+  },
+  {
+    id: "forma-circulo",
+    elemento: "Forma de la clase Círculo",
+    usoEn: "FormaClase (en los temas oscuros va sobre una placa blanca)",
+    tipo: "componente",
+    pares: [
+      ["#2F62B8", "superficie"],
+      ["#2F62B8", "#FFFFFF"],
+    ],
+  },
+  {
+    id: "forma-cuadrado",
+    elemento: "Forma de la clase Cuadrado",
+    usoEn: "FormaClase (en los temas oscuros va sobre una placa blanca)",
+    tipo: "componente",
+    pares: [
+      ["#2D6A3E", "superficie"],
+      ["#2D6A3E", "#FFFFFF"],
+    ],
+  },
 ];
 
 export interface ResultadoContraste {

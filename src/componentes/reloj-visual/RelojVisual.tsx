@@ -1,4 +1,4 @@
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 import Svg, { Circle, Line, Path } from "react-native-svg";
 
 import {
@@ -9,6 +9,7 @@ import {
   trazadoSector,
 } from "./calculoReloj";
 import { useTemaOpcional } from "../../temas";
+import { Texto as Text } from "../../ui/Texto";
 import { textoTiempoRestante } from "./textoTiempo";
 import { useAlarmaSuave } from "./useAlarmaSuave";
 

@@ -1,6 +1,7 @@
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, Platform } from "react-native";
+import { TouchableOpacity, StyleSheet, ViewStyle, Platform, View } from "react-native";
 import { BotonNecesidadesProps, PosicionBotonNecesidades } from "./tipos";
+import { PictogramaInterfaz, Texto, colorSobre, useApariencia } from "../ui";
 
 export const getEstiloPosicion = (posicion: PosicionBotonNecesidades): ViewStyle => {
   switch (posicion) {
@@ -17,6 +18,7 @@ export const getEstiloPosicion = (posicion: PosicionBotonNecesidades): ViewStyle
   }
 };
 
+/** Blanco o negro, el que más contraste dé sobre el fondo del botón. */
 export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
   onPress,
   posicion = "inferior-izquierda",
@@ -25,22 +27,22 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
   canal = "ambos",
   etiqueta = "Ayuda",
   testID = "btn-necesidades-flotante",
+  enBarra,
 }) => {
+  const { colores } = useApariencia();
   const dimension = Math.max(tamanio, 48);
-  const estiloPosicion = getEstiloPosicion(posicion);
+  const estiloPosicion: ViewStyle = enBarra
+    ? { position: "relative", zIndex: 0, width: enBarra.ancho, height: enBarra.alto }
+    : getEstiloPosicion(posicion);
 
-  // Paletas de color accesibles según prototipo tuagendita
-  // Estándar: fondo rojo-granate (#C0392B), texto blanco
-  // Alto contraste: fondo negro o amarillo con texto negro puro y borde blanco
-  const esAltoContraste = variante === "alto-contraste";
-
-  const colorFondo = esAltoContraste ? "#FF5A5A" : variante === "pastel" ? "#B8433A" : "#C0392B";
-
-  const colorTexto = esAltoContraste ? "#000000" : "#FFFFFF";
-  const colorBorde = esAltoContraste ? "#FFFFFF" : "#FFFFFF";
+  // El botón usa el color de alerta del tema activo para que se encuentre enseguida. Con la
+  // variante «alto-contraste» se fuerza el rojo claro del prototipo, con borde blanco.
+  const colorFondo = variante === "alto-contraste" ? "#FF5A5A" : colores.peligro;
+  const colorTexto = colorSobre(colorFondo);
 
   const verDibujo = canal !== "soloTexto";
   const verTexto = canal !== "soloPictograma";
+  const ladoDibujo = verTexto ? Math.round(dimension * 0.5) : Math.round(dimension * 0.72);
 
   return (
     <TouchableOpacity
@@ -48,32 +50,27 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
       accessibilityLabel="Necesito ayuda o pedir necesidades básicas"
       accessibilityHint="Abre las opciones para pedir agua, ir al baño, descansar o pedir urgencia"
       testID={testID}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={onPress}
       style={[
         estilos.botonFlotante,
-        estiloPosicion,
         {
           width: dimension,
           height: dimension,
           backgroundColor: colorFondo,
-          borderColor: colorBorde,
-          borderRadius: 18,
+          borderColor: enBarra ? colorFondo : "#FFFFFF",
+          borderRadius: 16,
         },
+        estiloPosicion,
       ]}
     >
       {verDibujo && (
-        <Text
-          style={[
-            estilos.iconoMano,
-            canal === "soloPictograma" && { fontSize: 40, lineHeight: 44 },
-          ]}
-        >
-          ✋
-        </Text>
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <PictogramaInterfaz nombre="ayuda" etiqueta="ayuda" tam={ladoDibujo} />
+        </View>
       )}
       {verTexto && (
-        <Text
+        <Texto
           style={[
             estilos.textoEtiqueta,
             { color: colorTexto },
@@ -82,12 +79,13 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
           numberOfLines={1}
         >
           {etiqueta}
-        </Text>
+        </Texto>
       )}
     </TouchableOpacity>
   );
 };
 
+// Sin sombra: se separa de la pantalla por el color y el borde blanco de 3 px.
 const estilos = StyleSheet.create({
   botonFlotante: {
     position: "absolute",
@@ -96,29 +94,18 @@ const estilos = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 3,
     padding: 4,
-    gap: 2,
+    gap: 4,
     ...Platform.select({
       web: {
         cursor: "pointer",
         userSelect: "none",
-        boxShadow: "0 6px 12px rgba(0, 0, 0, 0.25)",
       },
-      default: {
-        elevation: 8,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-      },
+      default: {},
     }),
   },
-  iconoMano: {
-    fontSize: 32,
-    lineHeight: 34,
-  },
   textoEtiqueta: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 15,
+    fontWeight: "700",
     textAlign: "center",
   },
 });

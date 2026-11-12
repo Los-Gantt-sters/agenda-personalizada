@@ -19,16 +19,22 @@ npm test -- UsabilidadNoLectores
 | Código | Criterio | Resultado |
 |---|---|---|
 | NL-01 | Todo botón tiene rol y etiqueta accesible (lo anuncia la ayuda de voz) | Cumple |
-| NL-02 | Todo botón lleva símbolo, emoji o foto, y cada paso su pictograma | Cumple |
+| NL-02 | Todo botón lleva pictograma de ARASAAC, icono dibujado o foto, y cada paso su pictograma | Cumple |
 | NL-03 | Clases y fotos ≥ 120 dp, dibujos ≥ 96 dp, resto ≥ 44 dp (WCAG 2.5.5 AAA) | Cumple |
 | NL-04 | Si la pantalla es estrecha, las fotos bajan de fila en vez de encogerse | Cumple |
-| NL-05 | Los 5 toques del recorrido suenan | Cumple |
-| NL-06 | Se entra sin escribir y con 5 toques | Cumple |
+| NL-05 | Los 6 toques del recorrido suenan | Cumple |
+| NL-06 | Se entra sin escribir y con 6 toques (clase, foto, 3 dibujos y «Entrar») | Cumple |
 | NL-07 | Los errores se pueden deshacer y los avisos llevan icono | Cumple |
 
 ## No conformidades
 
-- **NC-005 (Menor).** «Cambiar de clase», «No soy yo» y «Volver» no suenan, y el resto del recorrido sí. **Acción propuesta:** añadirles el sonido «toque».
+- **NC-005 (Menor), resuelta en noviembre de 2026.** «Cambiar de clase», «No soy yo» y «Volver» no sonaban. Con las mejoras de la profesora esos botones pasan a ser «Atrás» en la barra de abajo, que en las pantallas del alumno suena con «toque».
+
+## Cambios de noviembre de 2026 (mejoras de la profesora)
+
+- Ya no hay pantalla de bienvenida: la app empieza en «¿Cuál es tu clase?». Los adultos entran desde ahí.
+- La contraseña de 3 dibujos ocupa toda la pantalla y, tras tocar el tercero, hay que pulsar «Entrar» (o «Adelante» en la barra). Por eso el recorrido pasa de 5 a 6 toques: es un toque más, pero el alumno comprueba sus dibujos antes de entrar.
+- Todas las pantallas tienen cabecera con su nombre y una barra abajo con «Ayuda», «Atrás», «Adelante» y «Accesibilidad», siempre en el mismo sitio.
 
 ## Decisiones del equipo
 

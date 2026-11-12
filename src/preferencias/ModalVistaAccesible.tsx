@@ -1,12 +1,22 @@
-// Modal accesible de configuración rápida de vista (a11yPanel en tuagendita-prototipos.html).
-// Permite al estudiante o tutor cambiar al momento qué información se ve en pantalla:
-// solo pictogramas, solo texto o ambos a la vez, garantizando áreas táctiles >= 48px y Lectura Fácil.
+// Ventana rápida de accesibilidad (a11yPanel en tuagendita-prototipos.html). Se abre con el botón
+// «Accesibilidad» de la barra de abajo, en cualquier pantalla. El alumno o el tutor cambian al
+// momento qué se ve (solo dibujos, solo texto o ambos) y el tamaño de la letra.
+// Áreas táctiles de al menos 48 px, Lectura Fácil y la opción elegida con marca, no solo con color.
 import React from "react";
-import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 
-import { useTema } from "../temas";
+import type { Paleta } from "../temas";
+import { Icono, type NombreIcono } from "../ui/Icono";
+import { Texto } from "../ui/Texto";
+import { useApariencia, useEstilos } from "../ui/apariencia";
 import { usePreferencias } from "./PreferenciasProvider";
-import { MODOS_CANAL, ORDEN_MODOS_CANAL, ORDEN_TAMANOS_LETRA, TAMANOS_LETRA } from "./opciones";
+import {
+  MODOS_CANAL,
+  ORDEN_MODOS_CANAL,
+  ORDEN_TAMANOS_LETRA,
+  TAMANOS_LETRA,
+  type ModoCanal,
+} from "./opciones";
 
 export interface ModalVistaAccesibleProps {
   visible: boolean;
@@ -14,13 +24,20 @@ export interface ModalVistaAccesibleProps {
   testID?: string;
 }
 
+const ICONOS_CANAL: Record<ModoCanal, NombreIcono[]> = {
+  ambos: ["imagen", "lista"],
+  soloPictograma: ["imagen"],
+  soloTexto: ["lista"],
+};
+
 export function ModalVistaAccesible({
   visible,
   alCerrar,
   testID = "modal-vista-accesible",
 }: ModalVistaAccesibleProps) {
-  const { colores } = useTema();
-  const { preferencias, estilos, cambiar } = usePreferencias();
+  const { colores } = useApariencia();
+  const e = useEstilos(crearEstilos);
+  const { preferencias, cambiar } = usePreferencias();
 
   return (
     <Modal
@@ -30,262 +47,177 @@ export function ModalVistaAccesible({
       onRequestClose={alCerrar}
       testID={testID}
     >
-      <View style={styles.fondoOscurecido}>
+      <View style={e.fondo}>
         <View
-          style={[
-            styles.tarjetaModal,
-            {
-              backgroundColor: colores.superficie,
-              borderColor: colores.primario,
-            },
-          ]}
+          style={e.tarjeta}
           accessibilityRole="dialog"
           accessibilityLabel="Opciones de accesibilidad y vista de la agenda"
         >
-          {/* Cabecera con título y botón de cierre */}
-          <View style={styles.cabecera}>
-            <View style={styles.tituloFila}>
-              <Text style={styles.iconoCabecera} accessibilityElementsHidden>
-                ♿
-              </Text>
-              <Text
-                style={[
-                  styles.tituloTexto,
-                  {
-                    color: colores.texto,
-                    fontFamily: estilos.fuenteNegrita,
-                  },
-                ]}
-              >
-                ¿Cómo quieres ver la pantalla?
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.botonListo,
-                {
-                  backgroundColor: colores.primario,
-                  borderColor: colores.primario,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar opciones de vista"
-              testID="btn-cerrar-modal-vista"
-              onPress={alCerrar}
-            >
-              <Text
-                style={[
-                  styles.textoBotonListo,
-                  {
-                    color: colores.textoSobrePrimario,
-                    fontFamily: estilos.fuenteNegrita,
-                  },
-                ]}
-              >
-                ✓ Listo
-              </Text>
-            </TouchableOpacity>
+          <View style={e.cabecera}>
+            <Icono nombre="accesibilidad" color={colores.primario} tam={36} />
+            <Texto style={e.titulo} accessibilityRole="header">
+              ¿Cómo quieres ver la pantalla?
+            </Texto>
           </View>
 
-          {/* Sección 1: Canal de información (Qué se ve) */}
-          <View style={styles.seccion}>
-            <Text
-              style={[
-                styles.etiquetaSeccion,
-                {
-                  color: colores.texto,
-                  fontFamily: estilos.fuenteNegrita,
-                },
-              ]}
+          <View style={e.seccion}>
+            <Texto style={e.etiquetaSeccion}>Qué se ve</Texto>
+            <View style={e.fila} accessibilityRole="radiogroup" accessibilityLabel="Qué se ve">
+              {ORDEN_MODOS_CANAL.map((modo) => (
+                <Opcion
+                  key={modo}
+                  testID={`opcion-canal-${modo}`}
+                  etiqueta={MODOS_CANAL[modo].etiqueta}
+                  elegida={preferencias.canal === modo}
+                  onPress={() => cambiar({ canal: modo })}
+                  iconos={ICONOS_CANAL[modo]}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={e.seccion}>
+            <Texto style={e.etiquetaSeccion}>Tamaño de letra</Texto>
+            <View
+              style={e.fila}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Tamaño de letra"
             >
-              1. Qué se ve (Dibujos y palabras)
-            </Text>
-            <View style={styles.filaOpciones}>
-              {ORDEN_MODOS_CANAL.map((modo) => {
-                const info = MODOS_CANAL[modo];
-                const seleccionado = preferencias.canal === modo;
-                return (
-                  <TouchableOpacity
-                    key={modo}
-                    testID={`opcion-canal-${modo}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={info.etiqueta}
-                    accessibilityState={{ selected: seleccionado }}
-                    onPress={() => cambiar({ canal: modo })}
-                    style={[
-                      styles.chipOpcion,
-                      {
-                        backgroundColor: seleccionado
-                          ? colores.superficieDestacada
-                          : colores.superficie,
-                        borderColor: seleccionado ? colores.primario : colores.borde,
-                        borderWidth: seleccionado ? 3 : 2,
-                      },
-                    ]}
-                  >
-                    <Text style={styles.iconoChip}>{info.icono}</Text>
-                    <Text
-                      style={[
-                        styles.textoChip,
-                        {
-                          color: colores.texto,
-                          fontFamily: seleccionado ? estilos.fuenteNegrita : estilos.fuenteNormal,
-                          fontWeight: seleccionado ? "700" : "500",
-                        },
-                      ]}
+              {ORDEN_TAMANOS_LETRA.map((tamano) => (
+                <Opcion
+                  key={tamano}
+                  testID={`opcion-letra-${tamano}`}
+                  etiqueta={TAMANOS_LETRA[tamano].etiqueta}
+                  accessibilityLabel={`Tamaño ${TAMANOS_LETRA[tamano].etiqueta}`}
+                  elegida={preferencias.tamanoLetra === tamano}
+                  onPress={() => cambiar({ tamanoLetra: tamano })}
+                  muestra={
+                    <Texto
+                      escalar={false}
+                      style={[e.letraMuestra, { fontSize: 24 * TAMANOS_LETRA[tamano].escala }]}
                     >
-                      {info.etiqueta}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+                      A
+                    </Texto>
+                  }
+                />
+              ))}
             </View>
           </View>
 
-          {/* Sección 2: Tamaño de letra rápido */}
-          <View style={styles.seccion}>
-            <Text
-              style={[
-                styles.etiquetaSeccion,
-                {
-                  color: colores.texto,
-                  fontFamily: estilos.fuenteNegrita,
-                },
-              ]}
-            >
-              2. Tamaño de letra
-            </Text>
-            <View style={styles.filaOpciones}>
-              {ORDEN_TAMANOS_LETRA.map((tamano) => {
-                const info = TAMANOS_LETRA[tamano];
-                const seleccionado = preferencias.tamanoLetra === tamano;
-                return (
-                  <TouchableOpacity
-                    key={tamano}
-                    testID={`opcion-letra-${tamano}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Tamaño ${info.etiqueta}`}
-                    accessibilityState={{ selected: seleccionado }}
-                    onPress={() => cambiar({ tamanoLetra: tamano })}
-                    style={[
-                      styles.chipOpcion,
-                      {
-                        backgroundColor: seleccionado
-                          ? colores.superficieDestacada
-                          : colores.superficie,
-                        borderColor: seleccionado ? colores.primario : colores.borde,
-                        borderWidth: seleccionado ? 3 : 2,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.textoChip,
-                        {
-                          color: colores.texto,
-                          fontFamily: seleccionado ? estilos.fuenteNegrita : estilos.fuenteNormal,
-                          fontWeight: seleccionado ? "700" : "500",
-                        },
-                      ]}
-                    >
-                      {info.etiqueta}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+          <Pressable
+            style={({ pressed }) => [e.botonListo, pressed && e.pulsado]}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar opciones de vista"
+            testID="btn-cerrar-modal-vista"
+            onPress={alCerrar}
+          >
+            <Icono nombre="check" color={colores.textoSobrePrimario} tam={28} grosor={3} />
+            <Texto style={e.textoListo}>Listo</Texto>
+          </Pressable>
         </View>
       </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  fondoOscurecido: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  tarjetaModal: {
-    maxWidth: 580,
-    width: "100%",
-    borderRadius: 24,
-    borderWidth: 4,
-    padding: 24,
-    gap: 20,
-    ...Platform.select({
-      web: {
-        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.25)",
-      },
-      default: {
-        elevation: 8,
-      },
-    }),
-  },
-  cabecera: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-  },
-  tituloFila: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  iconoCabecera: {
-    fontSize: 28,
-  },
-  tituloTexto: {
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  botonListo: {
-    minHeight: 48,
-    minWidth: 90,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-  },
-  textoBotonListo: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  seccion: {
-    gap: 10,
-  },
-  etiquetaSeccion: {
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  filaOpciones: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  chipOpcion: {
-    minHeight: 52, // >= 48px WCAG
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    flexGrow: 1,
-  },
-  iconoChip: {
-    fontSize: 22,
-  },
-  textoChip: {
-    fontSize: 16,
-  },
-});
+function Opcion({
+  etiqueta,
+  elegida,
+  onPress,
+  iconos,
+  muestra,
+  accessibilityLabel,
+  testID,
+}: {
+  etiqueta: string;
+  elegida: boolean;
+  onPress: () => void;
+  iconos?: NombreIcono[];
+  muestra?: React.ReactNode;
+  accessibilityLabel?: string;
+  testID: string;
+}) {
+  const { colores } = useApariencia();
+  const e = useEstilos(crearEstilos);
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="radio"
+      accessibilityLabel={accessibilityLabel ?? etiqueta}
+      accessibilityState={{ checked: elegida, selected: elegida }}
+      onPress={onPress}
+      style={({ pressed }) => [e.opcion, elegida && e.opcionElegida, pressed && e.pulsado]}
+    >
+      <View style={e.filaIconos}>
+        {iconos?.map((n) => (
+          <Icono key={n} nombre={n} color={colores.primario} tam={28} />
+        ))}
+        {muestra}
+      </View>
+      <View style={e.filaIconos}>
+        {elegida ? <Icono nombre="check" color={colores.primario} tam={22} grosor={3} /> : null}
+        <Texto style={e.textoOpcion}>{etiqueta}</Texto>
+      </View>
+    </Pressable>
+  );
+}
+
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    fondo: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 16,
+    },
+    tarjeta: {
+      maxWidth: 640,
+      width: "100%",
+      borderRadius: 20,
+      borderWidth: 3,
+      borderColor: c.primario,
+      backgroundColor: c.superficie,
+      padding: 24,
+      gap: 22,
+    },
+    cabecera: { flexDirection: "row", alignItems: "center", gap: 12 },
+    titulo: { flex: 1, fontSize: 26, fontWeight: "700", color: c.texto },
+    seccion: { gap: 10 },
+    etiquetaSeccion: { fontSize: 20, fontWeight: "700", color: c.texto },
+    fila: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+    opcion: {
+      flexGrow: 1,
+      flexBasis: 150,
+      minHeight: 84,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      borderWidth: 2,
+      borderColor: c.borde,
+      backgroundColor: c.superficie,
+      ...Platform.select({ web: { cursor: "pointer" }, default: {} }),
+    },
+    opcionElegida: {
+      borderWidth: 4,
+      borderColor: c.primario,
+      backgroundColor: c.superficieDestacada,
+    },
+    filaIconos: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 28 },
+    textoOpcion: { fontSize: 18, fontWeight: "700", color: c.texto },
+    letraMuestra: { fontWeight: "700", color: c.primario },
+    botonListo: {
+      minHeight: 64,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      borderRadius: 16,
+      backgroundColor: c.primario,
+    },
+    textoListo: { fontSize: 22, fontWeight: "700", color: c.textoSobrePrimario },
+    pulsado: { opacity: 0.85 },
+  });

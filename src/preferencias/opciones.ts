@@ -94,12 +94,34 @@ export const MODOS_CANAL: Record<ModoCanal, InfoModoCanal> = {
   },
 };
 
+// ---- Letra escolar: cada centro enseña a leer en MAYÚSCULAS o en minúsculas ----
+// «Minúsculas» deja el texto como está escrito (no lo fuerza todo a minúscula).
+export type CajaLetra = "normal" | "mayusculas";
+
+export const CAJAS_LETRA: Record<CajaLetra, { etiqueta: string; descripcion: string }> = {
+  normal: { etiqueta: "Minúsculas", descripcion: "El texto se escribe como siempre" },
+  mayusculas: { etiqueta: "MAYÚSCULAS", descripcion: "Todo el texto en letra mayúscula" },
+};
+
+// ---- Tareas que se ven en «Hecho» y en «Después» (concepto de tiempo de cada alumno) ----
+// Hay quien se orienta mejor con pocas tareas a la vista y quien quiere ver el día entero.
+export type TareasVisibles = "una" | "tres" | "todas";
+
+export const TAREAS_VISIBLES: Record<TareasVisibles, { etiqueta: string; maximo: number }> = {
+  una: { etiqueta: "Solo 1", maximo: 1 },
+  tres: { etiqueta: "Hasta 3", maximo: 3 },
+  // Sin límite: si no caben todas, las tarjetas se hacen más pequeñas y se cuentan las que faltan.
+  todas: { etiqueta: "Todas", maximo: 99 },
+};
+
 /** Orden en que se muestran las opciones en el panel. */
 export const ORDEN_FUENTES: FuenteLetra[] = ["atkinson", "lexend", "andika"];
 export const ORDEN_TAMANOS_LETRA: TamanoLetra[] = ["normal", "grande", "extra"];
 export const ORDEN_TAMANOS_BOTON: TamanoBoton[] = ["M", "L", "XL"];
 export const ORDEN_FORMAS: FormaBoton[] = ["round", "square", "pill"];
 export const ORDEN_MODOS_CANAL: ModoCanal[] = ["ambos", "soloPictograma", "soloTexto"];
+export const ORDEN_CAJAS_LETRA: CajaLetra[] = ["normal", "mayusculas"];
+export const ORDEN_TAREAS_VISIBLES: TareasVisibles[] = ["una", "tres", "todas"];
 
 /** RI3.1: preferencias de visualización del estudiante que cubre este panel. */
 export interface PreferenciasApariencia {
@@ -109,16 +131,25 @@ export interface PreferenciasApariencia {
   tamanoBoton: TamanoBoton;
   forma: FormaBoton;
   canal: ModoCanal;
+  /** Letra escolar: como se escribe o todo en mayúsculas. */
+  caja: CajaLetra;
+  /** Cuántas tareas se ven a cada lado de «Ahora». */
+  tareasVisibles: TareasVisibles;
 }
 
-/** Valores de la variante A del prototipo: clara, Atkinson, redondeados, botones grandes, ambos. */
+/**
+ * Valores por defecto: tema claro («Piedra»), Lexend, redondeados, botones grandes, ambos, el texto
+ * como se escribe y hasta 3 tareas a cada lado.
+ */
 export const PREFERENCIAS_POR_DEFECTO: PreferenciasApariencia = {
   tema: TEMA_POR_DEFECTO,
-  fuente: "atkinson",
+  fuente: "lexend",
   tamanoLetra: "normal",
   tamanoBoton: "L",
   forma: "round",
   canal: "ambos",
+  caja: "normal",
+  tareasVisibles: "tres",
 };
 
 const tiene = (objeto: object, clave: unknown): boolean =>
@@ -143,5 +174,9 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
       : d.tamanoBoton,
     forma: tiene(FORMAS_BOTON, c.forma) ? (c.forma as FormaBoton) : d.forma,
     canal: tiene(MODOS_CANAL, c.canal) ? (c.canal as ModoCanal) : d.canal,
+    caja: tiene(CAJAS_LETRA, c.caja) ? (c.caja as CajaLetra) : d.caja,
+    tareasVisibles: tiene(TAREAS_VISIBLES, c.tareasVisibles)
+      ? (c.tareasVisibles as TareasVisibles)
+      : d.tareasVisibles,
   };
 }

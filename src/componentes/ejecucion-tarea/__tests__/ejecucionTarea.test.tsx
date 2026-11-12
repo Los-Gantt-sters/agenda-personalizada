@@ -1,7 +1,8 @@
-import { act, render, screen, userEvent } from "@testing-library/react-native";
+import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import { AREA_TACTIL_MINIMA, BotonAccionTarea } from "../BotonAccionTarea";
 import { RefuerzoPositivo } from "../RefuerzoPositivo";
+import { ProveedorNecesidades } from "../../../necesidades";
 import { msDesde } from "../useTranscurrido";
 import { reproducirSonido } from "../../../servicios/sonidos";
 
@@ -9,6 +10,10 @@ import { reproducirSonido } from "../../../servicios/sonidos";
 jest.setTimeout(20_000);
 
 jest.mock("../../../servicios/sonidos", () => ({ reproducirSonido: jest.fn() }));
+// El refuerzo es una pantalla con barra de abajo (Atrás / Adelante): necesita el router.
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+}));
 
 describe("Ejecución de tarea (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)", () => {
   afterEach(() => {
@@ -16,10 +21,11 @@ describe("Ejecución de tarea (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)", ()
     jest.clearAllMocks();
   });
 
-  it("los botones son texto grande en mayúsculas con «Mantén pulsado» debajo, sin pictograma", async () => {
+  it("los botones son texto grande con «Mantén pulsado» debajo, sin pictograma", async () => {
     await render(<BotonAccionTarea accion="terminar" onConfirmar={() => {}} />);
     const texto = screen.getByText("Terminar");
-    expect(StyleSheet.flatten(texto.props.style)).toMatchObject({ textTransform: "uppercase" });
+    // Mayúsculas o minúsculas las elige el centro en las preferencias («Tipografía escolar»).
+    expect(StyleSheet.flatten(texto.props.style).textTransform).toBeUndefined();
     expect(StyleSheet.flatten(texto.props.style).fontSize).toBeGreaterThanOrEqual(36);
     expect(screen.getByText("Mantén pulsado")).toBeTruthy();
     expect(screen.queryByRole("image")).toBeNull();
@@ -82,6 +88,83 @@ describe("Ejecución de tarea (SCRUM-74: T-08.1 Botones EMPEZAR / TERMINAR)", ()
       />,
     );
     expect(screen.queryByText("¡Muy bien!")).toBeNull();
+  });
+
+  it("pregunta «¿Cómo te has sentido?»; la respuesta se entrega al pulsar Seguir", async () => {
+    const user = userEvent.setup();
+    const onSeguir = jest.fn();
+    const onEmocion = jest.fn();
+    await render(
+      <RefuerzoPositivo
+        tarea="Recreo"
+        preferencias={{ animacion: "ninguna", sonido: false }}
+        onSeguir={onSeguir}
+        onEmocion={onEmocion}
+      />,
+    );
+    expect(screen.getByText("¿Cómo te has sentido?")).toBeTruthy();
+    const contento = screen.getByRole("radio", { name: "Contento" });
+    await user.press(contento);
+    expect(screen.getByRole("radio", { name: "Contento" }).props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    expect(onEmocion).not.toHaveBeenCalled();
+
+    await user.press(screen.getByRole("button", { name: "Seguir" }));
+    expect(onEmocion).toHaveBeenCalledWith("contento");
+    expect(onSeguir).toHaveBeenCalledTimes(1);
+  });
+
+  it("contestar no es obligatorio: Seguir (o Adelante en la barra) funciona sin elegir", async () => {
+    const user = userEvent.setup();
+    const onSeguir = jest.fn();
+    const onEmocion = jest.fn();
+    await render(
+      <RefuerzoPositivo
+        tarea="Recreo"
+        preferencias={{ animacion: "ninguna", sonido: false }}
+        onSeguir={onSeguir}
+        onEmocion={onEmocion}
+      />,
+    );
+    await user.press(screen.getByTestId("btn-barra-adelante"));
+    expect(onSeguir).toHaveBeenCalledTimes(1);
+    expect(onEmocion).not.toHaveBeenCalled();
+  });
+
+  it("«Ayuda» dentro de la felicitación abre una sola ventana, la de encima", async () => {
+    const user = userEvent.setup();
+    await render(
+      <ProveedorNecesidades inicialmenteVisible={false}>
+        <RefuerzoPositivo
+          tarea="Recreo"
+          preferencias={{ animacion: "ninguna", sonido: false }}
+          onSeguir={() => {}}
+        />
+      </ProveedorNecesidades>,
+    );
+    await user.press(screen.getByTestId("btn-necesidades"));
+    expect(screen.getAllByTestId("btn-cerrar-modal-necesidades")).toHaveLength(1);
+    // Está dentro de la felicitación (encima), no en la raíz (debajo, sin verse).
+    expect(
+      within(screen.getByTestId("refuerzo-positivo")).getByTestId("btn-cerrar-modal-necesidades"),
+    ).toBeTruthy();
+    await user.press(screen.getByTestId("btn-cerrar-modal-necesidades"));
+    expect(screen.queryByTestId("btn-cerrar-modal-necesidades")).toBeNull();
+  });
+
+  it("sin sonido en el perfil, elegir emoción y Seguir tampoco suenan (RF6.4)", async () => {
+    const user = userEvent.setup();
+    await render(
+      <RefuerzoPositivo
+        tarea="Recreo"
+        preferencias={{ animacion: "ninguna", sonido: false }}
+        onSeguir={() => {}}
+      />,
+    );
+    await user.press(screen.getByRole("radio", { name: "Triste" }));
+    await user.press(screen.getByTestId("btn-barra-adelante"));
+    expect(reproducirSonido).not.toHaveBeenCalled();
   });
 
   it("cuenta el tiempo desde la hora de inicio guardada", () => {

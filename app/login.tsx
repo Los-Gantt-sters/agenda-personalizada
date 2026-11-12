@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -13,11 +12,17 @@ import {
 import { useRouter } from "expo-router";
 import { signInSupervisor, getRoleHomeRoute } from "../src/servicios/authService";
 import { AUTH_GENERIC_ERROR_MESSAGE, SupervisorRole } from "../src/tipos/auth";
+import type { Paleta } from "../src/temas";
+import { Pantalla } from "../src/pantalla";
+import { Icono, LogoColegio, Texto, useApariencia, useEstilos } from "../src/ui";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colores, fuente } = useApariencia();
+  const styles = useEstilos(crearEstilos);
 
   const [email, setEmail] = useState("");
+  const [verPassword, setVerPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -95,273 +100,312 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.keyboardContainer}
+    <Pantalla
+      titulo="Acceso para adultos"
+      simbolo={<Icono nombre="llave" color={colores.primario} tam={32} />}
+      // Se llega desde «¿Cuál es tu clase?»; si se entra directo a /login, Atrás lleva a esa pantalla
+      alAtras={() => (router.canGoBack?.() ? router.back() : router.replace("/"))}
+      etiquetaAtras="Atrás: volver a elegir clase"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <Text style={styles.title} accessibilityRole="header">
-              Acceso Supervisores
-            </Text>
-            <Text style={styles.subtitle}>CEE Fundación Purísima Concepción · Agensible</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardContainer}
+      >
+        {/* Solo se desplaza si sale el teclado; sin él, todo cabe en la pantalla. */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.columnaLateral}>
+            <LogoColegio ancho={300} />
+            <Texto style={styles.subtitle}>Tutores, familias y administración del colegio</Texto>
+            <View style={styles.demoSection}>
+              <Texto style={styles.demoSectionTitle}>Accesos de prueba (demo)</Texto>
+              <View style={styles.demoButtonGroup}>
+                <TouchableOpacity
+                  style={styles.demoButton}
+                  onPress={() => setDemoRole("tutor_docente")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Rellenar como Tutor Docente"
+                >
+                  <Texto style={styles.demoButtonText}>Docente</Texto>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.demoButton}
+                  onPress={() => setDemoRole("familiar")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Rellenar como Familia"
+                >
+                  <Texto style={styles.demoButtonText}>Familia</Texto>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.demoButton}
+                  onPress={() => setDemoRole("admin")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Rellenar como Administrador"
+                >
+                  <Texto style={styles.demoButtonText}>Admin</Texto>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
 
-          {errorMessage && (
-            <View
-              style={styles.errorAlert}
-              accessibilityRole="alert"
-              accessibilityLiveRegion="assertive"
+          <View style={styles.card}>
+            {errorMessage && (
+              <View
+                style={styles.errorAlert}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="assertive"
+              >
+                <Icono nombre="alerta" color={colores.peligro} tam={24} />
+                <Texto style={styles.errorAlertText}>{errorMessage}</Texto>
+              </View>
+            )}
+
+            <View style={styles.fieldGroup}>
+              <Texto nativeID="emailLabel" style={styles.label}>
+                Correo electrónico
+              </Texto>
+              <TextInput
+                style={[
+                  styles.input,
+                  { fontFamily: fuente.normal },
+                  validationErrors.email ? styles.inputError : null,
+                ]}
+                placeholder="ejemplo@purisima.es"
+                placeholderTextColor={colores.textoSecundario}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (validationErrors.email) {
+                    setValidationErrors((prev) => ({ ...prev, email: undefined }));
+                  }
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                accessibilityLabel="Correo electrónico del supervisor"
+                accessibilityHint="Introduce tu dirección de correo electrónico institucional"
+                accessibilityLabelledBy="emailLabel"
+                editable={!loading}
+              />
+              {validationErrors.email && <ErrorCampo texto={validationErrors.email} />}
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Texto nativeID="passwordLabel" style={styles.label}>
+                Contraseña
+              </Texto>
+              <View>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { fontFamily: fuente.normal },
+                    styles.inputConBoton,
+                    validationErrors.password ? styles.inputError : null,
+                  ]}
+                  placeholder="••••••••"
+                  placeholderTextColor={colores.textoSecundario}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (validationErrors.password) {
+                      setValidationErrors((prev) => ({ ...prev, password: undefined }));
+                    }
+                  }}
+                  secureTextEntry={!verPassword}
+                  autoCapitalize="none"
+                  accessibilityLabel="Contraseña del supervisor"
+                  accessibilityHint="Introduce tu contraseña segura"
+                  accessibilityLabelledBy="passwordLabel"
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  style={styles.botonVer}
+                  onPress={() => setVerPassword((v) => !v)}
+                  accessibilityRole="button"
+                  accessibilityLabel={verPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  <Icono
+                    nombre={verPassword ? "ojoTachado" : "ojo"}
+                    color={colores.textoSecundario}
+                    tam={26}
+                  />
+                </TouchableOpacity>
+              </View>
+              {validationErrors.password && <ErrorCampo texto={validationErrors.password} />}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitButton, loading ? styles.submitButtonDisabled : null]}
+              onPress={handleLogin}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel={loading ? "Iniciando sesión" : "Iniciar sesión"}
+              accessibilityState={{ busy: loading, disabled: loading }}
             >
-              <Text style={styles.errorAlertText}>{errorMessage}</Text>
-            </View>
-          )}
-
-          <View style={styles.fieldGroup}>
-            <Text nativeID="emailLabel" style={styles.label}>
-              Correo electrónico
-            </Text>
-            <TextInput
-              style={[styles.input, validationErrors.email ? styles.inputError : null]}
-              placeholder="ejemplo@purisima.es"
-              placeholderTextColor="#A0AEC0"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (validationErrors.email) {
-                  setValidationErrors((prev) => ({ ...prev, email: undefined }));
-                }
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              accessibilityLabel="Correo electrónico del supervisor"
-              accessibilityHint="Introduce tu dirección de correo electrónico institucional"
-              accessibilityLabelledBy="emailLabel"
-              editable={!loading}
-            />
-            {validationErrors.email && (
-              <Text style={styles.fieldErrorText} accessibilityRole="alert">
-                {validationErrors.email}
-              </Text>
-            )}
+              {loading ? (
+                <ActivityIndicator color={colores.textoSobrePrimario} />
+              ) : (
+                <Texto style={styles.submitButtonText}>Iniciar sesión</Texto>
+              )}
+            </TouchableOpacity>
           </View>
-
-          <View style={styles.fieldGroup}>
-            <Text nativeID="passwordLabel" style={styles.label}>
-              Contraseña
-            </Text>
-            <TextInput
-              style={[styles.input, validationErrors.password ? styles.inputError : null]}
-              placeholder="••••••••"
-              placeholderTextColor="#A0AEC0"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (validationErrors.password) {
-                  setValidationErrors((prev) => ({ ...prev, password: undefined }));
-                }
-              }}
-              secureTextEntry
-              autoCapitalize="none"
-              accessibilityLabel="Contraseña del supervisor"
-              accessibilityHint="Introduce tu contraseña segura"
-              accessibilityLabelledBy="passwordLabel"
-              editable={!loading}
-            />
-            {validationErrors.password && (
-              <Text style={styles.fieldErrorText} accessibilityRole="alert">
-                {validationErrors.password}
-              </Text>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.submitButton, loading ? styles.submitButtonDisabled : null]}
-            onPress={handleLogin}
-            disabled={loading}
-            accessibilityRole="button"
-            accessibilityLabel={loading ? "Iniciando sesión" : "Iniciar sesión"}
-            accessibilityState={{ busy: loading, disabled: loading }}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>Iniciar sesión</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.demoSection}>
-            <Text style={styles.demoSectionTitle}>Accesos rápidos de prueba (Demo / QA):</Text>
-            <View style={styles.demoButtonGroup}>
-              <TouchableOpacity
-                style={styles.demoButton}
-                onPress={() => setDemoRole("tutor_docente")}
-                accessibilityRole="button"
-                accessibilityLabel="Rellenar como Tutor Docente"
-              >
-                <Text style={styles.demoButtonText}>Docente</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.demoButton}
-                onPress={() => setDemoRole("familiar")}
-                accessibilityRole="button"
-                accessibilityLabel="Rellenar como Familia"
-              >
-                <Text style={styles.demoButtonText}>Familia</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.demoButton}
-                onPress={() => setDemoRole("admin")}
-                accessibilityRole="button"
-                accessibilityLabel="Rellenar como Administrador"
-              >
-                <Text style={styles.demoButtonText}>Admin</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Pantalla>
   );
 }
 
-const styles = StyleSheet.create({
-  keyboardContainer: {
-    flex: 1,
-    backgroundColor: "#EDF2F7",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 440,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 28,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  header: {
-    marginBottom: 24,
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1A365D",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#4A5568",
-    textAlign: "center",
-  },
-  errorAlert: {
-    backgroundColor: "#FFF5F5",
-    borderColor: "#FEB2B2",
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-  },
-  errorAlertText: {
-    color: "#C53030",
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  fieldGroup: {
-    marginBottom: 18,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2D3748",
-    marginBottom: 6,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#CBD5E0",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    color: "#1A202C",
-    backgroundColor: "#F7FAFC",
-  },
-  inputError: {
-    borderColor: "#E53E3E",
-    backgroundColor: "#FFF5F5",
-  },
-  fieldErrorText: {
-    color: "#C53030",
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  submitButton: {
-    height: 50,
-    backgroundColor: "#2B6CB0",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 8,
-    shadowColor: "#2B6CB0",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  submitButtonDisabled: {
-    backgroundColor: "#90CDF4",
-  },
-  submitButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  demoSection: {
-    marginTop: 26,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-    alignItems: "center",
-  },
-  demoSectionTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#718096",
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  demoButtonGroup: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    width: "100%",
-  },
-  demoButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: "#EDF2F7",
-    borderWidth: 1,
-    borderColor: "#CBD5E0",
-  },
-  demoButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#2D3748",
-  },
-});
+/** Error de un campo: icono y texto, no solo el color rojo del borde. */
+function ErrorCampo({ texto }: { texto: string }) {
+  const { colores } = useApariencia();
+  const styles = useEstilos(crearEstilos);
+  return (
+    <View style={styles.fieldError} accessibilityRole="alert">
+      <Icono nombre="alerta" color={colores.peligro} tam={20} />
+      <Texto style={styles.fieldErrorText}>{texto}</Texto>
+    </View>
+  );
+}
+
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    keyboardContainer: {
+      flex: 1,
+      backgroundColor: c.fondo,
+    },
+    // Dos columnas en la tableta: logo y accesos de prueba a la izquierda, formulario a la derecha
+    scrollContent: {
+      flexGrow: 1,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      alignItems: "center",
+      alignContent: "center",
+      gap: 40,
+      padding: 20,
+    },
+    columnaLateral: {
+      width: 330,
+      gap: 18,
+    },
+    card: {
+      width: "100%",
+      maxWidth: 460,
+      backgroundColor: c.superficie,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: c.borde,
+      padding: 28,
+      gap: 18,
+    },
+    subtitle: {
+      fontSize: 17,
+      color: c.textoSecundario,
+    },
+    errorAlert: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      borderWidth: 3,
+      borderColor: c.peligro,
+      borderRadius: 10,
+      padding: 12,
+    },
+    errorAlertText: {
+      flexShrink: 1,
+      color: c.peligro,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    fieldGroup: {
+      gap: 6,
+    },
+    label: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: c.texto,
+    },
+    input: {
+      minHeight: 56,
+      borderWidth: 2,
+      borderColor: c.borde,
+      borderRadius: 10,
+      paddingHorizontal: 16,
+      fontSize: 18,
+      color: c.texto,
+      backgroundColor: c.superficie,
+    },
+    inputConBoton: {
+      paddingRight: 60,
+    },
+    inputError: {
+      borderColor: c.peligro,
+      borderWidth: 3,
+    },
+    botonVer: {
+      position: "absolute",
+      right: 4,
+      top: 4,
+      width: 48,
+      height: 48,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    fieldError: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    fieldErrorText: {
+      flexShrink: 1,
+      color: c.peligro,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    submitButton: {
+      minHeight: 60,
+      backgroundColor: c.primario,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 4,
+    },
+    submitButtonDisabled: {
+      opacity: 0.6,
+    },
+    submitButtonText: {
+      color: c.textoSobrePrimario,
+      fontSize: 20,
+      fontWeight: "700",
+    },
+    demoSection: {
+      width: "100%",
+      gap: 8,
+    },
+    demoSectionTitle: {
+      fontSize: 15,
+      color: c.textoSecundario,
+    },
+    demoButtonGroup: {
+      flexDirection: "row",
+      gap: 8,
+      flexWrap: "wrap",
+    },
+    demoButton: {
+      minHeight: 48,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: c.borde,
+      backgroundColor: c.superficie,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    demoButtonText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: c.texto,
+    },
+  });

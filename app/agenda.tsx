@@ -5,20 +5,23 @@
 // (hasta que el inicio de sesión del estudiante, HU-01, dé el id).
 // HU-08 (T-08.2): con ?confirmacion=simple se prueba el modo «¿Seguro?» en lugar de mantener
 // pulsado, hasta que salga del perfil del estudiante (SCRUM-66).
-// T-06.4: sin barras de scroll, cabecera, barra de estado ni gestos del navegador que distraigan.
+// T-06.4: sin barras de scroll, barra de estado ni gestos del navegador que distraigan.
+// Mejoras de la profesora (noviembre de 2026):
+// - Como todas las pantallas, lleva cabecera («Mi agenda» y la fecha) y la barra de abajo.
+// - Es la misma agenda para el alumno y para los adultos; cambia lo que puede hacer cada uno:
+//   el alumno, el tutor y administración pueden empezar y terminar tareas; la familia solo mira.
+// - Cuántas tareas se ven en «Hecho» y «Después» sale de las preferencias (1, hasta 3 o todas).
 // HU-16: con ?aviso=prueba la demo mueve las horas para que el aviso de «Reprografía» salga en menos
 // de un minuto; con ?aviso=visual el aviso es solo visual, sin sonido ni vibración (RNF4.3). Se
 // pueden juntar: ?aviso=prueba,visual.
 import { useEffect, useMemo } from "react";
-import { StyleSheet, View } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   AgendaDelDia,
   agendaDemo,
   agendaDemoAviso,
   ESTUDIANTE_DEMO,
-  colores,
   crearRepositorioMemoria,
   hoyISO,
   useModoSinDistracciones,
@@ -26,6 +29,19 @@ import {
 import { PREFERENCIAS_EJECUCION_POR_DEFECTO } from "../src/componentes/ejecucion-tarea";
 import { AVISO_POR_DEFECTO, type PreferenciasAviso } from "../src/componentes/aviso-anticipado";
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
+import { Pantalla } from "../src/pantalla";
+import { TAREAS_VISIBLES, usePreferenciasOpcional } from "../src/preferencias";
+import { useSesionOpcional } from "../src/sesion";
+import { PictogramaInterfaz, Texto, fechaDeHoy, useApariencia } from "../src/ui";
+import type { UserRole } from "../src/tipos/auth";
+
+/** Panel al que vuelve cada adulto con «Atrás» si no hay pantalla anterior (p. ej. tras recargar). */
+const PANEL_DE: Partial<Record<UserRole, Href>> = {
+  tutor_docente: "/docente/agenda",
+  especialista: "/docente/agenda",
+  familiar: "/familiar/resumen",
+  admin: "/admin/vinculos",
+};
 
 export default function PantallaAgenda() {
   const { estudiante, confirmacion, aviso } = useLocalSearchParams<{
@@ -71,10 +87,36 @@ export default function PantallaAgenda() {
     if (tutorDemo) Object.assign(globalThis, { __tutorDemo: tutorDemo });
   }, [tutorDemo]);
 
+  const { colores } = useApariencia();
+  const router = useRouter();
+  const prefs = usePreferenciasOpcional();
+  const tareasVisibles = TAREAS_VISIBLES[prefs?.preferencias.tareasVisibles ?? "tres"].maximo;
+
+  // Permisos según quién mira la agenda (sin sesión de adulto, es el alumno).
+  const rol = useSesionOpcional()?.sesion?.user.role ?? "estudiante";
+  const esAlumno = rol === "estudiante";
+  const soloMirar = rol === "familiar";
+
   return (
-    <View style={estilos.raiz}>
-      {/* Sin cabecera de navegación: en la vista del alumno distrae (RNF4.1). */}
-      <Stack.Screen options={{ headerShown: false, title: "Mi agenda" }} />
+    <Pantalla
+      titulo={esAlumno ? "Mi agenda" : "Agenda del alumno"}
+      simbolo={<PictogramaInterfaz nombre="agenda" etiqueta="agenda" tam={44} />}
+      derecha={
+        <Texto style={{ fontSize: 20, fontWeight: "700", color: colores.textoSecundario }}>
+          {fechaDeHoy()}
+        </Texto>
+      }
+      // El alumno no sale de su agenda por error; los adultos vuelven a su panel.
+      alAtras={
+        esAlumno
+          ? null
+          : () => {
+              if (router.canGoBack?.()) router.back();
+              else router.replace(PANEL_DE[rol] ?? "/");
+            }
+      }
+      conSonido={esAlumno}
+    >
       {/* T-06.4: tampoco se ve la barra de estado (hora, batería, notificaciones) en la tableta. */}
       <StatusBar hidden />
       <AgendaDelDia
@@ -82,9 +124,9 @@ export default function PantallaAgenda() {
         estudianteId={estudianteId}
         preferencias={preferencias}
         preferenciasAviso={preferenciasAviso}
+        tareasVisibles={tareasVisibles}
+        soloMirar={soloMirar}
       />
-    </View>
+    </Pantalla>
   );
 }
-
-const estilos = StyleSheet.create({ raiz: { flex: 1, backgroundColor: colores.fondo } });

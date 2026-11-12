@@ -4,21 +4,24 @@
 // deniega por defecto las rutas que no conoce (y bloquearía, p. ej., el acceso del alumnado).
 import { Redirect, usePathname, type Href } from "expo-router";
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { checkRouteAccess } from "../servicios/sessionGuard";
+import type { Paleta } from "../temas";
+import { Texto, useEstilos } from "../ui";
 import { useSesion } from "./SesionProvider";
 
 export function ZonaProtegida({ children }: { children: ReactNode }) {
   const { sesion, cargando } = useSesion();
   const ruta = usePathname();
+  const estilos = useEstilos(crearEstilos);
 
   if (cargando) {
     return (
       <View style={estilos.centro}>
-        <Text style={estilos.texto} accessibilityLiveRegion="polite">
+        <Texto style={estilos.texto} accessibilityLiveRegion="polite">
           Comprobando…
-        </Text>
+        </Texto>
       </View>
     );
   }
@@ -30,8 +33,14 @@ export function ZonaProtegida({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-const estilos = StyleSheet.create({
-  centro: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
-  // 15,97:1 sobre blanco
-  texto: { fontSize: 20, color: "#14213d" },
-});
+const crearEstilos = (c: Paleta) =>
+  StyleSheet.create({
+    centro: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      backgroundColor: c.fondo,
+    },
+    texto: { fontSize: 20, color: c.texto },
+  });
