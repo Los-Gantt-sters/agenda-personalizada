@@ -18,23 +18,20 @@ describe("LoginEstudiantesScreen (SCRUM-52: T-01.3 sonido en todos los botones)"
     jest.clearAllMocks();
   });
 
-  it("«Volver» suena antes de ir a la pantalla de bienvenida", async () => {
+  it("el acceso de los adultos suena y lleva al acceso para adultos", async () => {
     const user = userEvent.setup();
     await render(<LoginEstudiantesScreen />);
-
-    await user.press(screen.getByLabelText("Volver a la pantalla de bienvenida"));
+    await user.press(screen.getByTestId("btn-acceso-supervisores"));
     expect(sonar).toHaveBeenCalledWith("toque");
-    expect(mockPush).toHaveBeenCalledWith("/");
+    expect(mockPush).toHaveBeenCalledWith("/login");
   });
 
-  it("«Cambiar de clase» suena igual que elegir una clase", async () => {
+  it("«Atrás» (barra de abajo) suena igual que elegir una clase", async () => {
     const user = userEvent.setup();
     await render(<LoginEstudiantesScreen />);
-
     await user.press(screen.getByTestId("tarjeta-clase-tri"));
     sonar.mockClear();
-    await user.press(screen.getByTestId("btn-cambiar-clase"));
-
+    await user.press(screen.getByTestId("btn-barra-atras"));
     expect(sonar).toHaveBeenCalledWith("toque");
     expect(screen.getByText("¿Cuál es tu clase?")).toBeTruthy();
   });

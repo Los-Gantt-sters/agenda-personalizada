@@ -102,4 +102,63 @@ describe("useAgendaDia (SCRUM-70: T-06.2 Lógica reactiva de avance automático 
     await waitFor(() => expect(result.current.bloques.ahora?.estado).toBe("pendiente"));
     expect(result.current.errorGuardado).toBe("sin red");
   });
+  it("profesora: Atrás deshace Empezar y Terminar, también en el servidor", async () => {
+    const { repo } = crearRepositorioMemoria([
+      { ...e("1", "09:00"), requiere_inicio_fin: true },
+      e("2", "10:00"),
+    ]);
+    const { result } = await renderHook(() => useAgendaDia(repo, "al1", F));
+    await waitFor(() => expect(result.current.bloques.ahora?.id).toBe("1"));
+
+    await act(() => result.current.empezar("1"));
+    await act(() => result.current.deshacerEmpezar("1"));
+    expect(result.current.bloques.ahora).toMatchObject({ id: "1", estado: "pendiente" });
+    let servidor = await repo.obtenerSecuenciaDia("al1", F);
+    expect(servidor[0]).toMatchObject({ estado: "pendiente", inicio_real: null });
+
+    await act(() => result.current.empezar("1"));
+    await act(() => result.current.confirmarFin("1"));
+    expect(result.current.bloques.ahora?.id).toBe("2");
+    await act(() => result.current.deshacerFin("1"));
+    expect(result.current.bloques.ahora).toMatchObject({ id: "1", estado: "en_curso" });
+    servidor = await repo.obtenerSecuenciaDia("al1", F);
+    expect(servidor[0]).toMatchObject({ estado: "en_curso", fin_real: null });
+  });
+
+  it("profesora: si se pulsa Atrás antes de que se guarde Terminar, el servidor acaba sin terminar", async () => {
+    const { repo } = crearRepositorioMemoria([e("1", "09:00"), e("2", "10:00")]);
+    // El servidor tarda en guardar «Terminar»; «Atrás» llega mientras tanto.
+    let soltar: () => void = () => {};
+    const marcarHecha = repo.marcarHecha;
+    repo.marcarHecha = (id, fin) =>
+      new Promise<void>((ok) => {
+        soltar = () => marcarHecha(id, fin).then(ok);
+      });
+    const { result } = await renderHook(() => useAgendaDia(repo, "al1", F));
+    await waitFor(() => expect(result.current.bloques.ahora?.id).toBe("1"));
+
+    let fin: Promise<boolean> = Promise.resolve(false);
+    let atras: Promise<boolean> = Promise.resolve(false);
+    await act(async () => {
+      fin = result.current.confirmarFin("1");
+    });
+    expect(result.current.bloques.ahora?.id).toBe("2");
+    await act(async () => {
+      atras = result.current.deshacerFin("1");
+    });
+    expect(result.current.bloques.ahora?.id).toBe("1");
+
+    // Una recarga mientras tanto no devuelve la tarea a «Hecho».
+    await act(() => result.current.recargar());
+    expect(result.current.bloques.ahora?.id).toBe("1");
+
+    await act(async () => {
+      soltar();
+      await fin;
+      await atras;
+    });
+    const servidor = await repo.obtenerSecuenciaDia("al1", F);
+    expect(servidor[0]).toMatchObject({ estado: "pendiente", fin_real: null });
+    await waitFor(() => expect(result.current.bloques.ahora?.id).toBe("1"));
+  });
 });

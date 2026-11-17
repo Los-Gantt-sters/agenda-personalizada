@@ -1,6 +1,7 @@
 // Opciones de apariencia que el tutor puede elegir para cada estudiante (T-04.3, HU-04).
 // Los valores salen de tuagendita-prototipos.html: FONTS, FS, BS, SHAPES y canales (canal / chan),
 // con la variante A como valores por defecto.
+import type { ClaveNecesidadBasica } from "../necesidades/tipos";
 import { NombreTema, TEMA_POR_DEFECTO, esNombreTema } from "../temas";
 
 // ---- Tipo de letra (RF3.2): las tres fuentes pensadas para Lectura Fácil del prototipo ----
@@ -94,12 +95,53 @@ export const MODOS_CANAL: Record<ModoCanal, InfoModoCanal> = {
   },
 };
 
+// ---- Letra escolar: cada centro enseña a leer en MAYÚSCULAS o en minúsculas ----
+// «Minúsculas» deja el texto como está escrito (no lo fuerza todo a minúscula).
+export type CajaLetra = "normal" | "mayusculas";
+
+export const CAJAS_LETRA: Record<CajaLetra, { etiqueta: string; descripcion: string }> = {
+  normal: { etiqueta: "Minúsculas", descripcion: "El texto se escribe como siempre" },
+  mayusculas: { etiqueta: "MAYÚSCULAS", descripcion: "Todo el texto en letra mayúscula" },
+};
+
+// ---- Tareas que se ven en «Hecho» y en «Después» (concepto de tiempo de cada alumno) ----
+// Hay quien se orienta mejor con pocas tareas a la vista y quien quiere ver el día entero.
+export type TareasVisibles = "una" | "tres" | "todas";
+
+export const TAREAS_VISIBLES: Record<TareasVisibles, { etiqueta: string; maximo: number }> = {
+  una: { etiqueta: "Solo 1", maximo: 1 },
+  tres: { etiqueta: "Hasta 3", maximo: 3 },
+  // Sin límite: si no caben todas, las tarjetas se hacen más pequeñas y se cuentan las que faltan.
+  todas: { etiqueta: "Todas", maximo: 99 },
+};
+
+// ---- Reloj dentro de la tarea: se ve o no (mejora de la profesora, noviembre de 2026) ----
+// A unos alumnos el reloj les ayuda a saber cuánto queda y a otros les agobia. Si se ve, es pequeño.
+export type VerReloj = "si" | "no";
+
+export const VER_RELOJ: Record<VerReloj, { etiqueta: string; descripcion: string }> = {
+  si: { etiqueta: "Con reloj", descripcion: "Un reloj pequeño enseña cuánto tiempo queda" },
+  no: { etiqueta: "Sin reloj", descripcion: "La tarea se ve sin reloj" },
+};
+
+// ---- Necesidades que salen en «Ayuda» (mejora de la profesora, noviembre de 2026) ----
+// Se elige cuáles salen (aún no se guarda por alumno); «Urgencia» sale siempre.
+export const NECESIDADES_AYUDA: Record<ClaveNecesidadBasica, { etiqueta: string }> = {
+  bano: { etiqueta: "Baño" },
+  agua: { etiqueta: "Agua" },
+  descanso: { etiqueta: "Descanso" },
+};
+
 /** Orden en que se muestran las opciones en el panel. */
 export const ORDEN_FUENTES: FuenteLetra[] = ["atkinson", "lexend", "andika"];
 export const ORDEN_TAMANOS_LETRA: TamanoLetra[] = ["normal", "grande", "extra"];
 export const ORDEN_TAMANOS_BOTON: TamanoBoton[] = ["M", "L", "XL"];
 export const ORDEN_FORMAS: FormaBoton[] = ["round", "square", "pill"];
 export const ORDEN_MODOS_CANAL: ModoCanal[] = ["ambos", "soloPictograma", "soloTexto"];
+export const ORDEN_CAJAS_LETRA: CajaLetra[] = ["normal", "mayusculas"];
+export const ORDEN_TAREAS_VISIBLES: TareasVisibles[] = ["una", "tres", "todas"];
+export const ORDEN_VER_RELOJ: VerReloj[] = ["si", "no"];
+export const ORDEN_NECESIDADES_AYUDA: ClaveNecesidadBasica[] = ["bano", "agua", "descanso"];
 
 /** RI3.1: preferencias de visualización del estudiante que cubre este panel. */
 export interface PreferenciasApariencia {
@@ -109,16 +151,31 @@ export interface PreferenciasApariencia {
   tamanoBoton: TamanoBoton;
   forma: FormaBoton;
   canal: ModoCanal;
+  /** Letra escolar: como se escribe o todo en mayúsculas. */
+  caja: CajaLetra;
+  /** Cuántas tareas se ven a cada lado de «Ahora». */
+  tareasVisibles: TareasVisibles;
+  /** Si se ve el reloj mientras se hace una tarea. */
+  reloj: VerReloj;
+  /** Necesidades que salen en «Ayuda» (al menos una; «Urgencia» sale siempre). */
+  necesidades: ClaveNecesidadBasica[];
 }
 
-/** Valores de la variante A del prototipo: clara, Atkinson, redondeados, botones grandes, ambos. */
+/**
+ * Valores por defecto: tema claro («Piedra»), Lexend, redondeados, botones grandes, ambos, el texto
+ * como se escribe y hasta 3 tareas a cada lado.
+ */
 export const PREFERENCIAS_POR_DEFECTO: PreferenciasApariencia = {
   tema: TEMA_POR_DEFECTO,
-  fuente: "atkinson",
+  fuente: "lexend",
   tamanoLetra: "normal",
   tamanoBoton: "L",
   forma: "round",
   canal: "ambos",
+  caja: "normal",
+  tareasVisibles: "tres",
+  reloj: "si",
+  necesidades: ["bano", "agua", "descanso"],
 };
 
 const tiene = (objeto: object, clave: unknown): boolean =>
@@ -143,5 +200,18 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
       : d.tamanoBoton,
     forma: tiene(FORMAS_BOTON, c.forma) ? (c.forma as FormaBoton) : d.forma,
     canal: tiene(MODOS_CANAL, c.canal) ? (c.canal as ModoCanal) : d.canal,
+    caja: tiene(CAJAS_LETRA, c.caja) ? (c.caja as CajaLetra) : d.caja,
+    tareasVisibles: tiene(TAREAS_VISIBLES, c.tareasVisibles)
+      ? (c.tareasVisibles as TareasVisibles)
+      : d.tareasVisibles,
+    reloj: tiene(VER_RELOJ, c.reloj) ? (c.reloj as VerReloj) : d.reloj,
+    necesidades: normalizarNecesidades(c.necesidades),
   };
+}
+
+/** Necesidades válidas, sin repetir y en el orden de siempre; si no queda ninguna, todas. */
+function normalizarNecesidades(crudo: unknown): ClaveNecesidadBasica[] {
+  const lista = Array.isArray(crudo) ? crudo : [];
+  const validas = ORDEN_NECESIDADES_AYUDA.filter((n) => lista.includes(n));
+  return validas.length > 0 ? validas : [...PREFERENCIAS_POR_DEFECTO.necesidades];
 }

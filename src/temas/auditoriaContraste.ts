@@ -48,15 +48,15 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   },
   {
     id: "texto-superficie",
-    elemento: "Texto de tarjetas, opciones y modal",
-    usoEn: "OpcionPreferencia, ModalVistaAccesible, BotonAccesible (suave), BotonVistaAccesible",
+    elemento: "Texto de tarjetas, opciones y pantalla de Accesibilidad",
+    usoEn: "OpcionPreferencia, PantallaVistaAccesible, BotonAccesible (suave), BotonVistaAccesible",
     tipo: "texto",
     pares: [["texto", "superficie"]],
   },
   {
     id: "texto-superficieDestacada",
     elemento: "Texto de la opción elegida y de la tarea «Ahora»",
-    usoEn: "OpcionPreferencia, ModalVistaAccesible, vista previa de PanelPreferencias",
+    usoEn: "OpcionPreferencia, PantallaVistaAccesible, vista previa de PanelPreferencias",
     tipo: "texto",
     pares: [["texto", "superficieDestacada"]],
   },
@@ -84,7 +84,7 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   {
     id: "textoSobrePrimario-primario",
     elemento: "Texto de los botones principales",
-    usoEn: "BotonAccesible (principal), botón «Listo» de ModalVistaAccesible",
+    usoEn: "BotonAccesible (principal), botón «Listo» de PantallaVistaAccesible (barra de abajo)",
     tipo: "texto",
     pares: [["textoSobrePrimario", "primario"]],
   },
@@ -163,7 +163,7 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   {
     id: "borde-superficie",
     elemento: "Borde de tarjetas, chips y botón suave",
-    usoEn: "ModalVistaAccesible, BotonAccesible (suave)",
+    usoEn: "PantallaVistaAccesible, BotonAccesible (suave)",
     tipo: "componente",
     pares: [["borde", "superficie"]],
   },
@@ -176,8 +176,8 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   },
   {
     id: "primario-superficie-componente",
-    elemento: "Borde de la tarjeta del modal y del chip elegido",
-    usoEn: "ModalVistaAccesible",
+    elemento: "Borde de la opción elegida y del chip elegido",
+    usoEn: "PantallaVistaAccesible",
     tipo: "componente",
     pares: [["primario", "superficie"]],
   },
@@ -269,6 +269,69 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
     usoEn: "RelojVisual",
     tipo: "componente",
     pares: [["texto", "superficie"]],
+  },
+
+  // ---- Rediseño «Piedra»: iconos sobre rellenos de color (blanco o negro con colorSobre) ----
+  {
+    id: "sello-hecha",
+    elemento: "Marca de tarea hecha sobre el sello verde",
+    usoEn: "AgendaTresBloques (sello), RefuerzoPositivo (insignia)",
+    tipo: "texto",
+    pares: [
+      ["#FFFFFF", "exito"],
+      ["#000000", "exito"],
+    ],
+  },
+  {
+    id: "sello-bloqueada",
+    elemento: "Candado de tarea bloqueada sobre el sello de aviso",
+    usoEn: "AgendaTresBloques (sello)",
+    tipo: "texto",
+    pares: [
+      ["#FFFFFF", "aviso"],
+      ["#000000", "aviso"],
+    ],
+  },
+  {
+    id: "boton-ayuda",
+    elemento: "Texto «Ayuda» del botón de necesidades",
+    usoEn: "BotonNecesidades (relleno peligro)",
+    tipo: "texto",
+    pares: [
+      ["#FFFFFF", "peligro"],
+      ["#000000", "peligro"],
+    ],
+  },
+  // ---- Formas de clase (colores fijos copiados de FormaClase) ----
+  {
+    id: "forma-triangulo",
+    elemento: "Forma de la clase Triángulo",
+    usoEn: "FormaClase (en los temas oscuros va sobre una placa blanca)",
+    tipo: "componente",
+    pares: [
+      ["#B3261E", "superficie"],
+      ["#B3261E", "#FFFFFF"],
+    ],
+  },
+  {
+    id: "forma-circulo",
+    elemento: "Forma de la clase Círculo",
+    usoEn: "FormaClase (en los temas oscuros va sobre una placa blanca)",
+    tipo: "componente",
+    pares: [
+      ["#2F62B8", "superficie"],
+      ["#2F62B8", "#FFFFFF"],
+    ],
+  },
+  {
+    id: "forma-cuadrado",
+    elemento: "Forma de la clase Cuadrado",
+    usoEn: "FormaClase (en los temas oscuros va sobre una placa blanca)",
+    tipo: "componente",
+    pares: [
+      ["#2D6A3E", "superficie"],
+      ["#2D6A3E", "#FFFFFF"],
+    ],
   },
 ];
 

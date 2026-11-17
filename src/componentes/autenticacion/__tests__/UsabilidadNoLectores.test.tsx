@@ -10,16 +10,16 @@
 //   NL-03 Tamaños táctiles: fotos y clases >= 120 dp, dibujos >= 96 dp, resto >= 44 dp (WCAG 2.5.5 AAA)
 //   NL-04 En pantallas estrechas la cuadrícula baja de fila en vez de encoger las fotos
 //   NL-05 Feedback sonoro en cada toque del recorrido principal
-//   NL-06 Recorrido completo sin teclado y en 5 toques
+//   NL-06 Recorrido completo sin teclado y en 6 toques (clase + foto + 3 dibujos + «Entrar»)
 //   NL-07 Los errores se pueden deshacer y se muestran con icono, no solo con texto
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet } from "react-native";
 import { render, screen, userEvent, within } from "@testing-library/react-native";
 
 import LoginEstudiantesScreen from "../../../../app/login-estudiantes";
 import { TarjetaEstudiante } from "../TarjetaEstudiante";
 import { CuadriculaEstudiantes } from "../CuadriculaEstudiantes";
-import { ModalConfirmacionEstudiante } from "../ModalConfirmacionEstudiante";
+import { CredencialDibujos } from "../CredencialDibujos";
 import { ESTUDIANTES_MOCK } from "../../../tipos/estudiante";
 import { reproducirSonido } from "../../../servicios/sonidos";
 
@@ -36,6 +36,10 @@ const sonar = reproducirSonido as jest.Mock;
 
 // Emojis, flechas y símbolos (⬅ ⌫ ✓ ⚠️ ...): lo que un no lector puede "leer" sin leer
 const SIMBOLO_VISUAL = /[\p{Extended_Pictographic}←-⇿⌀-⏿✀-➿⬀-⯿]/u;
+
+/** Iconos SVG del estilo de la app (src/ui: Icono y FormaClase); también se «leen» sin leer. */
+const esIconoSvg = (n: { props: { testID?: unknown } }) =>
+  typeof n.props.testID === "string" && /^(icono|forma)-/.test(n.props.testID);
 
 const TAM_FOTO_Y_CLASE = 120;
 const TAM_DIBUJO = 96;
@@ -69,9 +73,8 @@ async function botonesDelRecorrido() {
   const pantallaFotos = screen.getAllByRole("button");
 
   await user.press(screen.getByTestId("tarjeta-estudiante-ale"));
-  const pantallaDibujos = within(screen.getByTestId("modal-confirmacion-estudiante")).getAllByRole(
-    "button",
-  );
+  // La contraseña ocupa ya toda la pantalla: se cuentan sus botones y los de la barra de abajo
+  const pantallaDibujos = screen.getAllByRole("button");
 
   return { pantallaClases, pantallaFotos, pantallaDibujos };
 }
@@ -92,7 +95,7 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
   });
 
   describe("NL-02 · Ningún botón depende solo del texto", () => {
-    it("cada botón del recorrido muestra un símbolo, emoji o foto además de su texto", async () => {
+    it("cada botón del recorrido muestra un pictograma, icono o foto además de su texto", async () => {
       const { pantallaClases, pantallaFotos, pantallaDibujos } = await botonesDelRecorrido();
       const sinSimbolo: string[] = [];
 
@@ -100,7 +103,7 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
         const textos = within(boton)
           .queryAllByText(/.*/)
           .map((t) => String(t.props.children));
-        const tieneImagen = boton.queryAll((n) => n.type === "Image").length > 0;
+        const tieneImagen = boton.queryAll((n) => n.type === "Image" || esIconoSvg(n)).length > 0;
         if (!tieneImagen && !textos.some((t) => SIMBOLO_VISUAL.test(t))) {
           sinSimbolo.push(boton.props.accessibilityLabel);
         }
@@ -114,13 +117,14 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
       await render(<LoginEstudiantesScreen />);
       // Los pictogramas decorativos se ocultan al lector de pantalla, pero se ven en pantalla
       const visibles = { includeHiddenElements: true };
-      expect(screen.getByText("🏫", visibles)).toBeTruthy(); // ¿Cuál es tu clase?
+      // Pictogramas de ARASAAC (src/ui/PictogramaInterfaz)
+      expect(screen.getByLabelText("Dibujo de colegio", visibles)).toBeTruthy(); // ¿Cuál es tu clase?
 
       await user.press(screen.getByTestId("tarjeta-clase-tri"));
-      expect(screen.getByText("👆", visibles)).toBeTruthy(); // Busca tu dibujo o foto y tócalo
+      expect(screen.getByLabelText("Dibujo de tocar", visibles)).toBeTruthy(); // Busca tu dibujo...
 
       await user.press(screen.getByTestId("tarjeta-estudiante-ale"));
-      expect(screen.getByText(/🔑/)).toBeTruthy(); // Toca tus 3 dibujos en orden
+      expect(screen.getByLabelText("Dibujo de contraseña", visibles)).toBeTruthy(); // Toca tus 3...
     });
   });
 
@@ -188,7 +192,7 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
   });
 
   describe("NL-05 · Feedback sonoro", () => {
-    it("suena algo en cada uno de los 5 toques del recorrido principal", async () => {
+    it("suena algo en cada uno de los 6 toques del recorrido principal", async () => {
       const user = userEvent.setup();
       await render(<LoginEstudiantesScreen alCompletarCredencialVisual={jest.fn()} />);
 
@@ -197,13 +201,15 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
       for (const dibujo of ["manzana", "perro", "estrella"]) {
         await user.press(screen.getByTestId(`dibujo-credencial-${dibujo}`));
       }
+      await user.press(screen.getByTestId("btn-entrar-credencial"));
 
       expect(sonar.mock.calls.map(([nombre]) => nombre)).toEqual([
         "toque", // clase
         "toque", // foto
         "toque", // dibujo 1
         "toque", // dibujo 2
-        "acierto", // dibujo 3
+        "toque", // dibujo 3
+        "acierto", // Entrar
       ]);
     });
   });
@@ -221,7 +227,7 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
       expect(camposDeTexto()).toBe(0);
     });
 
-    it("se entra con 5 toques: clase + foto + 3 dibujos", async () => {
+    it("se entra con 6 toques: clase + foto + 3 dibujos + «Entrar»", async () => {
       const user = userEvent.setup();
       const credencial = jest.fn();
       await render(<LoginEstudiantesScreen alCompletarCredencialVisual={credencial} />);
@@ -236,57 +242,61 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
       await tocar("dibujo-credencial-manzana");
       await tocar("dibujo-credencial-perro");
       await tocar("dibujo-credencial-estrella");
+      // Un toque más que antes: así el alumno comprueba sus dibujos antes de entrar (profesora)
+      await tocar("btn-entrar-credencial");
 
       expect(credencial).toHaveBeenCalledWith("ale", ["manzana", "perro", "estrella"]);
-      expect(toques).toBeLessThanOrEqual(5);
+      expect(toques).toBeLessThanOrEqual(6);
     });
   });
 
   describe("NL-07 · Errores recuperables y comprensibles sin leer", () => {
     const alumno = ESTUDIANTES_MOCK[0];
 
+    /** La secuencia la guarda la pantalla; aquí, un estado local. */
+    function Credencial(props: { alEntrar?: (s: string[]) => void; mensajeError?: string }) {
+      const [secuencia, setSecuencia] = useState<string[]>([]);
+      return (
+        <CredencialDibujos
+          estudiante={alumno}
+          secuencia={secuencia}
+          alCambiarSecuencia={setSecuencia}
+          alEntrar={() => props.alEntrar?.(secuencia)}
+          mensajeError={props.mensajeError}
+        />
+      );
+    }
+
     it("un dibujo equivocado se puede borrar y el hueco vuelve a quedar libre", async () => {
       const user = userEvent.setup();
-      const alConfirmar = jest.fn();
-      await render(
-        <ModalConfirmacionEstudiante
-          estudiante={alumno}
-          visible
-          alConfirmar={alConfirmar}
-          alCancelar={jest.fn()}
-        />,
-      );
+      const alEntrar = jest.fn();
+      await render(<Credencial alEntrar={alEntrar} />);
 
       await user.press(screen.getByTestId("dibujo-credencial-gato")); // se equivoca
       await user.press(screen.getByTestId("btn-borrar-dibujo"));
       for (const dibujo of ["manzana", "perro", "estrella"]) {
         await user.press(screen.getByTestId(`dibujo-credencial-${dibujo}`));
       }
+      await user.press(screen.getByTestId("btn-entrar-credencial"));
 
-      expect(alConfirmar).toHaveBeenCalledWith(alumno, ["manzana", "perro", "estrella"]);
+      expect(alEntrar).toHaveBeenCalledWith(["manzana", "perro", "estrella"]);
     });
 
     it("el aviso de error lleva un icono, no solo texto", async () => {
-      await render(
-        <ModalConfirmacionEstudiante
-          estudiante={alumno}
-          visible
-          alConfirmar={jest.fn()}
-          alCancelar={jest.fn()}
-          mensajeError="Esos dibujos no son. Prueba otra vez"
-        />,
-      );
+      await render(<Credencial mensajeError="Esos dibujos no son. Prueba otra vez" />);
       const aviso = screen.getByTestId("error-credencial-visual");
-      expect(within(aviso).getByText(SIMBOLO_VISUAL)).toBeTruthy();
+      expect(
+        within(aviso).getByTestId("icono-alerta", { includeHiddenElements: true }),
+      ).toBeTruthy();
     });
 
-    it("«No soy yo» devuelve a la cuadrícula de fotos sin perder la clase elegida", async () => {
+    it("«Atrás» (no soy yo) devuelve a las fotos sin perder la clase elegida", async () => {
       const user = userEvent.setup();
       await render(<LoginEstudiantesScreen />);
 
       await user.press(screen.getByTestId("tarjeta-clase-tri"));
       await user.press(screen.getByTestId("tarjeta-estudiante-ale"));
-      await user.press(screen.getByTestId("btn-cancelar-estudiante"));
+      await user.press(screen.getByTestId("btn-barra-atras"));
 
       expect(screen.queryByText("¿Eres Alejandro?")).toBeNull();
       expect(screen.getByTestId("tarjeta-estudiante-mir")).toBeTruthy();

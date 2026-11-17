@@ -5,7 +5,7 @@ import { Text } from "react-native";
 
 import { TemaProvider } from "../temas";
 import { BotonVistaAccesible } from "./BotonVistaAccesible";
-import { ModalVistaAccesible } from "./ModalVistaAccesible";
+import { PantallaVistaAccesible } from "./PantallaVistaAccesible";
 import { PreferenciasProvider, usePreferencias } from "./PreferenciasProvider";
 
 function ComponentePruebaVista() {
@@ -15,12 +15,16 @@ function ComponentePruebaVista() {
   return (
     <>
       <BotonVistaAccesible onPress={() => setModalAbierto(true)} />
-      <ModalVistaAccesible visible={modalAbierto} alCerrar={() => setModalAbierto(false)} />
+      <PantallaVistaAccesible visible={modalAbierto} alCerrar={() => setModalAbierto(false)} />
       <Text testID="valor-canal">{preferencias.canal}</Text>
       <Text testID="valor-letra">{preferencias.tamanoLetra}</Text>
     </>
   );
 }
+
+// Con la pantalla de Accesibilidad encima, lo de debajo queda oculto al lector de pantalla
+// (accessibilityViewIsModal): para leer los valores de prueba hay que incluir lo oculto.
+const valor = (id: string) => screen.getByTestId(id, { includeHiddenElements: true });
 
 const montar = () =>
   render(
@@ -31,7 +35,7 @@ const montar = () =>
     </TemaProvider>,
   );
 
-describe("BotonVistaAccesible y ModalVistaAccesible (a11yb y a11yPanel)", () => {
+describe("BotonVistaAccesible y PantallaVistaAccesible (a11yb y a11yPanel)", () => {
   it("renderiza el botón flotante en la esquina inferior derecha con icono ♿ y etiqueta Vista", async () => {
     await montar();
     const boton = screen.getByTestId("btn-vista-accesible-flotante");
@@ -41,36 +45,41 @@ describe("BotonVistaAccesible y ModalVistaAccesible (a11yb y a11yPanel)", () => 
     expect(boton.props.accessibilityLabel).toBe("Accesibilidad y vista de pantalla");
   });
 
-  it("al pulsar el botón abre el modal y permite conmutar a solo pictograma o solo texto", async () => {
+  it("al pulsar el botón abre la pantalla y permite conmutar a solo pictograma o solo texto", async () => {
     const user = userEvent.setup();
     await montar();
 
-    // Abre el modal
+    // Abre la pantalla (completa, con su cabecera; no es una ventana emergente)
     await user.press(screen.getByTestId("btn-vista-accesible-flotante"));
-    expect(screen.getByText("¿Cómo quieres ver la pantalla?")).toBeTruthy();
+    expect(screen.getByTestId("titulo-accesibilidad")).toHaveTextContent(
+      "¿Cómo quieres ver la pantalla?",
+    );
 
     // Cambiar a solo pictograma
     await user.press(screen.getByTestId("opcion-canal-soloPictograma"));
-    expect(screen.getByTestId("valor-canal").props.children).toBe("soloPictograma");
+    expect(valor("valor-canal").props.children).toBe("soloPictograma");
 
     // Cambiar a solo texto
     await user.press(screen.getByTestId("opcion-canal-soloTexto"));
-    expect(screen.getByTestId("valor-canal").props.children).toBe("soloTexto");
+    expect(valor("valor-canal").props.children).toBe("soloTexto");
 
-    // Cerrar modal
+    // «Listo» (Adelante en la barra) vuelve a la pantalla de antes
     await user.press(screen.getByTestId("btn-cerrar-modal-vista"));
     expect(screen.queryByText("¿Cómo quieres ver la pantalla?")).toBeNull();
   });
 
-  it("permite cambiar rápidamente el tamaño de letra desde el modal", async () => {
+  it("permite cambiar rápidamente el tamaño de letra; «Atrás» también vuelve", async () => {
     const user = userEvent.setup();
     await montar();
 
     await user.press(screen.getByTestId("btn-vista-accesible-flotante"));
     await user.press(screen.getByTestId("opcion-letra-grande"));
-    expect(screen.getByTestId("valor-letra").props.children).toBe("grande");
+    expect(valor("valor-letra").props.children).toBe("grande");
 
     await user.press(screen.getByTestId("opcion-letra-extra"));
-    expect(screen.getByTestId("valor-letra").props.children).toBe("extra");
+    expect(valor("valor-letra").props.children).toBe("extra");
+
+    await user.press(screen.getByTestId("btn-cerrar-vista"));
+    expect(screen.queryByTestId("titulo-accesibilidad")).toBeNull();
   });
 });

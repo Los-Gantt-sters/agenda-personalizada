@@ -37,18 +37,28 @@ describe("LoginEstudiantesScreen", () => {
     expect(screen.queryByText("Daniel")).toBeNull();
   });
 
-  it("permite cambiar de clase volviendo a la selección inicial", async () => {
+  it("«Atrás» (en la barra de abajo) vuelve a elegir clase", async () => {
     const user = userEvent.setup();
     await render(<LoginEstudiantesScreen />);
 
     await user.press(screen.getByTestId("tarjeta-clase-tri"));
     expect(screen.getByText("Clase Triángulo")).toBeTruthy();
 
-    await user.press(screen.getByTestId("btn-cambiar-clase"));
+    await user.press(screen.getByTestId("btn-barra-atras"));
     expect(screen.getByText("¿Cuál es tu clase?")).toBeTruthy();
   });
 
-  it("al tocar los 3 dibujos del alumno entrega el array de dibujos y redirige", async () => {
+  it("tras volver, «Adelante» lleva otra vez a la clase de antes", async () => {
+    const user = userEvent.setup();
+    await render(<LoginEstudiantesScreen />);
+    expect(screen.getByTestId("btn-barra-adelante")).toBeDisabled();
+    await user.press(screen.getByTestId("tarjeta-clase-tri"));
+    await user.press(screen.getByTestId("btn-barra-atras"));
+    await user.press(screen.getByTestId("btn-barra-adelante"));
+    expect(screen.getByText("Clase Triángulo")).toBeTruthy();
+  });
+
+  it("tras tocar los 3 dibujos y pulsar «Entrar» entrega el array de dibujos", async () => {
     const user = userEvent.setup();
     const callbackJaime = jest.fn();
     await render(<LoginEstudiantesScreen alCompletarCredencialVisual={callbackJaime} />);
@@ -57,12 +67,13 @@ describe("LoginEstudiantesScreen", () => {
     await user.press(screen.getByTestId("tarjeta-estudiante-ale"));
 
     expect(screen.getByText("¿Eres Alejandro?")).toBeTruthy();
-    expect(screen.getByText("🔑 Toca tus 3 dibujos en orden")).toBeTruthy();
+    expect(screen.getByText("Toca tus 3 dibujos en orden")).toBeTruthy();
 
     await user.press(screen.getByTestId("dibujo-credencial-manzana"));
     await user.press(screen.getByTestId("dibujo-credencial-perro"));
     await user.press(screen.getByTestId("dibujo-credencial-estrella"));
-
+    expect(callbackJaime).not.toHaveBeenCalled();
+    await user.press(screen.getByTestId("btn-entrar-credencial"));
     expect(callbackJaime).toHaveBeenCalledWith("ale", ["manzana", "perro", "estrella"]);
   });
 
@@ -89,16 +100,17 @@ describe("LoginEstudiantesScreen", () => {
       await user.press(screen.getByTestId("dibujo-credencial-manzana"));
       await user.press(screen.getByTestId("dibujo-credencial-perro"));
       await user.press(screen.getByTestId("dibujo-credencial-estrella"));
-
+      await user.press(screen.getByTestId("btn-entrar-credencial"));
       expect(await obtenerAlumnoTableta()).toBe("ale");
     });
 
-    it("«No soy yo» hace que la tableta olvide al alumno y vuelve a la cuadrícula", async () => {
+    it("«Atrás» (no soy yo) hace que la tableta olvide al alumno y vuelve a la cuadrícula", async () => {
       const user = userEvent.setup();
       await recordarAlumnoTableta("ale");
       await render(<LoginEstudiantesScreen modoTabletaPersonal />);
 
-      await user.press(await screen.findByTestId("btn-cancelar-estudiante"));
+      await screen.findByText("¿Eres Alejandro?");
+      await user.press(screen.getByTestId("btn-barra-atras"));
 
       expect(await obtenerAlumnoTableta()).toBeNull();
       expect(screen.getByText("Clase Triángulo")).toBeTruthy();

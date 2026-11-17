@@ -1,9 +1,11 @@
 // Opción elegible del panel, con el aspecto de .cfgopt del prototipo: borde de 3 px y, al estar
-// elegida, borde de 5 px, fondo «ahora» y una marca ✓ (la elección no depende solo del color, RNF14.4).
+// elegida, borde de 5 px, fondo «ahora» y un icono de marca (la elección no depende solo del color, RNF14.4).
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View, type TextStyle } from "react-native";
 
 import { useTema } from "../temas";
+import { Icono } from "../ui/Icono";
+import { Texto as Text } from "../ui/Texto";
 import { AREA_TACTIL_MINIMA } from "./estilos";
 
 interface Props {
@@ -14,7 +16,12 @@ interface Props {
   muestra?: React.ReactNode;
   /** Fuente con la que se escribe la etiqueta (para ver cómo se ve cada tipo de letra). */
   fuente?: string;
+  /** Estilo extra de la etiqueta (p. ej. que «Minúsculas» no salga en mayúsculas). */
+  estiloTexto?: TextStyle;
   accessibilityLabel?: string;
+  testID?: string;
+  /** Se pueden elegir varias (casilla) en lugar de una sola (radio). */
+  multiple?: boolean;
 }
 
 const BORDE = 3;
@@ -26,7 +33,10 @@ export function OpcionPreferencia({
   onPress,
   muestra,
   fuente,
+  estiloTexto,
   accessibilityLabel,
+  testID,
+  multiple = false,
 }: Props) {
   const { colores } = useTema();
   const borde = elegida ? BORDE_ELEGIDA : BORDE;
@@ -35,33 +45,31 @@ export function OpcionPreferencia({
 
   return (
     <Pressable
-      accessibilityRole="radio"
+      accessibilityRole={multiple ? "checkbox" : "radio"}
       accessibilityLabel={accessibilityLabel ?? etiqueta}
       accessibilityState={{ checked: elegida }}
       onPress={onPress}
+      testID={testID}
       style={[
         styles.opcion,
         {
           borderWidth: borde,
           borderColor: elegida ? colores.primario : colores.borde,
           backgroundColor: elegida ? colores.superficieDestacada : colores.superficie,
-          paddingHorizontal: relleno,
-          paddingVertical: relleno - 4,
+          paddingHorizontal: relleno + 4,
+          paddingVertical: relleno - 2,
         },
       ]}
     >
       {muestra}
       <View style={styles.fila}>
-        {elegida && (
-          <Text accessibilityElementsHidden style={[styles.marca, { color: colores.primario }]}>
-            ✓
-          </Text>
-        )}
+        {elegida && <Icono nombre="check" color={colores.primario} tam={26} grosor={3} />}
         <Text
           style={[
             styles.texto,
             { color: colores.texto },
             fuente ? { fontFamily: fuente } : undefined,
+            estiloTexto,
           ]}
         >
           {etiqueta}
@@ -73,14 +81,13 @@ export function OpcionPreferencia({
 
 const styles = StyleSheet.create({
   opcion: {
-    minWidth: 96,
-    minHeight: Math.max(AREA_TACTIL_MINIMA, 72),
+    minWidth: 150,
+    minHeight: Math.max(AREA_TACTIL_MINIMA, 88),
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
   fila: { flexDirection: "row", alignItems: "center", gap: 6 },
-  marca: { fontSize: 18, fontWeight: "800" },
-  texto: { fontSize: 16, fontWeight: "700", textAlign: "center" },
+  texto: { fontSize: 20, fontWeight: "700", textAlign: "center" },
 });

@@ -22,11 +22,44 @@ export async function obtenerSecuenciaDia(
     p_fecha: fecha,
   });
   if (error) throw error;
-  return ((data ?? []) as EntradaAgenda[]).map((fila) => ({
+  const filas = (data ?? []) as EntradaAgenda[];
+  const marcas = await obtenerMarcasTiempo(filas.map((f) => f.id));
+  return filas.map((fila) => ({
     ...fila,
     hora_inicio: normalizarHora(fila.hora_inicio),
     tarea: { ...fila.tarea, pasos: fila.tarea?.pasos ?? [] },
+    // RI6.1: la hora real de inicio y de fin está en ejecuciones (secuencia_dia no la trae). Sin
+    // ella, al recargar después de «Empezar» se perderían el reloj y «Empezaste a las...».
+    inicio_real: fila.inicio_real ?? marcas.get(fila.id)?.inicio ?? null,
+    fin_real: fila.fin_real ?? marcas.get(fila.id)?.fin ?? null,
   }));
+}
+
+/**
+ * Horas reales de inicio y fin (RI6.1) de las asignaciones del día. Si no se pueden leer, la agenda
+ * se enseña igual, solo que sin esas horas.
+ */
+async function obtenerMarcasTiempo(
+  ids: string[],
+): Promise<Map<string, { inicio: string | null; fin: string | null }>> {
+  const marcas = new Map<string, { inicio: string | null; fin: string | null }>();
+  if (ids.length === 0) return marcas;
+  try {
+    const { data, error } = await supabase
+      .from("ejecuciones")
+      .select("asignacion_id, inicio, fin")
+      .in("asignacion_id", ids);
+    if (error) return marcas;
+    for (const m of (data ?? []) as {
+      asignacion_id: string;
+      inicio: string | null;
+      fin: string | null;
+    }[])
+      marcas.set(m.asignacion_id, { inicio: m.inicio, fin: m.fin });
+  } catch {
+    // Sin las horas reales la agenda sigue funcionando.
+  }
+  return marcas;
 }
 
 /**
@@ -72,6 +105,49 @@ export async function marcarTareaHecha(
   const { error: errorEjecucion } = await supabase
     .from("ejecuciones")
     .update({ fin })
+    .eq("asignacion_id", idEntrada);
+  if (errorEjecucion) throw errorEjecucion;
+}
+
+/**
+ * «Atrás» tras «Empezar» (mejora de la profesora, noviembre de 2026): la asignación en curso vuelve
+ * a pendiente y se borra su ejecución, porque la hora de inicio es obligatoria en ejecuciones.
+ */
+export async function desmarcarTareaEnCurso(idEntrada: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("asignaciones")
+    .update({ estado: "pendiente" })
+    .eq("id", idEntrada)
+    .eq("estado", "en_curso")
+    .select("id");
+  if (error) throw error;
+  if (!(data as unknown[] | null)?.length) return; // ya no estaba en curso
+  const { error: errorEjecucion } = await supabase
+    .from("ejecuciones")
+    .delete()
+    .eq("asignacion_id", idEntrada);
+  if (errorEjecucion) throw errorEjecucion;
+}
+
+/**
+ * «Atrás» tras «Terminar» (mejora de la profesora, noviembre de 2026): la asignación hecha vuelve a
+ * en curso (si se había empezado) o a pendiente, y se borra la hora de fin.
+ */
+export async function desmarcarTareaHecha(
+  idEntrada: string,
+  volverA: "pendiente" | "en_curso",
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("asignaciones")
+    .update({ estado: volverA })
+    .eq("id", idEntrada)
+    .eq("estado", "hecho")
+    .select("id");
+  if (error) throw error;
+  if (!(data as unknown[] | null)?.length) return; // ya no estaba hecha
+  const { error: errorEjecucion } = await supabase
+    .from("ejecuciones")
+    .update({ fin: null })
     .eq("asignacion_id", idEntrada);
   if (errorEjecucion) throw errorEjecucion;
 }
@@ -127,5 +203,7 @@ export const repositorioAgendaSupabase: RepositorioAgenda = {
   obtenerSecuenciaDia,
   marcarEnCurso: marcarTareaEnCurso,
   marcarHecha: marcarTareaHecha,
+  desmarcarEnCurso: desmarcarTareaEnCurso,
+  desmarcarHecha: desmarcarTareaHecha,
   suscribir: suscribirseAgenda,
 };

@@ -38,8 +38,8 @@ export interface EntradaAgenda {
   estado: EstadoEntrada;
   tarea: Tarea;
   /**
-   * RF6.8: el tutor marca que en esta tarea el estudiante tiene que pulsar «Empezar» antes de
-   * «Terminar». Si es false o no viene, se enseña directamente «Terminar», como en HU-06.
+   * RF6.8: si el estudiante tiene que pulsar «Empezar» antes de «Terminar». Si no viene, sí (es
+   * lo normal); solo con false se enseña directamente «Terminar», como en HU-06.
    */
   requiere_inicio_fin?: boolean | null;
   /** RI6.1: momento en que el estudiante pulsó «Empezar» (ISO 8601). */
@@ -68,6 +68,10 @@ export interface RepositorioAgenda {
   marcarEnCurso(idEntrada: string, inicio: string): Promise<void>;
   /** RF4.3 y RF6.4: marca la entrada como hecha y guarda la hora de fin (RI6.1). */
   marcarHecha(idEntrada: string, fin?: string): Promise<void>;
+  /** «Atrás» tras «Empezar»: la entrada en curso vuelve a pendiente y se borra la hora de inicio. */
+  desmarcarEnCurso(idEntrada: string): Promise<void>;
+  /** «Atrás» tras «Terminar»: la entrada hecha vuelve a `volverA` y se borra la hora de fin. */
+  desmarcarHecha(idEntrada: string, volverA: "pendiente" | "en_curso"): Promise<void>;
   /**
    * RF4.7: avisa cada vez que cambia algo de la agenda del estudiante (el tutor crea, modifica,
    * bloquea o borra una tarea). Devuelve la función para darse de baja.

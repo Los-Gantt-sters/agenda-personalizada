@@ -76,3 +76,11 @@ export function usePreferencias(): ValorPreferencias {
   }
   return valor;
 }
+
+/**
+ * Devuelve las preferencias activas, o null fuera de <PreferenciasProvider>. Para componentes
+ * reutilizables que también se montan sueltos (p. ej. en los tests).
+ */
+export function usePreferenciasOpcional(): ValorPreferencias | null {
+  return useContext(PreferenciasContext);
+}

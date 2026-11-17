@@ -34,11 +34,15 @@ describe("PreferenciasProvider", () => {
     await render(ui);
     expect(ref.prefs?.preferencias).toEqual({
       tema: "claro",
-      fuente: "atkinson",
+      fuente: "lexend",
       tamanoLetra: "normal",
       tamanoBoton: "L",
       forma: "round",
       canal: "ambos",
+      caja: "normal",
+      tareasVisibles: "tres",
+      reloj: "si",
+      necesidades: ["bano", "agua", "descanso"],
     });
   });
 
@@ -70,7 +74,7 @@ describe("PreferenciasProvider", () => {
     const { ref, ui } = montar();
     await render(ui);
     await act(async () => ref.prefs?.cambiar({ fuente: "comic" as never }));
-    expect(ref.prefs?.preferencias.fuente).toBe("atkinson");
+    expect(ref.prefs?.preferencias.fuente).toBe("lexend");
   });
 
   it("restablecer vuelve a los valores por defecto, tema incluido", async () => {
@@ -79,7 +83,7 @@ describe("PreferenciasProvider", () => {
     await act(async () =>
       ref.prefs?.cambiar({
         tema: "oscuro",
-        fuente: "lexend",
+        fuente: "andika",
         tamanoLetra: "extra",
         forma: "square",
       }),
@@ -87,11 +91,15 @@ describe("PreferenciasProvider", () => {
     await act(async () => ref.prefs?.restablecer());
     expect(ref.prefs?.preferencias).toEqual({
       tema: "claro",
-      fuente: "atkinson",
+      fuente: "lexend",
       tamanoLetra: "normal",
       tamanoBoton: "L",
       forma: "round",
       canal: "ambos",
+      caja: "normal",
+      tareasVisibles: "tres",
+      reloj: "si",
+      necesidades: ["bano", "agua", "descanso"],
     });
     expect(ref.tema?.nombre).toBe("claro");
   });

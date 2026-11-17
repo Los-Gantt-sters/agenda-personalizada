@@ -40,10 +40,12 @@ async function abrirCredencialDeAlejandro(user: ReturnType<typeof userEvent.setu
   await user.press(screen.getByTestId("tarjeta-estudiante-ale"));
 }
 
+/** Toca los dibujos y pulsa «Entrar» (ya no entra sola al tocar el tercero). */
 async function tocarDibujos(user: ReturnType<typeof userEvent.setup>, ...slugs: string[]) {
   for (const slug of slugs) {
     await user.press(screen.getByTestId(`dibujo-credencial-${slug}`));
   }
+  await user.press(screen.getByTestId("btn-entrar-credencial"));
 }
 
 describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () => {
@@ -73,7 +75,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     await abrirCredencialDeAlejandro(user);
     await tocarDibujos(user, "sol", "coche", "casa");
 
-    expect(await screen.findByText(`⚠️ ${MENSAJE}`)).toBeTruthy();
+    expect(await screen.findByText(MENSAJE)).toBeTruthy();
     expect(screen.getByLabelText("0 de 3 dibujos seleccionados")).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
@@ -85,7 +87,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
 
     await abrirCredencialDeAlejandro(user);
     await tocarDibujos(user, "sol", "coche", "casa");
-    await screen.findByText(`⚠️ ${MENSAJE}`);
+    await screen.findByText(MENSAJE);
     await tocarDibujos(user, "manzana", "perro", "estrella");
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/agenda"));
@@ -100,22 +102,22 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     await abrirCredencialDeAlejandro(user);
     await tocarDibujos(user, "manzana", "perro", "estrella");
 
-    expect(await screen.findByText(`⚠️ ${MENSAJE}`)).toBeTruthy();
+    expect(await screen.findByText(MENSAJE)).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it("«No soy yo» quita el aviso de error", async () => {
+  it("«Atrás» (no soy yo) quita el aviso de error", async () => {
     mockLogin.mockResolvedValue(FALLO);
     const user = userEvent.setup();
     await render(<LoginEstudiantesScreen />);
 
     await abrirCredencialDeAlejandro(user);
     await tocarDibujos(user, "sol", "coche", "casa");
-    await screen.findByText(`⚠️ ${MENSAJE}`);
-    await user.press(screen.getByTestId("btn-cancelar-estudiante"));
+    await screen.findByText(MENSAJE);
+    await user.press(screen.getByTestId("btn-barra-atras"));
     await user.press(screen.getByTestId("tarjeta-estudiante-ale"));
 
-    expect(screen.queryByText(`⚠️ ${MENSAJE}`)).toBeNull();
+    expect(screen.queryByText(MENSAJE)).toBeNull();
   });
 
   describe("modo tableta personal", () => {
@@ -126,7 +128,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
 
       await abrirCredencialDeAlejandro(user);
       await tocarDibujos(user, "sol", "coche", "casa");
-      await screen.findByText(`⚠️ ${MENSAJE}`);
+      await screen.findByText(MENSAJE);
 
       expect(await obtenerAlumnoTableta()).toBeNull();
     });

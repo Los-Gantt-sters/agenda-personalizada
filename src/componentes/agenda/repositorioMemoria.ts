@@ -29,6 +29,20 @@ export function crearRepositorioMemoria(inicial: EntradaAgenda[]) {
       );
       avisar();
     },
+    async desmarcarEnCurso(idEntrada) {
+      entradas = entradas.map((e) =>
+        e.id === idEntrada && e.estado === "en_curso"
+          ? { ...e, estado: "pendiente", inicio_real: null }
+          : e,
+      );
+      avisar();
+    },
+    async desmarcarHecha(idEntrada, volverA) {
+      entradas = entradas.map((e) =>
+        e.id === idEntrada && e.estado === "hecha" ? { ...e, estado: volverA, fin_real: null } : e,
+      );
+      avisar();
+    },
     suscribir(_estudianteId, _fecha, alCambiar) {
       oyentes.add(alCambiar);
       return () => {

@@ -3,11 +3,11 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { BotonNecesidades, getEstiloPosicion } from "../BotonNecesidades";
 
 describe("BotonNecesidades (SCRUM-86: T-18.1 Botón flotante accesible fijado)", () => {
-  it("renderiza el botón con icono de mano y texto de ayuda", async () => {
+  it("renderiza el botón con el pictograma de ayuda y el texto", async () => {
     const handlePress = jest.fn();
     await render(<BotonNecesidades onPress={handlePress} />);
 
-    expect(screen.getByText("✋")).toBeTruthy();
+    expect(screen.getByLabelText("Dibujo de ayuda", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText("Ayuda")).toBeTruthy();
 
     const boton = screen.getByRole("button");
@@ -83,11 +83,11 @@ describe("BotonNecesidades (SCRUM-86: T-18.1 Botón flotante accesible fijado)",
       <BotonNecesidades onPress={jest.fn()} canal="soloPictograma" />,
     );
 
-    expect(screen.getByText("✋")).toBeTruthy();
+    expect(screen.getByLabelText("Dibujo de ayuda", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.queryByText("Ayuda")).toBeNull();
 
     await rerender(<BotonNecesidades onPress={jest.fn()} canal="soloTexto" />);
-    expect(screen.queryByText("✋")).toBeNull();
+    expect(screen.queryByLabelText("Dibujo de ayuda", { includeHiddenElements: true })).toBeNull();
     expect(screen.getByText("Ayuda")).toBeTruthy();
   });
 });

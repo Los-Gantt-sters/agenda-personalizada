@@ -1,7 +1,12 @@
+// Estado de «Ayuda» para toda la app (SCRUM-87). El botón está en la barra de abajo de cada
+// pantalla (src/pantalla) y la pantalla «¿Qué necesitas?» se pinta aquí, encima de todo, sin quitar
+// la pantalla de debajo (mejora de la profesora, noviembre de 2026: nada de ventanas emergentes).
+// Qué necesidades salen lo elige el tutor en Preferencias.
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { View, StyleSheet } from "react-native";
+import { usePreferenciasOpcional } from "../preferencias/PreferenciasProvider";
 import { BotonNecesidades } from "./BotonNecesidades";
-import { ModalNecesidades } from "./ModalNecesidades";
+import { PantallaNecesidades } from "./PantallaNecesidades";
 import {
   PosicionBotonNecesidades,
   VarianteColorNecesidades,
@@ -23,6 +28,9 @@ interface NecesidadesContextType {
   cerrarModalNecesidades: () => void;
   ultimaNecesidadSolicitada: ClaveNecesidad | null;
   solicitarNecesidad: (clave: ClaveNecesidad) => void;
+  /** Necesidad recién enviada (la pantalla enseña «Aviso enviado»). */
+  necesidadEnviada: ClaveNecesidad | null;
+  nombreTutora: string;
 }
 
 const NecesidadesContext = createContext<NecesidadesContextType | undefined>(undefined);
@@ -58,6 +66,8 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
   const [ultimaNecesidadSolicitada, setUltimaNecesidadSolicitada] = useState<ClaveNecesidad | null>(
     null,
   );
+  // Necesidades que ha elegido el tutor (sin proveedor de preferencias, todas).
+  const necesidades = usePreferenciasOpcional()?.preferencias.necesidades;
 
   const abrirModalNecesidades = () => {
     setNecesidadEnviada(null);
@@ -96,10 +106,15 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
         cerrarModalNecesidades,
         ultimaNecesidadSolicitada,
         solicitarNecesidad,
+        necesidadEnviada,
+        nombreTutora,
       }}
     >
       <View style={estilos.contenedorRaiz}>
-        {children}
+        {/* Con «¿Qué necesitas?» encima, lo de debajo no se lee con el lector de pantalla. */}
+        <View style={estilos.contenedorRaiz} aria-hidden={modalAbierto}>
+          {children}
+        </View>
 
         {mostrarBotonNecesidades && (
           <BotonNecesidades
@@ -110,8 +125,9 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
           />
         )}
 
-        <ModalNecesidades
+        <PantallaNecesidades
           visible={modalAbierto}
+          necesidades={necesidades}
           alSeleccionarNecesidad={solicitarNecesidad}
           alCerrar={cerrarModalNecesidades}
           necesidadEnviada={necesidadEnviada}
@@ -124,6 +140,10 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
     </NecesidadesContext.Provider>
   );
 };
+
+/** Igual que useNecesidades, pero devuelve null fuera del proveedor (componentes sueltos, tests). */
+export const useNecesidadesOpcional = (): NecesidadesContextType | null =>
+  useContext(NecesidadesContext) ?? null;
 
 export const useNecesidades = (): NecesidadesContextType => {
   const context = useContext(NecesidadesContext);

@@ -51,19 +51,22 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
     etiqueta: "Claro",
     esOscuro: false,
     esAltoContraste: false,
+    // «Piedra»: grises cálidos y el granate del logo del colegio (Hermanas Hospitalarias –
+    // Fundación Purísima Concepción) como único color. Pocos estímulos: sin degradados ni sombras.
+    // El turquesa del logo (#76D3D7) no llega a 3:1 sobre blanco, así que no se usa en texto ni bordes.
     paleta: {
-      fondo: "#F7FAFC",
+      fondo: "#F1F1EF",
       superficie: "#FFFFFF",
-      superficieDestacada: "#E3EDFB",
-      texto: "#1A202C",
-      textoSecundario: "#4A5568",
-      primario: "#2B6CB0",
+      superficieDestacada: "#EDE6E9",
+      texto: "#22211F",
+      textoSecundario: "#55524E",
+      primario: "#7D1D4F",
       textoSobrePrimario: "#FFFFFF",
-      borde: "#718096",
-      foco: "#1A365D",
-      exito: "#276749",
-      peligro: "#C53030",
-      aviso: "#8A5A00",
+      borde: "#7B7772",
+      foco: "#155E63",
+      exito: "#2D6A3E",
+      peligro: "#B3261E",
+      aviso: "#7A5600",
     },
   },
   oscuro: {

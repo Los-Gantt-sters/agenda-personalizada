@@ -6,6 +6,11 @@ jest.mock("../../src/servicios/sonidos", () => ({
   reproducirSonido: jest.fn(),
 }));
 
+// La demo es una pantalla con barra de abajo (Atrás / Adelante): necesita el router.
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+}));
+
 describe("Pantalla demo del reloj visual", () => {
   beforeEach(() => {
     // Temporizadores falsos: el test decide cuánto tiempo "pasa" sin esperar de verdad

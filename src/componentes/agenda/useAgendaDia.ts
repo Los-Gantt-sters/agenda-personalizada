@@ -3,11 +3,16 @@
 // (actualización optimista) y se guarda; si falla, se vuelve a lo que diga el servidor.
 // RF4.7: con la suscripción del repositorio (Supabase Realtime) recarga sola cuando el tutor cambia algo.
 // T-08.1 (HU-08): RF6.1 «Empezar» pone la tarea en curso al momento y guarda la hora de inicio.
+// Mejora de la profesora (noviembre de 2026): «Atrás» deshace «Empezar» y «Terminar». Los cambios
+// de una misma tarea se envían en fila, uno detrás de otro, para que «Terminar» y su «Atrás» no se
+// adelanten el uno al otro en el servidor.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import type { EntradaAgenda, RepositorioAgenda } from "./tipos";
 import {
   confirmarFin as aplicarFin,
+  deshacerEmpezar as aplicarDeshacerEmpezar,
+  deshacerFin as aplicarDeshacerFin,
   dividirEnBloques,
   empezarTarea,
   type OpcionesBloques,
@@ -38,6 +43,8 @@ export function useAgendaDia(
   // Entradas que se están guardando, con el cambio que se espera: el servidor aún no lo tiene y
   // una recarga no debe "devolverlas" a como estaban (p. ej. de «Hecho» otra vez a «Ahora»).
   const guardando = useRef(new Map<string, Partial<EntradaAgenda>>());
+  // Último envío pendiente de cada tarea: el siguiente cambio de esa tarea espera a que acabe.
+  const colas = useRef(new Map<string, Promise<void>>());
   const peticion = useRef(0);
 
   const recargar = useCallback(async () => {
@@ -98,21 +105,28 @@ export function useAgendaDia(
       const despues = aplicar(antes);
       if (despues.every((e, i) => e.estado === antes[i]?.estado)) return false; // no era la de «Ahora»
       const cambiada = despues.find((e) => e.id === idEntrada)!;
-      guardando.current.set(idEntrada, {
+      const esperado: Partial<EntradaAgenda> = {
         estado: cambiada.estado,
         inicio_real: cambiada.inicio_real,
         fin_real: cambiada.fin_real,
-      });
+      };
+      guardando.current.set(idEntrada, esperado);
       entradasRef.current = despues;
       setEntradas(despues);
       setErrorGuardado(null);
+      // En fila detrás del envío anterior de esta tarea (aunque ese fallara).
+      const anterior = colas.current.get(idEntrada) ?? Promise.resolve();
+      const envio = anterior.catch(() => {}).then(() => enviar(cambiada));
+      colas.current.set(idEntrada, envio);
       try {
-        await enviar(cambiada);
+        await envio;
       } catch (e: any) {
         // La recarga de abajo devuelve la tarea a como estaba para que se pueda repetir.
         setErrorGuardado(e?.message ?? "No se ha podido guardar");
       } finally {
-        guardando.current.delete(idEntrada);
+        // Si mientras tanto llegó otro cambio de esta tarea, su protección y su fila siguen.
+        if (guardando.current.get(idEntrada) === esperado) guardando.current.delete(idEntrada);
+        if (colas.current.get(idEntrada) === envio) colas.current.delete(idEntrada);
         recargarPronto();
       }
       return true;
@@ -142,6 +156,28 @@ export function useAgendaDia(
     [guardar, repo],
   );
 
+  /** «Atrás» tras «Empezar»: la tarea vuelve a pendiente. Devuelve false si no estaba en curso. */
+  const deshacerEmpezar = useCallback(
+    (idEntrada: string) =>
+      guardar(
+        idEntrada,
+        (antes) => aplicarDeshacerEmpezar(antes, idEntrada),
+        () => repo.desmarcarEnCurso(idEntrada),
+      ),
+    [guardar, repo],
+  );
+
+  /** «Atrás» tras «Terminar»: la tarea vuelve a «Ahora». Devuelve false si no se puede deshacer. */
+  const deshacerFin = useCallback(
+    (idEntrada: string) =>
+      guardar(
+        idEntrada,
+        (antes) => aplicarDeshacerFin(antes, idEntrada),
+        (e) => repo.desmarcarHecha(idEntrada, e.estado === "en_curso" ? "en_curso" : "pendiente"),
+      ),
+    [guardar, repo],
+  );
+
   const maxHecho = opciones?.maxHecho;
   const maxDespues = opciones?.maxDespues;
   const bloques = useMemo(
@@ -149,5 +185,16 @@ export function useAgendaDia(
     [entradas, maxHecho, maxDespues],
   );
 
-  return { bloques, entradas, cargando, error, errorGuardado, empezar, confirmarFin, recargar };
+  return {
+    bloques,
+    entradas,
+    cargando,
+    error,
+    errorGuardado,
+    empezar,
+    confirmarFin,
+    deshacerEmpezar,
+    deshacerFin,
+    recargar,
+  };
 }

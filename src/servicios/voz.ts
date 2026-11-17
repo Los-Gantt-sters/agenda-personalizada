@@ -1,7 +1,7 @@
 // Servicio de voz de la app (HUT-03, T-T03.3): lee en voz alta los textos de tareas y pasos (RF14.3,
 // RF14.5). Es el único punto que usa la síntesis de voz, para que todas las pantallas suenen igual.
 // expo-speech usa la voz del navegador en web y la del sistema si se genera la app para tabletas.
-// Los nombres `leer` y `puedeLeer` son los mismos que ya usaba DetalleTarea (HU-06), para que solo
+// Los nombres `leer` y `puedeLeer` son los que usaba el detalle de la tarea (HU-06, hoy PantallaTarea), para que solo
 // haya que importarlos de aquí.
 import * as Speech from "expo-speech";
 import { Platform } from "react-native";

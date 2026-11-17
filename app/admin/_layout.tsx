@@ -6,7 +6,11 @@ import { ZonaProtegida } from "../../src/sesion";
 export default function ZonaAdministracion() {
   return (
     <ZonaProtegida>
-      <Stack />
+      {/* Cada pantalla pinta su propia cabecera (src/pantalla): sin la barra de navegación. */}
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="vinculos" options={{ title: "Tutores y familias" }} />
+        <Stack.Screen name="dashboard" options={{ title: "Tutores y familias" }} />
+      </Stack>
     </ZonaProtegida>
   );
 }
