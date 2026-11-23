@@ -14,12 +14,14 @@
 // - Las familias (soloMirar) ven la agenda pero no empiezan ni terminan tareas.
 // T-08.4 (SCRUM-262): «Terminar» pregunta «¿Has terminado?» (pantalla 08). «No, sigo» y «Atrás»
 // vuelven siempre al último paso de la tarea, con el formato que tenía.
+// T-08.5 (SCRUM-263): al abrir una tarea hecha sale la pantalla 10, sin descripción ni valoración.
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import type { RepositorioAgenda } from "./tipos";
 import { useAgendaDia } from "./useAgendaDia";
 import { AgendaTresBloques } from "./AgendaTresBloques";
 import { PantallaTarea, type VistaTarea } from "./PantallaTarea";
+import { PantallaTareaHecha } from "./PantallaTareaHecha";
 import { Pantalla } from "../../pantalla/Pantalla";
 import { Texto, useApariencia } from "../../ui";
 import { PantallaConfirmarFin } from "../ejecucion-tarea/PantallaConfirmarFin";
@@ -197,6 +199,18 @@ export function AgendaDelDia({
         tarea={aConfirmar.tarea}
         onSi={() => terminar(aConfirmar.id)}
         onNo={() => setConfirmandoId(null)}
+        conSonido={marco.conSonido}
+      />
+    );
+  }
+
+  // ---- Pantalla 10: una tarea ya hecha solo enseña el tick, el dibujo y su nombre ----
+  if (abierta?.estado === "hecha") {
+    return (
+      <PantallaTareaHecha
+        key={`hecha-${abierta.id}`}
+        tarea={abierta.tarea}
+        alAtras={() => setAbiertaId(null)}
         conSonido={marco.conSonido}
       />
     );

@@ -318,6 +318,53 @@ describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
   });
 });
 
+describe("Pantalla 10 «Tarea hecha» (SCRUM-263: T-08.5)", () => {
+  it("enseña solo el tick, el dibujo, «Tarea hecha» y el nombre", async () => {
+    const user = userEvent.setup();
+    await render(<PantallaAgenda />);
+
+    await user.press(await screen.findByTestId("mini-e1"));
+
+    expect(screen.getByTestId("pantalla-tarea-hecha")).toBeTruthy();
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Asamblea");
+    expect(screen.getByTestId("tick-tarea-hecha")).toBeTruthy();
+    expect(screen.getByText("Tarea hecha")).toBeTruthy();
+    expect(screen.getAllByText("Asamblea")).toHaveLength(2);
+    // Nada más: ni descripción, ni hora, ni formatos, ni voz, ni valoración.
+    expect(screen.queryByText("Nos sentamos en círculo. Decimos qué día es hoy.")).toBeNull();
+    expect(screen.queryByText("9:00 a 9:30")).toBeNull();
+    expect(screen.queryByTestId("selector-formato")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Escuchar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
+    expect(screen.queryByText("¿Cómo te has sentido?")).toBeNull();
+    expect(JSON.stringify(screen.toJSON())).not.toContain("RCTModalHostView");
+  });
+
+  it("«Atrás» vuelve a la agenda", async () => {
+    const user = userEvent.setup();
+    await render(<PantallaAgenda />);
+    await user.press(await screen.findByTestId("mini-e1"));
+
+    await user.press(screen.getByTestId("btn-barra-atras"));
+
+    expect(await screen.findByTestId("bloque-ahora")).toBeTruthy();
+    expect(screen.queryByTestId("pantalla-tarea-hecha")).toBeNull();
+  });
+
+  it("una tarea recién terminada también se abre así desde «Hecho»", async () => {
+    const user = userEvent.setup();
+    await render(<PantallaAgenda />);
+    await empezarLavarse();
+    await terminarTarea();
+    await user.press(screen.getByRole("button", { name: "Seguir" }));
+
+    await user.press(await screen.findByTestId("mini-e2"));
+
+    expect(screen.getByTestId("pantalla-tarea-hecha")).toBeTruthy();
+    expect(screen.queryByText("Antes del desayuno nos lavamos las manos.")).toBeNull();
+  });
+});
+
 describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () => {
   const repoEnCurso = () =>
     crearRepositorioMemoria(
