@@ -274,8 +274,8 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   // ---- Rediseño «Piedra»: iconos sobre rellenos de color (blanco o negro con colorSobre) ----
   {
     id: "sello-hecha",
-    elemento: "Marca de tarea hecha sobre el sello verde",
-    usoEn: "AgendaTresBloques (sello), RefuerzoPositivo (insignia)",
+    elemento: "Marca de tarea hecha sobre el sello verde y texto del botón «Sí, he terminado»",
+    usoEn: "AgendaTresBloques (sello), RefuerzoPositivo (insignia), PantallaConfirmarFin (botón)",
     tipo: "texto",
     pares: [
       ["#FFFFFF", "exito"],
