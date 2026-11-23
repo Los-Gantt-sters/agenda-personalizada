@@ -412,5 +412,225 @@ describe("alumnosService - SCRUM-60 (Backend CRUD de Alumnos & Validación de Tu
       expect(result.success).toBe(false);
       expect(result.error).toBe("Bucket no encontrado");
     });
+
+    it("valida alumnoId vacío y captura excepciones en subirFotoAlumno", async () => {
+      const sinId = await subirFotoAlumno("   ", new Blob(["x"]));
+      expect(sinId.success).toBe(false);
+      expect(sinId.error).toContain("no proporcionado");
+
+      (supabase.storage.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Storage desconectado");
+      });
+      const conExcepcion = await subirFotoAlumno("alu-1", new Blob(["x"]));
+      expect(conExcepcion.success).toBe(false);
+      expect(conExcepcion.error).toBe("Storage desconectado");
+    });
+  });
+
+  describe("Cobertura de ramas adicionales y manejo de errores (SCRUM-226)", () => {
+    it("cubre error al insertar vínculo de tutor y excepciones en crearAlumno", async () => {
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: { id: "alu-err-vinc", creado_en: "2026-11-10", actualizado_en: "2026-11-10" },
+        error: null,
+      });
+      (supabase.from as jest.Mock).mockImplementation((tabla: string) => {
+        if (tabla === "alumnos") {
+          return {
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({ single: mockSingle }),
+            }),
+          };
+        }
+        if (tabla === "vinculos_alumno_supervisor") {
+          return {
+            insert: jest.fn().mockResolvedValue({ error: { message: "Fallo FK supervisor" } }),
+          };
+        }
+        return {};
+      });
+
+      const res = await crearAlumno({
+        nombre: "Lucía",
+        aulaId: "aula-1",
+        tutorTitularId: "tutor-invalido",
+      });
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Fallo FK supervisor");
+
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Excepción creando alumno");
+      });
+      const resEx = await crearAlumno({
+        nombre: "Lucía",
+        aulaId: "aula-1",
+        tutorTitularId: "tutor-1",
+      });
+      expect(resEx.success).toBe(false);
+      expect(resEx.error).toBe("Excepción creando alumno");
+    });
+
+    it("cubre filtros centroId, soloActivos=false y excepciones en obtenerAlumnos", async () => {
+      const chain: any = {};
+      chain.select = jest.fn().mockReturnValue(chain);
+      chain.order = jest.fn().mockReturnValue(chain);
+      chain.eq = jest.fn().mockReturnValue(chain);
+      chain.then = (resolve: any) => resolve({ data: null, error: null });
+
+      (supabase.from as jest.Mock).mockReturnValue(chain);
+
+      const res = await obtenerAlumnos({ centroId: "centro-purisima", soloActivos: false });
+      expect(res.success).toBe(true);
+      expect(res.data).toEqual([]);
+      expect(chain.eq).toHaveBeenCalledWith("centro_id", "centro-purisima");
+
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Fallo de red en listado");
+      });
+      const resEx = await obtenerAlumnos();
+      expect(resEx.success).toBe(false);
+      expect(resEx.error).toBe("Fallo de red en listado");
+    });
+
+    it("cubre vínculos con perfiles completos, errores y excepciones en obtenerAlumnoPorId", async () => {
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: null, error: { message: "No hallado" } }),
+        }),
+      });
+      const noHallado = await obtenerAlumnoPorId("alu-404");
+      expect(noHallado.success).toBe(false);
+      expect(noHallado.error).toBe("No hallado");
+
+      // Con vínculos completos y sin preferencias
+      (supabase.from as jest.Mock).mockImplementation((tabla: string) => {
+        if (tabla === "alumnos") {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: { id: "alu-vinc", nombre: "Lucas", aula_id: "cua" },
+                error: null,
+              }),
+            }),
+          };
+        }
+        if (tabla === "preferencias_alumnos") {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnValue({
+              maybeSingle: jest.fn().mockResolvedValue({ data: null }),
+            }),
+          };
+        }
+        if (tabla === "vinculos_alumno_supervisor") {
+          const chain: any = {};
+          chain.select = jest.fn().mockReturnValue(chain);
+          chain.eq = jest.fn().mockReturnValue(chain);
+          chain.then = (resolve: any) =>
+            resolve({
+              data: [
+                {
+                  id: "v-1",
+                  alumno_id: "alu-vinc",
+                  supervisor_id: "sup-1",
+                  tipo_vinculo: "aula",
+                  activo: true,
+                  perfiles: {
+                    id: "sup-1",
+                    email: "tutor@purisima.es",
+                    nombre_completo: "María Carmen",
+                    rol: "tutor",
+                  },
+                },
+                {
+                  id: "v-2",
+                  alumno_id: "alu-vinc",
+                  supervisor_id: "sup-2",
+                  tipo_vinculo: "familiar",
+                  activo: true,
+                  perfiles: null,
+                },
+              ],
+            });
+          return chain;
+        }
+        return {};
+      });
+
+      const conVinculos = await obtenerAlumnoPorId("alu-vinc");
+      expect(conVinculos.success).toBe(true);
+      expect(conVinculos.data?.tutorDocenteTitular?.fullName).toBe("María Carmen");
+      expect(conVinculos.data?.preferencias).toBeUndefined();
+
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Fallo crítico detalle");
+      });
+      const resEx = await obtenerAlumnoPorId("alu-err");
+      expect(resEx.success).toBe(false);
+      expect(resEx.error).toBe("Fallo crítico detalle");
+    });
+
+    it("cubre todos los campos opcionales, errores y excepciones en actualizarAlumno y eliminarAlumno", async () => {
+      const sinIdAct = await actualizarAlumno(" ", { nombre: "X" });
+      expect(sinIdAct.success).toBe(false);
+
+      // Error al actualizar en BD
+      (supabase.from as jest.Mock).mockReturnValue({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: null, error: { message: "Error UPD" } }),
+            }),
+          }),
+        }),
+      });
+      const errUpd = await actualizarAlumno("alu-1", {
+        apellidos: "Mora",
+        aulaId: "cua",
+        fotoUrl: "https://foto.jpg",
+        iconoPersonal: "🦖",
+        secuenciaAcceso: ["⚽", "🚗", "⭐"],
+        colorIdentificativo: "#3E6FA3",
+        activo: true,
+        temaInteres: "animales",
+      });
+      expect(errUpd.success).toBe(false);
+      expect(errUpd.error).toBe("Error UPD");
+
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Excepción UPD");
+      });
+      const exUpd = await actualizarAlumno("alu-1", { nombre: "Test" });
+      expect(exUpd.success).toBe(false);
+      expect(exUpd.error).toBe("Excepción UPD");
+
+      // eliminarAlumno ramas de error
+      const sinIdElim = await eliminarAlumno("");
+      expect(sinIdElim.success).toBe(false);
+
+      (supabase.from as jest.Mock).mockReturnValue({
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: { message: "Error delete físico" } }),
+        }),
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: { message: "Error baja lógica" } }),
+        }),
+      });
+      const errFisica = await eliminarAlumno("alu-1", true);
+      expect(errFisica.success).toBe(false);
+      expect(errFisica.error).toBe("Error delete físico");
+
+      const errLogica = await eliminarAlumno("alu-1", false);
+      expect(errLogica.success).toBe(false);
+      expect(errLogica.error).toBe("Error baja lógica");
+
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Excepción al eliminar");
+      });
+      const exElim = await eliminarAlumno("alu-1");
+      expect(exElim.success).toBe(false);
+      expect(exElim.error).toBe("Excepción al eliminar");
+    });
   });
 });

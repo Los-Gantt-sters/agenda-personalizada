@@ -316,5 +316,264 @@ describe("marcasTiempoService - SCRUM-76 (Registro de Marcas de Tiempo Reales)",
       expect(resFin.success).toBe(true);
       expect(resFin.data?.estadoFinal).toBe("completada");
     });
+
+    it("tolera excepciones síncronas o asíncronas lanzadas por el cliente Supabase", async () => {
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Fallo crítico de cliente");
+      });
+
+      const resInicio = await registrarInicioTarea({
+        asignacionId: "asig-crash",
+        estudianteId: "est-1",
+      });
+      expect(resInicio.success).toBe(true);
+
+      const resPaso = await registrarPasoConfirmado({
+        asignacionId: "asig-crash",
+        paso: 1,
+        texto: "Paso offline",
+      });
+      expect(resPaso.success).toBe(true);
+
+      const resFin = await registrarFinTarea({
+        asignacionId: "asig-crash",
+        estadoFinal: "incompleta",
+      });
+      expect(resFin.success).toBe(true);
+      expect(resFin.data?.estadoFinal).toBe("incompleta");
+
+      const resLista = await listarEjecucionesPorEstudiante("est-1");
+      expect(resLista.success).toBe(true);
+      expect(resLista.data?.length).toBe(1);
+    });
+  });
+
+  describe("Cobertura exhaustiva de ramas y casos borde (SCRUM-226)", () => {
+    it("valida entradas inválidas en registrarFinTarea y registrarPasoConfirmado", async () => {
+      const finSinId = await registrarFinTarea({
+        asignacionId: "   ",
+        estadoFinal: "completada",
+      });
+      expect(finSinId.success).toBe(false);
+      expect(finSinId.error).toContain("VALIDACION_ERROR");
+
+      await registrarInicioTarea({
+        asignacionId: "asig-fecha-fin-err",
+        estudianteId: "est-1",
+      });
+      const finFechaInvalida = await registrarFinTarea({
+        asignacionId: "asig-fecha-fin-err",
+        fin: "no-es-fecha",
+        estadoFinal: "completada",
+      });
+      expect(finFechaInvalida.success).toBe(false);
+      expect(finFechaInvalida.error).toContain("FORMATO_FECHA_INVALIDO");
+
+      const pasoSinId = await registrarPasoConfirmado({
+        asignacionId: "",
+        paso: 1,
+      });
+      expect(pasoSinId.success).toBe(false);
+
+      const pasoInvalido = await registrarPasoConfirmado({
+        asignacionId: "asig-fecha-fin-err",
+        paso: 0,
+      });
+      expect(pasoInvalido.success).toBe(false);
+
+      const pasoNoIniciado = await registrarPasoConfirmado({
+        asignacionId: "no-existe",
+        paso: 1,
+      });
+      expect(pasoNoIniciado.success).toBe(false);
+      expect(pasoNoIniciado.error).toContain("EJECUCION_NO_ENCONTRADA");
+
+      const pasoFechaErr = await registrarPasoConfirmado({
+        asignacionId: "asig-fecha-fin-err",
+        paso: 1,
+        confirmadoEn: "fecha-rota",
+      });
+      expect(pasoFechaErr.success).toBe(false);
+      expect(pasoFechaErr.error).toContain("FORMATO_FECHA_INVALIDO");
+    });
+
+    it("recupera la ejecución desde Supabase al finalizar si no estaba en memoria y actualiza paso repetido", async () => {
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: "ejec-remota-1",
+                  asignacion_id: "asig-remota",
+                  estudiante_id: "est-remoto",
+                  inicio: "2026-11-10T08:00:00.000Z",
+                  pasos_confirmados: null,
+                },
+              ],
+              error: null,
+            }),
+          }),
+        }),
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      });
+
+      const resFin = await registrarFinTarea({
+        asignacionId: "asig-remota",
+        fin: "2026-11-10T08:15:00.000Z",
+        estadoFinal: "cancelada",
+      });
+      expect(resFin.success).toBe(true);
+      expect(resFin.data?.id).toBe("ejec-remota-1");
+      expect(resFin.data?.duracionRealSegundos).toBe(900);
+
+      // Reemplazo y ordenación de pasos confirmados
+      await registrarPasoConfirmado({
+        asignacionId: "asig-remota",
+        paso: 2,
+        texto: "Paso dos",
+      });
+      await registrarPasoConfirmado({
+        asignacionId: "asig-remota",
+        paso: 1,
+        texto: "Paso uno inicial",
+      });
+      const resPaso1Actualizado = await registrarPasoConfirmado({
+        asignacionId: "asig-remota",
+        paso: 1,
+        texto: "Paso uno corregido",
+      });
+      expect(resPaso1Actualizado.success).toBe(true);
+      expect(resPaso1Actualizado.data?.pasosConfirmados).toHaveLength(2);
+      expect(resPaso1Actualizado.data?.pasosConfirmados[0].texto).toBe("Paso uno corregido");
+    });
+
+    it("cubre todas las ramas de obtenerEjecucion y listarEjecucionesPorEstudiante desde Supabase", async () => {
+      const sinId = await obtenerEjecucion("  ");
+      expect(sinId.success).toBe(false);
+
+      const listaSinId = await listarEjecucionesPorEstudiante("");
+      expect(listaSinId.success).toBe(false);
+
+      // Caso builder sin select
+      (supabase.from as jest.Mock).mockReturnValue({});
+      const noBuilder = await obtenerEjecucion("asig-sin-builder");
+      expect(noBuilder.success).toBe(false);
+
+      const listaSinBuilder = await listarEjecucionesPorEstudiante("est-sin-builder");
+      expect(listaSinBuilder.success).toBe(true);
+
+      // Caso obtenerEjecucion con datos remotos en Supabase
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: "ejec-db-99",
+                asignacion_id: "asig-db-99",
+                estudiante_id: "est-99",
+                inicio: "2026-11-10T09:00:00.000Z",
+                pasos_confirmados: null,
+              },
+            ],
+            error: null,
+          }),
+        }),
+      });
+      const desdeDb = await obtenerEjecucion("asig-db-99");
+      expect(desdeDb.success).toBe(true);
+      expect(desdeDb.data?.id).toBe("ejec-db-99");
+
+      // Caso obtenerEjecucion con error de BD
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: null,
+            error: { message: "No existe registro" },
+          }),
+        }),
+      });
+      const noEncontrada = await obtenerEjecucion("asig-inexistente");
+      expect(noEncontrada.success).toBe(false);
+      expect(noEncontrada.error).toBe("No existe registro");
+
+      // Caso obtenerEjecucion lanzando excepción
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error("Excepción en consulta");
+      });
+      const conExcepcion = await obtenerEjecucion("asig-excepcion");
+      expect(conExcepcion.success).toBe(false);
+      expect(conExcepcion.error).toBe("Excepción en consulta");
+
+      // Caso listarEjecucionesPorEstudiante devolviendo filas desde Supabase
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: "ejec-lista-1",
+                  asignacion_id: "asig-l1",
+                  estudiante_id: "est-remoto-lista",
+                  inicio: "2026-11-10T10:00:00.000Z",
+                  estado_final: "completada",
+                  pasos_confirmados: null,
+                },
+              ],
+              error: null,
+            }),
+          }),
+        }),
+      });
+      const listaRemota = await listarEjecucionesPorEstudiante("est-remoto-lista");
+      expect(listaRemota.success).toBe(true);
+      expect(listaRemota.data).toHaveLength(1);
+      expect(listaRemota.data?.[0].id).toBe("ejec-lista-1");
+    });
+
+    it("calcula métricas con lista vacía, errores y todos los estados emocionales (neutral, regular, mal, cancelada)", async () => {
+      const errMetricas = await calcularMetricasRendimiento("");
+      expect(errMetricas.success).toBe(false);
+
+      const vacias = await calcularMetricasRendimiento("est-sin-tareas");
+      expect(vacias.success).toBe(true);
+      expect(vacias.data?.totalEjecuciones).toBe(0);
+      expect(vacias.data?.tasaExitoPorcentaje).toBe(0);
+
+      const estVariado = "est-emociones";
+      await registrarInicioTarea({ asignacionId: "v-1", estudianteId: estVariado });
+      await registrarFinTarea({
+        asignacionId: "v-1",
+        estadoFinal: "cancelada",
+        valoracionEmocional: "neutral",
+      });
+
+      await registrarInicioTarea({ asignacionId: "v-2", estudianteId: estVariado });
+      await registrarFinTarea({
+        asignacionId: "v-2",
+        estadoFinal: "incompleta",
+        valoracionEmocional: "regular",
+      });
+
+      await registrarInicioTarea({ asignacionId: "v-3", estudianteId: estVariado });
+      await registrarFinTarea({
+        asignacionId: "v-3",
+        estadoFinal: "bloqueada",
+        valoracionEmocional: "mal",
+      });
+
+      // Una tarea en curso sin finalizar (sin duracionRealSegundos ni valoracionEmocional)
+      await registrarInicioTarea({ asignacionId: "v-4", estudianteId: estVariado });
+
+      const res = await calcularMetricasRendimiento(estVariado);
+      expect(res.success).toBe(true);
+      expect(res.data?.totalEjecuciones).toBe(4);
+      expect(res.data?.canceladas).toBe(1);
+      expect(res.data?.bloqueadas).toBe(1);
+      expect(res.data?.desgloseEmocional.neutro).toBe(2);
+      expect(res.data?.desgloseEmocional.negativo).toBe(1);
+    });
   });
 });
