@@ -12,14 +12,17 @@
 // - Basta un toque en «Empezar» y «Terminar»; «Atrás» los deshace por si el alumno se equivoca:
 //   en la tarea en curso vuelve a la agenda sin empezar y en la felicitación, a la tarea sin terminar.
 // - Las familias (soloMirar) ven la agenda pero no empiezan ni terminan tareas.
+// T-08.4 (SCRUM-262): «Terminar» pregunta «¿Has terminado?» (pantalla 08). «No, sigo» y «Atrás»
+// vuelven siempre al último paso de la tarea, con el formato que tenía.
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import type { RepositorioAgenda } from "./tipos";
 import { useAgendaDia } from "./useAgendaDia";
 import { AgendaTresBloques } from "./AgendaTresBloques";
-import { PantallaTarea } from "./PantallaTarea";
+import { PantallaTarea, type VistaTarea } from "./PantallaTarea";
 import { Pantalla } from "../../pantalla/Pantalla";
 import { Texto, useApariencia } from "../../ui";
+import { PantallaConfirmarFin } from "../ejecucion-tarea/PantallaConfirmarFin";
 import { RefuerzoPositivo } from "../ejecucion-tarea/RefuerzoPositivo";
 import type { Emocion } from "../ejecucion-tarea/emociones";
 import {
@@ -114,14 +117,34 @@ export function AgendaDelDia({
   const [terminada, setTerminada] = useState<{ id: string; titulo: string } | null>(null);
   // Tarea empezada desde esta pantalla (para los adultos, que no entran directos a la tarea).
   const [empezadaAqui, setEmpezadaAqui] = useState<string | null>(null);
+  // Tarea por la que se está preguntando «¿Has terminado?» (pantalla 08).
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
+  // Paso y formato de cada tarea, para volver a ellos desde otra pantalla.
+  const [vistas, setVistas] = useState<Record<string, VistaTarea>>({});
   // Cerrar el aviso solo lo quita de la pantalla: la tarea en curso sigue igual.
   const { aviso, cerrar: cerrarAviso } = useAvisoAnticipado(entradas, preferenciasAviso, onAviso);
+
+  // Si la tarea deja de ser la de «Ahora» (la cambia el tutor), ya no se pregunta por ella.
+  const aConfirmar = bloques.ahora?.id === confirmandoId ? bloques.ahora : null;
+  if (confirmandoId && !aConfirmar) setConfirmandoId(null);
+
+  const olvidarVista = (idEntrada: string) =>
+    setVistas((actuales) => {
+      const resto = { ...actuales };
+      delete resto[idEntrada];
+      return resto;
+    });
+
+  const pedirFin = (idEntrada: string) => {
+    if (bloques.ahora?.id === idEntrada) setConfirmandoId(idEntrada);
+  };
 
   // El refuerzo sale al momento, igual que la tarea pasa a «Hecho» al momento (actualización
   // optimista); si no se guarda, la tarea vuelve a «Ahora» y se avisa abajo.
   const terminar = (idEntrada: string) => {
     if (bloques.ahora?.id !== idEntrada) return;
     setTerminada({ id: idEntrada, titulo: bloques.ahora.tarea.titulo });
+    setConfirmandoId(null);
     setAbiertaId(null);
     void confirmarFin(idEntrada);
   };
@@ -153,12 +176,28 @@ export function AgendaDelDia({
         tarea={terminada.titulo}
         nombre={nombre}
         preferencias={preferencias.refuerzo}
-        onSeguir={() => setTerminada(null)}
+        onSeguir={() => {
+          olvidarVista(terminada.id);
+          setTerminada(null);
+        }}
         onDeshacer={() => {
           void deshacerFin(terminada.id);
           setTerminada(null);
         }}
         onEmocion={(emocion) => onEmocion?.(terminada.id, emocion)}
+      />
+    );
+  }
+
+  // ---- «¿Has terminado?»: «No, sigo» y «Atrás» vuelven al último paso ----
+  if (aConfirmar) {
+    return (
+      <PantallaConfirmarFin
+        key={`confirmar-${aConfirmar.id}`}
+        tarea={aConfirmar.tarea}
+        onSi={() => terminar(aConfirmar.id)}
+        onNo={() => setConfirmandoId(null)}
+        conSonido={marco.conSonido}
       />
     );
   }
@@ -193,13 +232,18 @@ export function AgendaDelDia({
         key={`en-curso-${enCurso.id}`}
         entrada={enCurso}
         enCurso
-        alAtras={() => void deshacerEmpezar(enCurso.id)}
+        alAtras={() => {
+          olvidarVista(enCurso.id);
+          void deshacerEmpezar(enCurso.id);
+        }}
         etiquetaAtras="Atrás: todavía no he empezado"
-        onTerminar={() => terminar(enCurso.id)}
+        onTerminar={() => pedirFin(enCurso.id)}
         verReloj={verReloj}
         conSonido={marco.conSonido}
         aviso={franjaAviso}
         pie={pieError}
+        vistaInicial={vistas[enCurso.id]}
+        onCambioVista={(vista) => setVistas((v) => ({ ...v, [enCurso.id]: vista }))}
       />
     );
   }
@@ -230,7 +274,7 @@ export function AgendaDelDia({
               setEmpezadaAqui(id);
               void empezar(id);
             }}
-            onConfirmarFin={terminar}
+            onConfirmarFin={pedirFin}
             maxTareas={tareasVisibles}
             soloMirar={soloMirar}
             verReloj={verReloj}

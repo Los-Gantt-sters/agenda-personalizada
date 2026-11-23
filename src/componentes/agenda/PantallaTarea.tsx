@@ -48,6 +48,16 @@ const FORMATOS: { modo: ModoCanal; etiqueta: string; iconos: NombreIcono[] }[] =
   { modo: "soloTexto", etiqueta: "Ver solo el texto", iconos: ["lista"] },
 ];
 
+/**
+ * Por dónde va el alumno dentro de la tarea. AgendaDelDia lo guarda para que, al volver de
+ * «¿Has terminado?» (T-08.4), siga en el mismo paso y con el formato que había elegido.
+ */
+export interface VistaTarea {
+  paso: number;
+  /** Formato elegido dentro de la tarea; null = el de las preferencias. */
+  formato: ModoCanal | null;
+}
+
 export function PantallaTarea({
   entrada,
   enCurso,
@@ -58,6 +68,8 @@ export function PantallaTarea({
   conSonido = false,
   aviso,
   pie,
+  vistaInicial,
+  onCambioVista,
 }: {
   entrada: EntradaAgenda;
   /** La tarea se está haciendo: reloj (si se quiere) y «Terminar». Si no, es el detalle. */
@@ -73,21 +85,35 @@ export function PantallaTarea({
   aviso?: ReactNode;
   /** Aviso discreto de abajo (sin conexión, no se ha guardado). */
   pie?: ReactNode;
+  /** Paso y formato con los que se abre (al volver a la tarea). */
+  vistaInicial?: VistaTarea;
+  /** Se llama al cambiar de paso o de formato. */
+  onCambioVista?: (vista: VistaTarea) => void;
 }) {
   const { colores, canal, escalaLetra: L } = useApariencia();
   const e = useEstilos(crearEstilos);
   const ventana = useWindowDimensions();
   const [area, setArea] = useState<{ width: number; height: number } | null>(null);
   // Formato elegido dentro de la tarea; mientras no se toque, el de las preferencias.
-  const [formatoElegido, setFormatoElegido] = useState<ModoCanal | null>(null);
+  const [formatoElegido, setFormatoElegido] = useState<ModoCanal | null>(
+    vistaInicial?.formato ?? null,
+  );
   const formato = formatoElegido ?? canal;
   const verDibujo = formato !== "soloTexto";
   const verTexto = formato !== "soloPictograma";
 
   const t = entrada.tarea;
   const pasos = (t.pasos ?? []).slice().sort((a, b) => a.orden - b.orden);
-  const [paso, setPaso] = useState(0);
+  const [paso, setPaso] = useState(vistaInicial?.paso ?? 0);
   const p = pasos[Math.min(paso, Math.max(0, pasos.length - 1))];
+  const irAPaso = (n: number) => {
+    setPaso(n);
+    onCambioVista?.({ paso: n, formato: formatoElegido });
+  };
+  const elegirFormato = (f: ModoCanal) => {
+    setFormatoElegido(f);
+    onCambioVista?.({ paso, formato: f });
+  };
 
   const empezada = enCurso && Boolean(entrada.inicio_real);
   const conReloj = empezada && verReloj;
@@ -151,7 +177,7 @@ export function PantallaTarea({
                 accessibilityLabel={f.etiqueta}
                 accessibilityState={{ checked: elegido, selected: elegido }}
                 testID={`formato-${f.modo}`}
-                onPress={() => setFormatoElegido(f.modo)}
+                onPress={() => elegirFormato(f.modo)}
                 style={({ pressed }) => [
                   e.formato,
                   elegido && e.formatoElegido,
@@ -251,7 +277,7 @@ export function PantallaTarea({
                   icono="atras"
                   etiqueta="Paso anterior"
                   desactivado={nPaso === 0}
-                  onPress={() => setPaso(nPaso - 1)}
+                  onPress={() => irAPaso(nPaso - 1)}
                 />
               ) : null}
               {p.pictograma_url && verDibujo ? (
@@ -277,7 +303,7 @@ export function PantallaTarea({
                   icono="adelante"
                   etiqueta="Paso siguiente"
                   desactivado={nPaso >= pasos.length - 1}
-                  onPress={() => setPaso(nPaso + 1)}
+                  onPress={() => irAPaso(nPaso + 1)}
                 />
               ) : null}
             </View>

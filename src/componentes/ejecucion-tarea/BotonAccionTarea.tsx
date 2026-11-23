@@ -1,11 +1,11 @@
 // Botones gigantes «Empezar» y «Terminar» (T-08.1, HU-08).
 // RF6.1: «Empezar» pone la tarea en curso. RF6.4: «Terminar» la da por hecha.
 // RNF6.3: área táctil muy por encima de 48 × 48. RNF6.4: solo botones, sin campos de texto.
-// Mejora de la profesora (noviembre de 2026): basta con un toque. Ya no hay que mantenerlo pulsado
-// ni contestar «¿Seguro?»; si el alumno se equivoca, «Atrás» lo deshace. Esto sustituye a los
-// antitoques de T-08.2 (RNF6.1). Se mantiene que, recién aparecido, el botón no haga caso durante
-// un momento (al pasar de «Empezar» a «Terminar», el mismo toque no vale para las dos cosas) y que
-// solo confirme una vez.
+// Mejora de la profesora (noviembre de 2026): basta con un toque, sin mantenerlo pulsado. Si el
+// alumno se equivoca al empezar, «Atrás» lo deshace; «Terminar» abre la pantalla 08 («¿Has
+// terminado?», T-08.4). Se mantiene que, recién aparecido, el botón no haga caso durante un momento
+// (al pasar de «Empezar» a «Terminar», el mismo toque no vale para las dos cosas) y que solo
+// confirme una vez.
 import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import type { Paleta } from "../../temas";
@@ -57,7 +57,7 @@ export function BotonAccionTarea({
       accessibilityHint={
         accion === "empezar"
           ? "Si te equivocas, pulsa Atrás"
-          : "Si no has terminado, pulsa Atrás en la siguiente pantalla"
+          : "Antes de terminar te pregunta si has terminado"
       }
       accessibilityState={{ disabled: desactivado }}
       disabled={desactivado}
