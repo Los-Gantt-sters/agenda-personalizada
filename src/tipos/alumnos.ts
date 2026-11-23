@@ -46,10 +46,29 @@ export interface Aula {
   centroId: string;
   nombre: string;
   iconoForma?: "triangulo" | "circulo" | "cuadrado" | string;
+  /** Pictograma de ARASAAC o imagen propia del aula; si existe, sustituye a la forma (SCRUM-259). */
+  iconoUrl?: string | null;
   colorDistintivo?: string;
   nivel: string;
   tutorTitularId?: string;
+  /** Posición del aula en las pantallas 01 y 35, de menor a mayor (SCRUM-259). */
+  orden?: number;
   creadoEn?: string;
+}
+
+/** Datos para crear un aula desde la pantalla 48b (SCRUM-259). */
+export interface CrearAulaInput {
+  nombre: string;
+  iconoForma?: string;
+  iconoUrl?: string | null;
+  centroId?: string;
+}
+
+/** Cambios sobre un aula existente (SCRUM-259). */
+export interface ActualizarAulaInput {
+  nombre?: string;
+  iconoForma?: string;
+  iconoUrl?: string | null;
 }
 
 /**

@@ -9,8 +9,9 @@ import {
 } from "../../src/servicios/vinculosService";
 
 // La consola es una pantalla con barra de abajo (Atrás / Adelante): necesita el router.
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
 }));
 
 jest.mock("../../src/servicios/vinculosService", () => ({
@@ -63,6 +64,16 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prepararDatos();
+  });
+
+  it("tiene un acceso provisional a «Aulas y clases» con su aviso (SCRUM-259)", async () => {
+    const user = userEvent.setup();
+    await render(<ConsolaVinculos />);
+    await screen.findByTestId("fila-a1");
+
+    expect(screen.getByText(/Acceso provisional/)).toBeTruthy();
+    await user.press(screen.getByRole("button", { name: "Ir a configurar aulas y clases" }));
+    expect(mockPush).toHaveBeenCalledWith("/admin/aulas");
   });
 
   it("muestra cada estudiante con su aula, su tutor de aula y su familia", async () => {

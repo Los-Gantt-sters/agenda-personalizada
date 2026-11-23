@@ -172,6 +172,20 @@ export default function ConsolaVinculos() {
           cambia estos vínculos.
         </Texto>
 
+        {/* PROVISIONAL (SCRUM-259): acceso a la pantalla 48b hasta que exista el panel de
+            administración (pantalla 48, con las tarjetas Aulas y Clases, Menús y Alergias...).
+            Cuando esté, se quita este bloque. */}
+        <View style={estilos.accesoProvisional}>
+          <Boton
+            texto="Aulas y clases"
+            etiqueta="Ir a configurar aulas y clases"
+            alPulsar={() => router.push("/admin/aulas")}
+          />
+          <Texto style={estilos.avisoProvisional}>
+            Acceso provisional: se quitará cuando esté el panel de administración (pantalla 48).
+          </Texto>
+        </View>
+
         {cargando && <Texto style={estilos.estado}>Cargando estudiantes…</Texto>}
 
         {errorCarga && (
@@ -277,6 +291,8 @@ const crearEstilos = (c: Paleta) =>
     },
     textoSalir: { fontSize: 16, fontWeight: "700", color: c.primario },
     subtitulo: { fontSize: 16, color: c.textoSecundario, maxWidth: 760 },
+    accesoProvisional: { gap: 4 },
+    avisoProvisional: { fontSize: 14, fontStyle: "italic", color: c.textoSecundario },
     estado: { fontSize: 18, color: c.textoSecundario },
     filaError: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
     error: { fontSize: 16, fontWeight: "700", color: c.peligro },
