@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import LoginEstudiantesScreen from "../login-estudiantes";
 import { signInEstudianteConDibujos } from "../../src/servicios/authService";
+import { destinoTrasLoginAlumno } from "../../src/servicios/destinoAgendaAlumno";
 import { obtenerAlumnoTableta } from "../../src/servicios/tabletaPersonal";
 import type { AuthResult } from "../../src/tipos/auth";
 
@@ -19,6 +20,12 @@ jest.mock("../../src/servicios/authService", () => ({
 const mockLogin = signInEstudianteConDibujos as jest.MockedFunction<
   typeof signInEstudianteConDibujos
 >;
+
+// SCRUM-227: la ruta de la agenda la decide destinoAgendaAlumno (con alumnos de ejemplo, la demo)
+jest.mock("../../src/servicios/destinoAgendaAlumno", () => ({
+  destinoTrasLoginAlumno: jest.fn(async () => "/agenda"),
+}));
+const mockDestino = destinoTrasLoginAlumno as jest.MockedFunction<typeof destinoTrasLoginAlumno>;
 
 const EXITO: AuthResult = {
   success: true,
@@ -65,6 +72,21 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/agenda"));
     expect(mockLogin).toHaveBeenCalledTimes(1);
     expect(mockLogin).toHaveBeenCalledWith("ale", ["manzana", "perro", "estrella"]);
+  });
+
+  it("SCRUM-227: tras entrar, lleva al alumno a la agenda que le corresponde", async () => {
+    mockLogin.mockResolvedValue(EXITO);
+    mockDestino.mockResolvedValueOnce("/agenda?estudiante=id-real&vista=semanal");
+    const user = userEvent.setup();
+    await render(<LoginEstudiantesScreen />);
+
+    await abrirCredencialDeAlejandro(user);
+    await tocarDibujos(user, "manzana", "perro", "estrella");
+
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith("/agenda?estudiante=id-real&vista=semanal"),
+    );
+    expect(mockDestino).toHaveBeenCalledWith("ale");
   });
 
   it("si la secuencia es incorrecta no entra, avisa y deja la secuencia vacía", async () => {
