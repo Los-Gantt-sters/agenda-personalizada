@@ -50,7 +50,6 @@ async function pedirTerminar() {
 
 /** Contesta «Sí, he terminado» en la pantalla 08. */
 async function decirQueSi() {
-  await pasaElBloqueo();
   tocar(screen.getByRole("button", { name: "Sí, he terminado" }));
 }
 
@@ -273,15 +272,13 @@ describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
     expect(screen.getByTestId("pantalla-confirmar-fin")).toBeTruthy();
   });
 
-  it("el toque que abre la pantalla no vale como «Sí»; después, pasa a la felicitación", async () => {
+  it("un solo toque en «Sí», nada más aparecer, pasa a la felicitación", async () => {
     const { repo } = await abrirAgenda();
     await pedirTerminar();
 
+    // Sin esperar: el primer toque siempre vale.
     tocar(screen.getByRole("button", { name: "Sí, he terminado" }));
-    expect(screen.queryByText("¡Muy bien!")).toBeNull();
-    expect(await estadoLavarse(repo)).toBe("en_curso");
 
-    await decirQueSi();
     expect(await screen.findByText("¡Muy bien!")).toBeTruthy();
     await waitFor(async () => expect(await estadoLavarse(repo)).toBe("hecha"));
   });
