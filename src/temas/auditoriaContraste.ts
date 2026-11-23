@@ -284,8 +284,8 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   },
   {
     id: "sello-bloqueada",
-    elemento: "Candado de tarea bloqueada sobre el sello de aviso",
-    usoEn: "AgendaTresBloques (sello)",
+    elemento: "Candado o alerta sobre el sello de aviso, y etiqueta del motivo de la pantalla 10b",
+    usoEn: "AgendaTresBloques (sello), PantallaTareaPendiente (círculo y etiqueta)",
     tipo: "texto",
     pares: [
       ["#FFFFFF", "aviso"],

@@ -6,7 +6,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import type { EntradaAgenda } from "../agenda/tipos";
-import { claveAviso, crearEventoAviso, momentoAviso, siguienteTarea, tocaAvisar } from "./logica";
+import { esPendienteRetomar } from "../agenda/logica";
+import {
+  claveAviso,
+  crearEventoAviso,
+  momentoAviso,
+  momentoInicio,
+  siguienteTarea,
+  tocaAvisar,
+} from "./logica";
 import { AVISO_POR_DEFECTO, type EventoAviso, type PreferenciasAviso } from "./tipos";
 
 // Aunque falte mucho, se revisa cada minuto: el navegador retrasa los temporizadores de las
@@ -66,8 +74,27 @@ export function useAvisoAnticipado(
     };
   }, [entradas, activado, antelacionMin, tipo]);
 
+  // T-08.6: la pantalla del aviso espera a «Vale», así que deja de valer sola si lo que dice ya no es
+  // cierto: la tarea ya no está pendiente, la han movido de hora o ha llegado su hora.
+  const actual = aviso ? entradas.find((e) => e.id === aviso.entrada_id) : undefined;
+  const vigente =
+    aviso &&
+    actual?.estado === "pendiente" &&
+    !esPendienteRetomar(actual) &&
+    claveAviso(actual) === claveAviso(aviso.entrada)
+      ? aviso
+      : null;
+  if (aviso && !vigente) setAviso(null);
+
+  useEffect(() => {
+    if (!vigente) return;
+    const espera = Math.max(0, momentoInicio(vigente.entrada).getTime() - Date.now());
+    const t = setTimeout(() => setAviso(null), espera);
+    return () => clearTimeout(t);
+  }, [vigente]);
+
   /** Quita el aviso de la pantalla. No cambia nada de la agenda. */
   const cerrar = useCallback(() => setAviso(null), []);
 
-  return { aviso, cerrar };
+  return { aviso: vigente, cerrar };
 }

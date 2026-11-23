@@ -15,6 +15,9 @@
 // T-08.4 (SCRUM-262): «Terminar» pregunta «¿Has terminado?» (pantalla 08). «No, sigo» y «Atrás»
 // vuelven siempre al último paso de la tarea, con el formato que tenía.
 // T-08.5 (SCRUM-263): al abrir una tarea hecha sale la pantalla 10, sin descripción ni valoración.
+// T-08.6 (SCRUM-264): una tarea a medias abre la pantalla 10b («Retomar tarea»). El aviso de 5 minutos
+// es la pantalla 08b para el alumno: espera a «Vale» y le devuelve justo donde estaba. Nunca corta la
+// felicitación ni «¿Has terminado?»; a los adultos solo les sale la franja de arriba.
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import type { RepositorioAgenda } from "./tipos";
@@ -22,6 +25,8 @@ import { useAgendaDia } from "./useAgendaDia";
 import { AgendaTresBloques } from "./AgendaTresBloques";
 import { PantallaTarea, type VistaTarea } from "./PantallaTarea";
 import { PantallaTareaHecha } from "./PantallaTareaHecha";
+import { PantallaTareaPendiente } from "./PantallaTareaPendiente";
+import { esPendienteRetomar } from "./logica";
 import { Pantalla } from "../../pantalla/Pantalla";
 import { Texto, useApariencia } from "../../ui";
 import { PantallaConfirmarFin } from "../ejecucion-tarea/PantallaConfirmarFin";
@@ -33,6 +38,7 @@ import {
 } from "../ejecucion-tarea/tipos";
 import { useAvisoAnticipado } from "../aviso-anticipado/useAvisoAnticipado";
 import { AvisoFlotante } from "../aviso-anticipado/AvisoFlotante";
+import { PantallaAviso } from "../aviso-anticipado/PantallaAviso";
 import {
   AVISO_POR_DEFECTO,
   type EventoAviso,
@@ -101,6 +107,7 @@ export function AgendaDelDia({
     error,
     errorGuardado,
     empezar,
+    retomar,
     confirmarFin,
     deshacerEmpezar,
     deshacerFin,
@@ -123,6 +130,8 @@ export function AgendaDelDia({
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
   // Paso y formato de cada tarea, para volver a ellos desde otra pantalla.
   const [vistas, setVistas] = useState<Record<string, VistaTarea>>({});
+  // Lo mismo para el detalle abierto, aparte: mirar los pasos no adelanta la tarea al empezarla.
+  const [vistaDetalle, setVistaDetalle] = useState<VistaTarea | undefined>(undefined);
   // Cerrar el aviso solo lo quita de la pantalla: la tarea en curso sigue igual.
   const { aviso, cerrar: cerrarAviso } = useAvisoAnticipado(entradas, preferenciasAviso, onAviso);
 
@@ -137,6 +146,11 @@ export function AgendaDelDia({
       return resto;
     });
 
+  const cerrarDetalle = () => {
+    setAbiertaId(null);
+    setVistaDetalle(undefined);
+  };
+
   const pedirFin = (idEntrada: string) => {
     if (bloques.ahora?.id === idEntrada) setConfirmandoId(idEntrada);
   };
@@ -147,11 +161,12 @@ export function AgendaDelDia({
     if (bloques.ahora?.id !== idEntrada) return;
     setTerminada({ id: idEntrada, titulo: bloques.ahora.tarea.titulo });
     setConfirmandoId(null);
-    setAbiertaId(null);
+    cerrarDetalle();
     void confirmarFin(idEntrada);
   };
 
-  const franjaAviso = (
+  // El alumno ve el aviso a pantalla completa (más abajo); los adultos, en esta franja.
+  const franjaAviso = abrirTareaEnCurso ? null : (
     <AvisoFlotante aviso={aviso} preferencias={preferenciasAviso} onCerrar={cerrarAviso} />
   );
   // Aviso discreto solo si algo falla; no tapa la tarea.
@@ -204,13 +219,57 @@ export function AgendaDelDia({
     );
   }
 
+  // ---- Pantalla 08b: «Vale» y «Atrás» devuelven justo a donde estaba ----
+  if (abrirTareaEnCurso && aviso) {
+    return (
+      <PantallaAviso
+        key={`aviso-${aviso.emitido_en}`}
+        aviso={aviso}
+        preferencias={preferenciasAviso}
+        onCerrar={cerrarAviso}
+        conSonido={marco.conSonido}
+      />
+    );
+  }
+
   // ---- Pantalla 10: una tarea ya hecha solo enseña el tick, el dibujo y su nombre ----
   if (abierta?.estado === "hecha") {
     return (
       <PantallaTareaHecha
         key={`hecha-${abierta.id}`}
         tarea={abierta.tarea}
-        alAtras={() => setAbiertaId(null)}
+        alAtras={cerrarDetalle}
+        conSonido={marco.conSonido}
+      />
+    );
+  }
+
+  // ---- Pantalla 10b: una tarea a medias se puede retomar ----
+  if (abierta && esPendienteRetomar(abierta)) {
+    const otraEnCurso = entradas.some((e) => e.estado === "en_curso");
+    const puedeRetomar = !soloMirar && !otraEnCurso;
+    return (
+      <PantallaTareaPendiente
+        key={`pendiente-${abierta.id}`}
+        entrada={abierta}
+        conPasoGuardado={Boolean(vistas[abierta.id])}
+        onRetomar={
+          puedeRetomar
+            ? () => {
+                setEmpezadaAqui(abierta.id);
+                cerrarDetalle();
+                void retomar(abierta.id);
+              }
+            : undefined
+        }
+        nota={
+          soloMirar
+            ? "Solo para mirar: la tarea la retoma el alumno o su tutor"
+            : otraEnCurso
+              ? "Antes hay que terminar la tarea que está en curso"
+              : undefined
+        }
+        alAtras={cerrarDetalle}
         conSonido={marco.conSonido}
       />
     );
@@ -224,12 +283,14 @@ export function AgendaDelDia({
         entrada={abierta}
         // Una familia que abre la tarea en curso ve también el reloj, pero no «Terminar».
         enCurso={abierta.estado === "en_curso"}
-        alAtras={() => setAbiertaId(null)}
+        alAtras={cerrarDetalle}
         etiquetaAtras="Atrás: volver a la agenda"
         verReloj={verReloj}
         conSonido={marco.conSonido}
         aviso={franjaAviso}
         pie={pieError}
+        vistaInicial={vistaDetalle}
+        onCambioVista={setVistaDetalle}
       />
     );
   }
@@ -247,10 +308,13 @@ export function AgendaDelDia({
         entrada={enCurso}
         enCurso
         alAtras={() => {
-          olvidarVista(enCurso.id);
+          // Una tarea retomada vuelve a estar pendiente y sigue recordando su paso.
+          if (!enCurso.pendiente_motivo) olvidarVista(enCurso.id);
           void deshacerEmpezar(enCurso.id);
         }}
-        etiquetaAtras="Atrás: todavía no he empezado"
+        etiquetaAtras={
+          enCurso.pendiente_motivo ? "Atrás: dejarla pendiente" : "Atrás: todavía no he empezado"
+        }
         onTerminar={() => pedirFin(enCurso.id)}
         verReloj={verReloj}
         conSonido={marco.conSonido}
