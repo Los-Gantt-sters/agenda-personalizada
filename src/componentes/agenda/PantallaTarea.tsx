@@ -123,12 +123,11 @@ export function PantallaTarea({
     empezada && entrada.inicio_real
       ? `Empezaste a las ${horaDe(entrada.inicio_real)}`
       : franjaHoraria(entrada);
+  // Las tareas hechas tienen su propia pantalla (PantallaTareaHecha, T-08.5).
   const estado =
-    entrada.estado === "hecha"
-      ? { icono: "check" as const, color: colores.exito, texto: "Ya la has hecho" }
-      : entrada.estado === "bloqueada"
-        ? { icono: "candado" as const, color: colores.aviso, texto: "Hoy no toca" }
-        : null;
+    entrada.estado === "bloqueada"
+      ? { icono: "candado" as const, color: colores.aviso, texto: "Hoy no toca" }
+      : null;
   const textoVoz = [
     t.titulo,
     hora,
@@ -338,7 +337,7 @@ export function PantallaTarea({
   );
 }
 
-/** Línea con un icono delante (hora, «Ya la has hecho», «Hoy no toca»). */
+/** Línea con un icono delante (hora, «Hoy no toca»). */
 function Linea({
   icono,
   color,
