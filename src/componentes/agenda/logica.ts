@@ -54,14 +54,19 @@ export function ordenarSecuencia(entradas: readonly EntradaAgenda[]): EntradaAge
     );
 }
 
+/** T-08.6: tarea que se quedó a medias. Sale en «Hecho» en ámbar y se retoma desde la pantalla 10b. */
+export function esPendienteRetomar(entrada: EntradaAgenda): boolean {
+  return entrada.estado === "pendiente" && Boolean(entrada.pendiente_motivo);
+}
+
 /**
  * Índice de la tarea de «Ahora»: la que está en curso o, si no hay, la
- * primera pendiente. Las bloqueadas por el tutor se saltan.
+ * primera pendiente. Las bloqueadas por el tutor y las que hay que retomar se saltan.
  */
 export function indiceAhora(secuencia: readonly EntradaAgenda[]): number {
   const enCurso = secuencia.findIndex((e) => e.estado === "en_curso");
   if (enCurso >= 0) return enCurso;
-  return secuencia.findIndex((e) => e.estado === "pendiente");
+  return secuencia.findIndex((e) => e.estado === "pendiente" && !esPendienteRetomar(e));
 }
 
 export interface OpcionesBloques {
@@ -79,24 +84,33 @@ export function dividirEnBloques(
   const secuencia = ordenarSecuencia(entradas);
   const i = indiceAhora(secuencia);
   const hechas = secuencia.filter((e) => e.estado === "hecha");
+  const porRetomar = secuencia.filter(esPendienteRetomar);
+  // Las que hay que retomar van las últimas: así nunca se esconden detrás de «y 2 antes».
+  const hecho = [...hechas, ...porRetomar].slice(-maxHecho);
 
   if (i < 0) {
     return {
-      hecho: hechas.slice(-maxHecho),
+      hecho,
       ahora: null,
       despues: [],
       // Si solo quedan bloqueadas, el día tampoco tiene nada que hacer ahora.
-      diaTerminado: true,
+      diaTerminado: porRetomar.length === 0,
     };
   }
 
+  // Al retomar una tarea, las pendientes de antes de ella también siguen en «Después».
   const despues = secuencia
-    .slice(i + 1)
-    .filter((e) => e.estado !== "hecha")
+    .filter(
+      (e, j) =>
+        j !== i &&
+        e.estado !== "hecha" &&
+        !esPendienteRetomar(e) &&
+        (j > i || e.estado === "pendiente"),
+    )
     .slice(0, maxDespues);
 
   return {
-    hecho: hechas.slice(-maxHecho),
+    hecho,
     ahora: secuencia[i],
     despues,
     diaTerminado: false,
@@ -146,6 +160,23 @@ export function empezarTarea(
   if (!actual || actual.id !== idEntrada || actual.estado !== "pendiente") return entradas.slice();
   return entradas.map((e) =>
     e.id === idEntrada ? { ...e, estado: "en_curso", inicio_real: inicio } : e,
+  );
+}
+
+/**
+ * T-08.6: «Retomar tarea» (pantalla 10b). La pone en curso con una hora de inicio nueva. Conserva el
+ * motivo para que, si se deshace, vuelva a salir en ámbar. No hace nada si ya hay otra en curso.
+ */
+export function retomarTarea(
+  entradas: readonly EntradaAgenda[],
+  idEntrada: string,
+  inicio: string = new Date().toISOString(),
+): EntradaAgenda[] {
+  const actual = entradas.find((e) => e.id === idEntrada);
+  if (!actual || !esPendienteRetomar(actual)) return entradas.slice();
+  if (entradas.some((e) => e.estado === "en_curso")) return entradas.slice();
+  return entradas.map((e) =>
+    e.id === idEntrada ? { ...e, estado: "en_curso", inicio_real: inicio, fin_real: null } : e,
   );
 }
 

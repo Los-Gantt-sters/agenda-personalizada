@@ -9,7 +9,7 @@
 // vacío para que las flechas no se muevan de sitio.
 import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 
 import {
   CLASES,
@@ -24,6 +24,7 @@ import {
   CuadriculaEstudiantes,
 } from "../src/componentes/autenticacion";
 import { signInEstudianteConDibujos } from "../src/servicios/authService";
+import { destinoTrasLoginAlumno } from "../src/servicios/destinoAgendaAlumno";
 import { reproducirSonido } from "../src/servicios/sonidos";
 import {
   obtenerAlumnoTableta,
@@ -45,8 +46,6 @@ import {
 
 // Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
 const MENSAJE_SECUENCIA_INCORRECTA = "No es esa. Prueba otra vez";
-// Agenda estructurada del alumno (HU-06)
-const RUTA_AGENDA_ESTUDIANTE = "/agenda";
 
 export interface LoginEstudiantesScreenProps {
   /**
@@ -159,8 +158,9 @@ export default function LoginEstudiantesScreen({
     setMensajeError(null);
     // La tableta solo recuerda al alumno cuando ha entrado de verdad
     if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id);
+    // SCRUM-227: a SU agenda con sus datos, semanal o diaria según su preferencia (HU-01 → HU-06).
     // replace: con «atrás» no se vuelve a la pantalla de acceso
-    router.replace(RUTA_AGENDA_ESTUDIANTE);
+    router.replace((await destinoTrasLoginAlumno(alumno.id)) as Href);
   };
 
   // ---- Paso 3: contraseña de 3 dibujos ----

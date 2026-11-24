@@ -4,6 +4,9 @@
 
 export type EstadoEntrada = "pendiente" | "en_curso" | "hecha" | "cancelada" | "bloqueada";
 
+/** T-08.6: por qué una tarea se quedó a medias y se puede retomar (pantalla 10b). */
+export type MotivoPendiente = "tiempo_agotado" | "profesor";
+
 export interface PasoTarea {
   orden: number;
   /** Texto en Lectura Fácil. */
@@ -46,6 +49,11 @@ export interface EntradaAgenda {
   inicio_real?: string | null;
   /** RI6.1: momento en que el estudiante pulsó «Terminar» (ISO 8601). */
   fin_real?: string | null;
+  /**
+   * T-08.6: si está pendiente con motivo, se quedó a medias: sale en «Hecho» en ámbar y se retoma
+   * desde la pantalla 10b. Solo existe en el frontend hasta que lo guarde SCRUM-237.
+   */
+  pendiente_motivo?: MotivoPendiente | null;
 }
 
 /** Resultado de repartir la secuencia del día en los tres bloques (RF4.2). */

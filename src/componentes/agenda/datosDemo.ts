@@ -3,7 +3,7 @@
 // imagen no carga (sin conexión).
 // HU-08: todas las tareas piden pulsar «Empezar» antes de «Terminar» (lo normal, RF6.8).
 // HU-16: agendaDemoAviso mueve las horas para probar el aviso de 5 minutos sin esperar.
-import type { EntradaAgenda, Tarea } from "./tipos";
+import type { EntradaAgenda, MotivoPendiente, Tarea } from "./tipos";
 import { urlImagenPictograma } from "../../arasaac/urls";
 
 const arasaac = (id: number) => urlImagenPictograma(id, 500);
@@ -77,6 +77,14 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
     tarea,
     requiere_inicio_fin: true,
   }));
+}
+
+/** T-08.6: la misma agenda con «Lavarse las manos» a medias, para probar la pantalla 10b. */
+export function agendaDemoPendiente(
+  fecha: string,
+  motivo: MotivoPendiente = "tiempo_agotado",
+): EntradaAgenda[] {
+  return agendaDemo(fecha).map((e) => (e.id === "e2" ? { ...e, pendiente_motivo: motivo } : e));
 }
 
 /**
