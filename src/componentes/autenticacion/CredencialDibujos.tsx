@@ -4,7 +4,7 @@
 // entra sola: el alumno lo comprueba y pulsa «Entrar» (o «Adelante» en la barra de abajo).
 // El componente no guarda la secuencia: la lleva la pantalla, que también la usa en «Adelante».
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import {
   DIBUJOS_CREDENCIAL_VISUAL,
@@ -52,9 +52,21 @@ export function AvatarEstudiante({
         backgroundColor: "#FFFFFF",
         alignItems: "center",
         justifyContent: "center",
+        overflow: "hidden",
       }}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
     >
-      <Text style={{ fontSize: tam * 0.55 }}>{estudiante.icono}</Text>
+      {/* Su foto si la tiene (como en la tarjeta de la pantalla 02); si no, su dibujo */}
+      {estudiante.fotoUrl ? (
+        <Image
+          source={{ uri: estudiante.fotoUrl }}
+          style={{ width: tam, height: tam }}
+          testID="avatar-foto"
+        />
+      ) : (
+        <Text style={{ fontSize: tam * 0.55 }}>{estudiante.icono}</Text>
+      )}
     </View>
   );
 }

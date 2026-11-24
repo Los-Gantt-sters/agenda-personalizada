@@ -55,13 +55,16 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261110000000_secuencia_dia.sql \
          supabase/migrations/20261123100000_auto_pendiente.sql \
          supabase/tests/secuencia_dia_test.sql \
-         supabase/tests/auto_pendiente_test.sql; do
+         supabase/migrations/20261124000000_aulas_configurables.sql \
+         supabase/migrations/20261125000000_acceso_alumnos_sin_sesion.sql \
+         supabase/tests/auto_pendiente_test.sql \
+         supabase/tests/acceso_alumnos_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan` y `NOTICE: auto_pendiente: las 11 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan` y `NOTICE: acceso_alumnos: las 6 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
@@ -70,3 +73,14 @@ Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan` y `NOTICE:
 > **Orden de despliegue:** aplicar `20261123100000_auto_pendiente.sql` solo cuando la pantalla 10b (SCRUM-264) esté en `main`. Sin ella, una tarea caducada se ve como una pendiente normal y vuelve a «Ahora».
 
 `supabase_minimo.sql` crea lo mínimo de Supabase (esquema `auth`, `auth.uid()`, roles `authenticated` y `anon`) para que las migraciones carguen en un PostgreSQL normal. Con Supabase real o `supabase start` no hace falta.
+
+## Acceso del alumno sin sesión (SCRUM-249 · T-01.7, MOD HU-01)
+
+La pantalla de acceso del alumno (01 y 02) se ve **antes** de iniciar sesión, y las políticas RLS de `aulas` y `alumnos` solo dejan leer a usuarios con sesión. La migración `20261125000000_acceso_alumnos_sin_sesion.sql` crea dos funciones que puede llamar `anon` y que devuelven solo lo que pinta la pantalla:
+
+| Función | Devuelve | Pantalla |
+|---|---|---|
+| `aulas_acceso()` | `id`, `nombre`, `icono_forma`, `icono_url`, `orden` (en el orden de la 48b) | 01 / 01b |
+| `alumnos_acceso(p_aula)` | `id`, `nombre` (de pila), `icono_personal`, `color_identificativo` de los alumnos **activos** del aula | 02 / 02b |
+
+**Protección de datos:** no salen apellidos, expediente, fecha de nacimiento, dieta, método ni secuencia de acceso. La **foto** tampoco, de momento: junto al `id` y con solo 729 contraseñas posibles (3 dibujos de 9) facilitaría intentar entrar a ciegas; queda pendiente de decidir en el equipo cómo protegerla. `acceso_alumnos_test.sql` comprueba el orden, que solo salen los alumnos activos del aula, las columnas exactas que devuelven, los permisos de `anon` y que `anon` sigue sin políticas sobre las tablas. En la app las usa `src/servicios/accesoAlumnosService.ts`; si fallan o no hay Supabase configurado, la pantalla usa sus datos de prueba.

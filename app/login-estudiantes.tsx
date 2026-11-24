@@ -5,11 +5,13 @@
 //      (pantallas 01 y 01b: 9 clases por página y «Más aulas», MOD HU-01 · SCRUM-247)
 //   2. Clase Triángulo     → busca tu foto o dibujo y tócalo.
 //      (pantallas 02 y 02b: 9 alumnos por página y «Más alumnos»)
+//   Las clases y los alumnos salen de la base de datos (lo que configura el administrador en la 48b,
+//   SCRUM-249). Sin Supabase configurado, o si falla, se usan los datos de prueba (CLASES).
 //   3. ¿Eres Alejandro?    → toca tus 3 dibujos y pulsa «Entrar».
 // «Atrás» y «Adelante» van siempre en la barra de abajo (componente Pantalla).
 // Sin «Ayuda» en estos tres pasos (petición de la profesora): el hueco de la izquierda se queda
 // vacío para que las flechas no se muevan de sitio.
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 
@@ -26,6 +28,14 @@ import {
   CuadriculaEstudiantes,
   CuadriculaPaginada,
 } from "../src/componentes/autenticacion";
+import { IconoAula } from "../src/componentes/administracion/IconoAula";
+import {
+  obtenerAlumnosAcceso,
+  obtenerAulasAcceso,
+  usaBaseDatos,
+  type AlumnoAcceso,
+  type AulaAcceso,
+} from "../src/servicios/accesoAlumnosService";
 import { signInEstudianteConDibujos } from "../src/servicios/authService";
 import { destinoTrasLoginAlumno } from "../src/servicios/destinoAgendaAlumno";
 import { reproducirSonido } from "../src/servicios/sonidos";
@@ -48,6 +58,38 @@ import {
 } from "../src/ui";
 
 // Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
+/** Nombre de la clase en pantalla: el del administrador o, en las de prueba, «Clase <nombre>». */
+const nombreDeClase = (c: Clase) => c.nombreVisible ?? `Clase ${c.nombre}`;
+
+const aulaAClase = (a: AulaAcceso): Clase => ({
+  id: a.id,
+  nombre: a.nombre,
+  nombreVisible: a.nombre,
+  simbolo: "",
+  iconoForma: a.iconoForma,
+  iconoUrl: a.iconoUrl,
+});
+
+const alumnoAEstudiante = (a: AlumnoAcceso, aulaId: string): Estudiante => ({
+  id: a.id,
+  nombre: a.nombre,
+  nombreCompleto: a.nombre,
+  claseId: aulaId,
+  icono: a.icono ?? "⭐",
+  color: a.color ?? "",
+});
+
+/** Datos que llegan de la base de datos: mientras llegan, si fallan o ya están. */
+type Carga<T> = { estado: "cargando" } | { estado: "error" } | { estado: "ok"; datos: T };
+
+/** Forma o dibujo de la clase: el que configuró el administrador o, en las de prueba, su forma. */
+function SimboloClase({ clase, tam }: { clase: Clase; tam: number }) {
+  if (clase.nombreVisible !== undefined) {
+    return <IconoAula iconoForma={clase.iconoForma} iconoUrl={clase.iconoUrl} tam={tam} />;
+  }
+  return <FormaClase claseId={clase.id} simbolo={clase.simbolo} tam={tam} />;
+}
+
 const MENSAJE_SECUENCIA_INCORRECTA = "No es esa. Prueba otra vez";
 
 export interface LoginEstudiantesScreenProps {
@@ -84,7 +126,67 @@ export default function LoginEstudiantesScreen({
   const [paginaClases, setPaginaClases] = useState(0);
   const [paginaAlumnos, setPaginaAlumnos] = useState(0);
 
-  const alumnosDeClase = clase ? ESTUDIANTES_MOCK.filter((s) => s.claseId === clase.id) : [];
+  // SCRUM-249: aulas de la base de datos. Sin Supabase (pruebas, demos) se usan las de prueba; con
+  // Supabase, nunca: si fallan, se avisa y se deja volver a probar.
+  const [aulasBD, setAulasBD] = useState<Carga<Clase[]> | null>(() =>
+    usaBaseDatos() ? { estado: "cargando" } : null,
+  );
+  // Alumnos de la base de datos del aula abierta. aulaPedida evita que la respuesta de un aula que
+  // ya se ha dejado (el alumno volvió y tocó otra) pise la del aula abierta.
+  const [alumnosBD, setAlumnosBD] = useState<({ aulaId: string } & Carga<Estudiante[]>) | null>(
+    null,
+  );
+  const aulaPedida = useRef<string | null>(null);
+
+  const clases = aulasBD?.estado === "ok" ? aulasBD.datos : Object.values(CLASES);
+  const esDeBaseDatos = (c: Clase) => c.nombreVisible !== undefined;
+  const cargaAlumnos =
+    clase && esDeBaseDatos(clase) && alumnosBD?.aulaId === clase.id ? alumnosBD : null;
+  const alumnosDeClase = !clase
+    ? []
+    : esDeBaseDatos(clase)
+      ? cargaAlumnos?.estado === "ok"
+        ? cargaAlumnos.datos
+        : []
+      : ESTUDIANTES_MOCK.filter((s) => s.claseId === clase.id);
+
+  // Pantalla 01: las aulas que ha configurado el administrador (48b), en su orden
+  const montado = useRef(true);
+  useEffect(
+    () => () => {
+      montado.current = false;
+    },
+    [],
+  );
+  // Pide las aulas; el estado «cargando» lo pone quien la llama (al abrir, ya empieza así)
+  const pedirAulas = useCallback(() => {
+    if (!usaBaseDatos()) return;
+    obtenerAulasAcceso().then((r) => {
+      if (!montado.current) return;
+      if (r.estado === "ok") setAulasBD({ estado: "ok", datos: r.datos.map(aulaAClase) });
+      else if (r.estado === "error") setAulasBD({ estado: "error" });
+      else setAulasBD(null); // sin Supabase: datos de prueba
+    });
+  }, []);
+  useEffect(pedirAulas, [pedirAulas]);
+  const volverAPedirAulas = () => {
+    setAulasBD({ estado: "cargando" });
+    pedirAulas();
+  };
+
+  /** Pide los alumnos de un aula de la base de datos (pantalla 02). Los errores no se guardan. */
+  const cargarAlumnos = (c: Clase) => {
+    aulaPedida.current = c.id;
+    setAlumnosBD({ aulaId: c.id, estado: "cargando" });
+    obtenerAlumnosAcceso(c.id).then((r) => {
+      if (!montado.current || aulaPedida.current !== c.id) return; // ya se abrió otra aula
+      setAlumnosBD(
+        r.estado === "ok"
+          ? { aulaId: c.id, estado: "ok", datos: r.datos.map((a) => alumnoAEstudiante(a, c.id)) }
+          : { aulaId: c.id, estado: "error" },
+      );
+    });
+  };
 
   // Modo tableta personal: si la tableta recuerda a un alumno, se abre directamente su contraseña
   useEffect(() => {
@@ -101,10 +203,22 @@ export default function LoginEstudiantesScreen({
     };
   }, [modoTabletaPersonal]);
 
-  const elegirClase = (c: Clase) => {
-    reproducirSonido("toque"); // T-01.3: feedback sonoro al pulsar
+  /** Abre las fotos de una clase; si es de la base de datos, pide sus alumnos (pantalla 02). */
+  const abrirClase = (c: Clase) => {
     setPaginaAlumnos(0);
     setClase(c);
+    if (!esDeBaseDatos(c)) return;
+    // Si ya estaban (se vuelve a la misma aula), no se piden otra vez
+    if (alumnosBD?.aulaId === c.id && alumnosBD.estado === "ok") {
+      aulaPedida.current = c.id;
+      return;
+    }
+    cargarAlumnos(c);
+  };
+
+  const elegirClase = (c: Clase) => {
+    reproducirSonido("toque"); // T-01.3: feedback sonoro al pulsar
+    abrirClase(c);
   };
 
   // La tarjeta de la foto ya suena al tocarla (TarjetaEstudiante)
@@ -200,8 +314,8 @@ export default function LoginEstudiantesScreen({
   if (clase) {
     return (
       <Pantalla
-        titulo={`Clase ${clase.nombre}`}
-        simbolo={<FormaClase claseId={clase.id} simbolo={clase.simbolo} tam={40} />}
+        titulo={nombreDeClase(clase)}
+        simbolo={<SimboloClase clase={clase} tam={40} />}
         alAtras={volverAClases}
         etiquetaAtras="Atrás: elegir otra clase"
         conSonido
@@ -210,12 +324,22 @@ export default function LoginEstudiantesScreen({
         <View style={e.paso}>
           {/* Instrucción: texto con dibujo, sin borde ni fondo para que no parezca un botón */}
           <Instruccion texto="Busca tu foto o tu dibujo y tócalo" pagina={paginaAlumnos} />
-          <CuadriculaEstudiantes
-            key={clase.id}
-            estudiantes={alumnosDeClase}
-            alSeleccionarEstudiante={elegirAlumno}
-            alCambiarPagina={setPaginaAlumnos}
-          />
+          {cargaAlumnos?.estado === "cargando" ? (
+            <AvisoCarga tipo="cargando" />
+          ) : cargaAlumnos?.estado === "error" ? (
+            <AvisoCarga
+              tipo="error"
+              texto="No se han podido cargar los alumnos de esta clase."
+              alVolverAProbar={() => cargarAlumnos(clase)}
+            />
+          ) : (
+            <CuadriculaEstudiantes
+              key={clase.id}
+              estudiantes={alumnosDeClase}
+              alSeleccionarEstudiante={elegirAlumno}
+              alCambiarPagina={setPaginaAlumnos}
+            />
+          )}
         </View>
       </Pantalla>
     );
@@ -228,34 +352,44 @@ export default function LoginEstudiantesScreen({
       simbolo={<PictogramaInterfaz nombre="colegio" etiqueta="colegio" tam={48} />}
       derecha={<LogoColegio ancho={190} />}
       alAtras={null}
-      alAdelante={claseAnterior ? () => setClase(claseAnterior) : null}
-      etiquetaAdelante={claseAnterior ? `Adelante: clase ${claseAnterior.nombre}` : undefined}
+      alAdelante={claseAnterior ? () => abrirClase(claseAnterior) : null}
+      etiquetaAdelante={claseAnterior ? `Adelante: ${nombreDeClase(claseAnterior)}` : undefined}
       conSonido
       sinAyuda
     >
       <View style={e.paso}>
         <Instruccion texto="Toca la forma de tu clase" pagina={paginaClases} />
 
-        <CuadriculaPaginada
-          elementos={Object.values(CLASES)}
-          clave={(c) => c.id}
-          queHayMas="aulas"
-          paginaInicial={paginaClases}
-          alCambiarPagina={setPaginaClases}
-          testID="selector-clases-estudiante"
-          pintar={(c) => (
-            <TouchableOpacity
-              style={e.tarjetaClase}
-              accessibilityRole="button"
-              accessibilityLabel={`Clase ${c.nombre}`}
-              testID={`tarjeta-clase-${c.id}`}
-              onPress={() => elegirClase(c)}
-            >
-              <FormaClase claseId={c.id} simbolo={c.simbolo} tam={52} />
-              <Texto style={e.nombreClase}>Clase {c.nombre}</Texto>
-            </TouchableOpacity>
-          )}
-        />
+        {aulasBD?.estado === "cargando" ? (
+          <AvisoCarga tipo="cargando" />
+        ) : aulasBD?.estado === "error" ? (
+          <AvisoCarga
+            tipo="error"
+            texto="No se han podido cargar las clases."
+            alVolverAProbar={volverAPedirAulas}
+          />
+        ) : (
+          <CuadriculaPaginada
+            elementos={clases}
+            clave={(c) => c.id}
+            queHayMas="aulas"
+            paginaInicial={paginaClases}
+            alCambiarPagina={setPaginaClases}
+            testID="selector-clases-estudiante"
+            pintar={(c) => (
+              <TouchableOpacity
+                style={e.tarjetaClase}
+                accessibilityRole="button"
+                accessibilityLabel={nombreDeClase(c)}
+                testID={`tarjeta-clase-${c.id}`}
+                onPress={() => elegirClase(c)}
+              >
+                <SimboloClase clase={c} tam={52} />
+                <Texto style={e.nombreClase}>{nombreDeClase(c)}</Texto>
+              </TouchableOpacity>
+            )}
+          />
+        )}
 
         {/* Los adultos (tutores, familias, administración y cocina) entran desde aquí */}
         <TouchableOpacity
@@ -293,6 +427,54 @@ function Instruccion({ texto, pagina }: { texto: string; pagina: number }) {
           <Texto style={e.textoMarcaPagina}>{`Página ${pagina + 1}`}</Texto>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * Mientras llegan las clases o los alumnos de la base de datos, o si no han llegado (SCRUM-249).
+ * El error se explica con icono y texto, y se puede volver a probar con un botón grande.
+ */
+function AvisoCarga({
+  tipo,
+  texto,
+  alVolverAProbar,
+}: {
+  tipo: "cargando" | "error";
+  texto?: string;
+  alVolverAProbar?: () => void;
+}) {
+  const { colores } = useApariencia();
+  const e = useEstilos(crearEstilos);
+  if (tipo === "cargando") {
+    return (
+      <View style={e.aviso} testID="aviso-cargando" accessibilityLiveRegion="polite">
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <PictogramaInterfaz nombre="esperar" etiqueta="esperar" tam={72} />
+        </View>
+        <Texto style={e.textoAviso}>Cargando…</Texto>
+      </View>
+    );
+  }
+  return (
+    <View style={e.aviso} testID="aviso-error-carga" accessibilityRole="alert">
+      <View style={e.filaAviso}>
+        <Icono nombre="alerta" color={colores.peligro} tam={32} grosor={2.8} />
+        <Texto style={[e.textoAviso, { color: colores.peligro }]}>{texto}</Texto>
+      </View>
+      <TouchableOpacity
+        style={e.botonVolverAProbar}
+        accessibilityRole="button"
+        accessibilityLabel="Volver a probar"
+        testID="btn-volver-a-probar"
+        onPress={() => {
+          reproducirSonido("toque");
+          alVolverAProbar?.();
+        }}
+      >
+        <Icono nombre="adelante" color={colores.textoSobrePrimario} tam={30} grosor={3} />
+        <Texto style={e.textoVolverAProbar}>Volver a probar</Texto>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -346,4 +528,20 @@ const crearEstilos = (c: Paleta) =>
       backgroundColor: c.superficie,
     },
     textoAdultos: { fontSize: 17, fontWeight: "700", color: c.texto },
+    aviso: { minHeight: 240, alignItems: "center", justifyContent: "center", gap: 20 },
+    filaAviso: { flexDirection: "row", alignItems: "center", gap: 12 },
+    textoAviso: { fontSize: 24, fontWeight: "700", color: c.texto, textAlign: "center" },
+    botonVolverAProbar: {
+      minWidth: 280,
+      minHeight: 120,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      paddingHorizontal: 24,
+      borderRadius: 16,
+      backgroundColor: c.primario,
+      ...Platform.select({ web: { cursor: "pointer" }, default: {} }),
+    },
+    textoVolverAProbar: { fontSize: 26, fontWeight: "700", color: c.textoSobrePrimario },
   });
