@@ -10,7 +10,9 @@ import { SupervisorProfile } from "./auth";
 // 1. TIPOS BÁSICOS Y ENUMS
 // ==============================================================================
 
-export type DietaComedor = "basal" | "turmix" | "texturizada" | "cetogenica";
+/** Tipo de menú del comedor (SCRUM-260). turmix = triturado líquido; texturizada = triturado con textura. */
+export type DietaComedor =
+  "normal" | "turmix" | "texturizada" | "cetogenica" | "sin_gluten" | "sin_lactosa" | "especial";
 
 export type TipoVinculo = "aula" | "familiar";
 
@@ -154,6 +156,9 @@ export interface Alumno {
   secuenciaAcceso?: string[]; // 3 pictogramas ordenados para inicio de sesión visual
   requiereTutorPresencial: boolean; // RF2.5: Etiqueta visible obligatoria
   dietaComedor: DietaComedor;
+  /** Alergias e intolerancias: lista fija de la app más las que escribe el administrador. */
+  alergias?: string[];
+  observacionesCocina?: string | null;
   activo: boolean;
   creadoEn?: string;
   actualizadoEn?: string;
