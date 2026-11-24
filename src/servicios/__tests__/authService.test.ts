@@ -30,6 +30,7 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
     it("debe asignar la ruta correcta según el rol del usuario (RF1.4)", () => {
       expect(getRoleHomeRoute("admin")).toBe("/admin/dashboard");
       expect(getRoleHomeRoute("familiar")).toBe("/familiar/resumen");
+      expect(getRoleHomeRoute("cocina")).toBe("/cocina/parte");
       expect(getRoleHomeRoute("especialista")).toBe("/especialista/terapias");
       expect(getRoleHomeRoute("estudiante")).toBe("/estudiante/agenda");
       expect(getRoleHomeRoute("tutor_docente")).toBe("/docente/agenda");
@@ -38,6 +39,9 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
     it("debe validar y normalizar roles desconocidos al default tutor_docente", () => {
       expect(normalizeRole("admin")).toBe("admin");
       expect(normalizeRole("familiar")).toBe("familiar");
+      expect(normalizeRole("cocina")).toBe("cocina");
+      expect(normalizeRole("familia")).toBe("familiar");
+      expect(normalizeRole("tutor")).toBe("tutor_docente");
       expect(normalizeRole("estudiante")).toBe("estudiante");
       expect(normalizeRole("rol_inexistente")).toBe("tutor_docente");
       expect(normalizeRole(undefined)).toBe("tutor_docente");

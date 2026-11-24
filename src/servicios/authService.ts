@@ -16,17 +16,28 @@ export function normalizeRole(roleCandidate?: string | null): UserRole {
     "tutor_docente",
     "familiar",
     "admin",
+    "cocina",
     "especialista",
     "estudiante",
   ];
-  if (roleCandidate && validRoles.includes(roleCandidate as UserRole)) {
-    return roleCandidate as UserRole;
+  const candidate = roleCandidate?.trim().toLowerCase();
+  if (candidate && validRoles.includes(candidate as UserRole)) {
+    return candidate as UserRole;
+  }
+  if (candidate === "tutor" || candidate === "docente" || candidate === "profesor") {
+    return "tutor_docente";
+  }
+  if (candidate === "familia") {
+    return "familiar";
+  }
+  if (candidate === "administrador" || candidate === "administracion") {
+    return "admin";
   }
   return "tutor_docente";
 }
 
 /**
- * Determina la ruta de redirección según el rol del usuario (RF1.4).
+ * Determina la ruta de redirección según el rol del usuario en BBDD (RF1.4 / SCRUM-228 · Pantalla 05 -> 33, 34, 48, 54).
  */
 export function getRoleHomeRoute(role: UserRole): string {
   switch (role) {
@@ -34,6 +45,8 @@ export function getRoleHomeRoute(role: UserRole): string {
       return "/admin/dashboard";
     case "familiar":
       return "/familiar/resumen";
+    case "cocina":
+      return "/cocina/parte";
     case "especialista":
       return "/especialista/terapias";
     case "estudiante":
