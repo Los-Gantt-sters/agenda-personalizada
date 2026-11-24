@@ -117,7 +117,9 @@ erDiagram
         varchar icono_personal "⭐, ⚽, 🚗, 🦖"
         jsonb secuencia_acceso "3 pictogramas"
         boolean requiere_tutor_presencial
-        varchar dieta_comedor "basal, turmix, texturizada, cetogenica"
+        varchar dieta_comedor "normal, turmix, texturizada, cetogenica, sin_gluten, sin_lactosa, especial"
+        text_array alergias
+        text observaciones_cocina
         boolean activo
     }
 

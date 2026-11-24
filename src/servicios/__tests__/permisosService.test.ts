@@ -432,7 +432,7 @@ describe("permisosService - Segregación de permisos y cumplimiento RGPD (SCRUM-
         centroId: "centro-uuid",
         codigoExpediente: "EXP-1111",
         requiereTutorPresencial: true,
-        dietaComedor: "basal",
+        dietaComedor: "normal",
         activo: true,
       },
       {
