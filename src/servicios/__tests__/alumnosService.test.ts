@@ -83,7 +83,7 @@ describe("alumnosService - SCRUM-60 (Backend CRUD de Alumnos & Validación de Tu
         aula_id: "aula-triangulo",
         codigo_expediente: "EXP-3A71",
         requiere_tutor_presencial: true,
-        dieta_comedor: "basal",
+        dieta_comedor: "normal",
         creado_en: "2026-11-05T09:00:00Z",
         actualizado_en: "2026-11-05T09:00:00Z",
       };
@@ -231,7 +231,7 @@ describe("alumnosService - SCRUM-60 (Backend CRUD de Alumnos & Validación de Tu
         codigo_expediente: "EXP-01",
         aula_id: "aula-triangulo",
         requiere_tutor_presencial: true,
-        dieta_comedor: "basal",
+        dieta_comedor: "normal",
         activo: true,
       };
 

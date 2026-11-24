@@ -53,12 +53,20 @@ docker run -d --rm --name pg-prueba -e POSTGRES_PASSWORD=prueba postgres:16
 for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261105000000_schema_inicial.sql \
          supabase/migrations/20261110000000_secuencia_dia.sql \
-         supabase/tests/secuencia_dia_test.sql; do
+         supabase/migrations/20261123100000_auto_pendiente.sql \
+         supabase/tests/secuencia_dia_test.sql \
+         supabase/tests/auto_pendiente_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan` y `NOTICE: auto_pendiente: las 11 comprobaciones pasan`.
+
+## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
+
+`caducar_tareas_agenda()` pasa a `pendiente`, con `pendiente_motivo = 'tiempo_agotado'`, las tareas cuya franja ha terminado sin pulsar «Terminar». En Supabase se ejecuta cada minuto con `pg_cron`; en un PostgreSQL sin esa extensión, la migración avisa y no programa nada.
+
+> **Orden de despliegue:** aplicar `20261123100000_auto_pendiente.sql` solo cuando la pantalla 10b (SCRUM-264) esté en `main`. Sin ella, una tarea caducada se ve como una pendiente normal y vuelve a «Ahora».
 
 `supabase_minimo.sql` crea lo mínimo de Supabase (esquema `auth`, `auth.uid()`, roles `authenticated` y `anon`) para que las migraciones carguen en un PostgreSQL normal. Con Supabase real o `supabase start` no hace falta.

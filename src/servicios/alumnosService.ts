@@ -56,7 +56,7 @@ export async function crearAlumno(input: CrearAlumnoInput): Promise<AlumnosResul
   const codigoExpediente = input.codigoExpediente?.trim() || generarCodigoExpediente();
   const centroId = input.centroId || "11111111-1111-1111-1111-111111111111"; // Centro CEE Purísima por defecto
   const requiereTutorPresencial = input.requiereTutorPresencial ?? true;
-  const dietaComedor = input.dietaComedor || "basal";
+  const dietaComedor = input.dietaComedor || "normal";
   const iconoPersonal = input.iconoPersonal || "⭐";
   const secuenciaAcceso = input.secuenciaAcceso || ["🍎", "⭐", "🐶"];
   const colorIdentificativo = input.colorIdentificativo || "#2f62b8";

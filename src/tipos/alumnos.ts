@@ -10,7 +10,9 @@ import { SupervisorProfile } from "./auth";
 // 1. TIPOS BÁSICOS Y ENUMS
 // ==============================================================================
 
-export type DietaComedor = "basal" | "turmix" | "texturizada" | "cetogenica";
+/** Tipo de menú del comedor (SCRUM-260). turmix = triturado líquido; texturizada = triturado con textura. */
+export type DietaComedor =
+  "normal" | "turmix" | "texturizada" | "cetogenica" | "sin_gluten" | "sin_lactosa" | "especial";
 
 export type TipoVinculo = "aula" | "familiar";
 
@@ -46,10 +48,29 @@ export interface Aula {
   centroId: string;
   nombre: string;
   iconoForma?: "triangulo" | "circulo" | "cuadrado" | string;
+  /** Pictograma de ARASAAC o imagen propia del aula; si existe, sustituye a la forma (SCRUM-259). */
+  iconoUrl?: string | null;
   colorDistintivo?: string;
   nivel: string;
   tutorTitularId?: string;
+  /** Posición del aula en las pantallas 01 y 35, de menor a mayor (SCRUM-259). */
+  orden?: number;
   creadoEn?: string;
+}
+
+/** Datos para crear un aula desde la pantalla 48b (SCRUM-259). */
+export interface CrearAulaInput {
+  nombre: string;
+  iconoForma?: string;
+  iconoUrl?: string | null;
+  centroId?: string;
+}
+
+/** Cambios sobre un aula existente (SCRUM-259). */
+export interface ActualizarAulaInput {
+  nombre?: string;
+  iconoForma?: string;
+  iconoUrl?: string | null;
 }
 
 /**
@@ -135,6 +156,9 @@ export interface Alumno {
   secuenciaAcceso?: string[]; // 3 pictogramas ordenados para inicio de sesión visual
   requiereTutorPresencial: boolean; // RF2.5: Etiqueta visible obligatoria
   dietaComedor: DietaComedor;
+  /** Alergias e intolerancias: lista fija de la app más las que escribe el administrador. */
+  alergias?: string[];
+  observacionesCocina?: string | null;
   activo: boolean;
   creadoEn?: string;
   actualizadoEn?: string;
