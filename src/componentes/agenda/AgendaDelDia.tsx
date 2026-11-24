@@ -18,9 +18,11 @@
 // T-08.6 (SCRUM-264): una tarea a medias abre la pantalla 10b («Retomar tarea»). El aviso de 5 minutos
 // es la pantalla 08b para el alumno: espera a «Vale» y le devuelve justo donde estaba. Nunca corta la
 // felicitación ni «¿Has terminado?»; a los adultos solo les sale la franja de arriba.
+// T-AUTO.2 (SCRUM-266): si se acaba el tiempo con la tarea en curso abierta, sale su 10b («Se acabó
+// el tiempo») en lugar de volver de golpe a la agenda con otra tarea en «Ahora».
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
-import type { RepositorioAgenda } from "./tipos";
+import type { EntradaAgenda, RepositorioAgenda } from "./tipos";
 import { useAgendaDia } from "./useAgendaDia";
 import { AgendaTresBloques } from "./AgendaTresBloques";
 import { PantallaTarea, type VistaTarea } from "./PantallaTarea";
@@ -138,6 +140,25 @@ export function AgendaDelDia({
   // Si la tarea deja de ser la de «Ahora» (la cambia el tutor), ya no se pregunta por ella.
   const aConfirmar = bloques.ahora?.id === confirmandoId ? bloques.ahora : null;
   if (confirmandoId && !aConfirmar) setConfirmandoId(null);
+
+  // La tarea en curso que se ve sola. Al alumno se le abre directamente; un adulto solo la ve así
+  // si la ha empezado él desde esta pantalla.
+  const ahora = bloques.ahora;
+  const enCurso =
+    !soloMirar && ahora?.estado === "en_curso" && (abrirTareaEnCurso || empezadaAqui === ahora.id)
+      ? ahora
+      : null;
+
+  // SCRUM-266: la tarea en curso que se estaba viendo. Si deja de estarlo porque se le acabó el
+  // tiempo (SCRUM-265) o porque el profesor la deja pendiente, se abre su 10b, que dice el motivo.
+  // Una tarea retomada ya traía el motivo: si se deja con «Atrás», vuelve a la agenda como siempre.
+  const [enCursoVista, setEnCursoVista] = useState<EntradaAgenda | null>(null);
+  if ((enCurso?.id ?? null) !== (enCursoVista?.id ?? null)) {
+    const antes = enCursoVista && !enCursoVista.pendiente_motivo ? enCursoVista : null;
+    const aMedias = antes ? entradas.find((e) => e.id === antes.id) : undefined;
+    if (aMedias && esPendienteRetomar(aMedias)) setAbiertaId(aMedias.id);
+    setEnCursoVista(enCurso);
+  }
 
   const olvidarVista = (idEntrada: string) =>
     setVistas((actuales) => {
@@ -296,11 +317,6 @@ export function AgendaDelDia({
   }
 
   // ---- La tarea en curso: solo se ve ella. «Atrás» = todavía no había empezado ----
-  const ahora = bloques.ahora;
-  const enCurso =
-    !soloMirar && ahora?.estado === "en_curso" && (abrirTareaEnCurso || empezadaAqui === ahora.id)
-      ? ahora
-      : null;
   if (enCurso) {
     return (
       <PantallaTarea

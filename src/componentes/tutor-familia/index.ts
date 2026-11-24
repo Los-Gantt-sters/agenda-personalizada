@@ -31,3 +31,5 @@ export type { VistaTareaFamiliaClase42Props } from "./VistaTareaFamiliaClase42";
 
 export { VistaTareaFamiliaCasa42b } from "./VistaTareaFamiliaCasa42b";
 export type { VistaTareaFamiliaCasa42bProps } from "./VistaTareaFamiliaCasa42b";
+
+export * from "../tareas-personales";

@@ -1,4 +1,4 @@
--- Pruebas de la migración 20261124000000_pasos_multimedia.sql (SCRUM-94 · T-10.1, HU-10).
+-- Pruebas de la migración 20261125000000_pasos_multimedia.sql (SCRUM-94 · T-10.1, HU-10).
 -- Se ejecutan dentro de una transacción que se deshace al final: no dejan datos.
 -- Si una comprobación falla, se para con un error que dice cuál.
 -- Cómo ejecutarlas: ver supabase/tests/README.md.

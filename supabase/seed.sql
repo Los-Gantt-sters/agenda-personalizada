@@ -148,7 +148,7 @@ VALUES
         '⚽',
         '["🍎", "⭐", "🐶"]'::jsonb,
         false,
-        'basal',
+        'normal',
         true
     ),
     (
@@ -186,7 +186,7 @@ VALUES
         '🦖',
         '["🦖", "🏀", "🍕"]'::jsonb,
         false,
-        'basal',
+        'normal',
         true
     )
 ON CONFLICT (codigo_expediente) DO UPDATE
