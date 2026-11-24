@@ -6,7 +6,7 @@
 --   - título corto («Abre el grifo») y texto en Lectura Fácil («Gira el grifo despacio...», 07b);
 --   - pictograma ARASAAC o propio (07);
 --   - foto real, vídeo y audio (07c, 07d y el botón Audio), guardados como recursos_multimedia en
---     el bucket privado de T-10.3 (20261124100000_storage_multimedia_pasos.sql).
+--     el bucket privado de T-10.3 (20261125100000_storage_multimedia_pasos.sql).
 -- La tarea guarda qué formatos puede elegir el alumno (cambios 17-11: «se mostrarán los que el
 -- profesor le dé permiso»).
 --

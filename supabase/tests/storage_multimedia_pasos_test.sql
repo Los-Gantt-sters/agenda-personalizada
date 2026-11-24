@@ -1,4 +1,4 @@
--- Pruebas de la migración 20261124100000_storage_multimedia_pasos.sql (SCRUM-96 · T-10.3, HU-10).
+-- Pruebas de la migración 20261125100000_storage_multimedia_pasos.sql (SCRUM-96 · T-10.3, HU-10).
 -- En un PostgreSQL normal no hay esquema storage, así que se prueba lo que deciden las políticas
 -- del bucket: de qué tarea es cada ruta y que un paso no pueda apuntar a archivos de otra tarea.
 -- Se ejecutan dentro de una transacción que se deshace al final: no dejan datos.
