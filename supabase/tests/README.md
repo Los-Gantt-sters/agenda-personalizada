@@ -16,6 +16,7 @@ const { data, error } = await supabase.rpc("secuencia_dia", {
 - Solo las asignaciones de **ese alumno y ese día**; quita las **canceladas** y las de tareas **desactivadas** (`tareas.activo = false`).
 - Ordena por **hora de inicio** (la de la asignación o, si no tiene, la de la tarea), luego por **orden**; las que no tienen hora van **al final**.
 - Traduce al formato de la agenda: estado `hecho` / `completada` → `hecha`; duración = de `hora_inicio` a `hora_fin` de la asignación o, si no hay, `duracion_estimada_minutos` de la tarea; pasos ordenados con `imagen_url` → `pictograma_url`.
+- Devuelve también `pendiente_motivo` (SCRUM-265), `requiere_inicio_fin` (si la tarea pide pulsar «Empezar», RF6.8; `true` por defecto) e `inicio_real` / `fin_real` (horas reales de `ejecuciones`, RI6.1; `null` si no se ha empezado). Estos tres últimos, desde `20261124230000_requiere_inicio_fin.sql` (SCRUM-225).
 - `SECURITY INVOKER`: respeta las políticas RLS de quien la llama. Solo pueden ejecutarla usuarios con sesión (`authenticated`).
 
 ### Ejemplo de una fila
@@ -45,7 +46,7 @@ const { data, error } = await supabase.rpc("secuencia_dia", {
 > **Nota:** el servicio de la agenda (`src/servicios/agendaService.ts`) todavía lee de las tablas `entrada_agenda` y `tarea`, que no existen en el esquema. Se ha acordado con Ana dejarlo así en el Sprint 1; para conectarlo basta con sustituir la consulta de `obtenerSecuenciaDia` por la llamada de arriba (su propio `TODO(T-06.3)`).
 
 ### Cómo repetir la prueba (PostgreSQL en Docker)
-`secuencia_dia_test.sql` crea datos de prueba dentro de una transacción que se deshace al final y hace 7 comprobaciones (orden, filtros, estados, duración, hora heredada, pasos, día vacío y permisos). Si alguna falla, se para con `FALLA …`.
+`secuencia_dia_test.sql` crea datos de prueba dentro de una transacción que se deshace al final y hace 9 comprobaciones (orden, filtros, estados, duración, hora heredada, pasos, día vacío, permisos, `requiere_inicio_fin` y horas reales). Si alguna falla, se para con `FALLA …`.
 
 ```bash
 docker run -d --rm --name pg-prueba -e POSTGRES_PASSWORD=prueba postgres:16
@@ -54,6 +55,7 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261105000000_schema_inicial.sql \
          supabase/migrations/20261110000000_secuencia_dia.sql \
          supabase/migrations/20261123100000_auto_pendiente.sql \
+         supabase/migrations/20261124230000_requiere_inicio_fin.sql \
          supabase/tests/secuencia_dia_test.sql \
          supabase/tests/auto_pendiente_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
@@ -61,7 +63,7 @@ done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan` y `NOTICE: auto_pendiente: las 11 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan` y `NOTICE: auto_pendiente: las 11 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
