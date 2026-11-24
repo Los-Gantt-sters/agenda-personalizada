@@ -11,6 +11,7 @@
 import { supabase } from "../lib/supabaseClient";
 import type { EntradaAgenda, RepositorioAgenda } from "../componentes/agenda/tipos";
 import { normalizarHora } from "../componentes/agenda/logica";
+import { firmarMultimediaPasos } from "./pasosService";
 
 /** RF4.1: entradas del día del estudiante, ya en orden cronológico y sin las canceladas. */
 export async function obtenerSecuenciaDia(
@@ -24,10 +25,13 @@ export async function obtenerSecuenciaDia(
   if (error) throw error;
   const filas = (data ?? []) as EntradaAgenda[];
   const marcas = await obtenerMarcasTiempo(filas.map((f) => f.id));
-  return filas.map((fila) => ({
+  // HU-10: la foto, el vídeo y el audio de los pasos están en un bucket privado; se ven con URL
+  // firmada (pasosService).
+  const pasos = await Promise.all(filas.map((f) => firmarMultimediaPasos(f.tarea?.pasos ?? [])));
+  return filas.map((fila, i) => ({
     ...fila,
     hora_inicio: normalizarHora(fila.hora_inicio),
-    tarea: { ...fila.tarea, pasos: fila.tarea?.pasos ?? [] },
+    tarea: { ...fila.tarea, pasos: pasos[i] },
     // RI6.1: la hora real de inicio y de fin está en ejecuciones (secuencia_dia no la trae). Sin
     // ella, al recargar después de «Empezar» se perderían el reloj y «Empezaste a las...».
     inicio_real: fila.inicio_real ?? marcas.get(fila.id)?.inicio ?? null,
