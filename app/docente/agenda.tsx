@@ -1,66 +1,67 @@
-import React from "react";
-import { Stack, useRouter } from "expo-router";
-import { useSesion } from "../../src/sesion";
-import { PanelAdulto } from "../../src/pantalla";
-
 /**
- * Panel principal del tutor docente: agenda del alumno, prueba del aviso de 5 minutos,
- * apariencia del perfil, buscador de pictogramas y reloj visual.
+ * Ruta `/docente/agenda` — Pantalla 33 (Panel de control · Tutor)
+ * y navegación hacia Mis alumnos (35->36->37) y Biblioteca de tareas (31->28->28b->28c)
+ * siguiendo exactamente `BOCETOS_NUEVOS/definitiva_v2/pantallas/33.html`
+ * (SCRUM-228 / SCRUM-244 · T-02.5).
  */
+
+import React, { useState } from "react";
+import { Stack, useRouter } from "expo-router";
+import { PanelInicioTutor33, type DestinoPanelTutor33 } from "../../src/componentes/paneles-inicio";
+import { FlujoTareasPersonales } from "../../src/componentes/tareas-personales";
+import { NavegacionTutor } from "../../src/componentes/tutor/NavegacionTutor";
+import { useSesion } from "../../src/sesion";
+
 export default function DocenteAgendaScreen() {
   const router = useRouter();
   const { sesion, cerrarSesion } = useSesion();
+  const [vistaActiva, setVistaActiva] = useState<"33" | DestinoPanelTutor33>("33");
+
+  const nombreTutor = sesion?.user?.fullName ?? "Carmen Ruiz";
 
   const handleLogout = async () => {
     await cerrarSesion();
     router.replace("/login");
   };
 
+  if (vistaActiva === "35") {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Mis alumnos" }} />
+        <NavegacionTutor nombreTutor={nombreTutor} alCerrarSesion={handleLogout} />
+      </>
+    );
+  }
+
+  if (vistaActiva === "31") {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Biblioteca de tareas" }} />
+        <FlujoTareasPersonales
+          rol="tutor"
+          nombreUsuario={nombreTutor}
+          alVolverPanel={() => setVistaActiva("33")}
+          alCerrarSesion={handleLogout}
+        />
+      </>
+    );
+  }
+
   return (
     <>
-      <Stack.Screen options={{ title: "Tutor" }} />
-      <PanelAdulto
-        titulo="Panel del tutor"
-        saludo={`Hola, ${sesion?.user?.fullName ?? "tutor"}`}
+      <Stack.Screen options={{ title: "Panel de control · Tutor" }} />
+      <PanelInicioTutor33
+        nombreTutor={nombreTutor}
         alCerrarSesion={handleLogout}
-        etiquetaCerrarSesion="Cerrar sesión y volver al inicio"
-        accesos={[
-          {
-            icono: "calendario",
-            titulo: "Agenda del día",
-            descripcion: "La misma agenda que ve el alumno: hecho, ahora y después.",
-            etiquetaAccesible: "Abrir agenda estructurada del estudiante",
-            alPulsar: () => router.push("/agenda"),
-          },
-          {
-            icono: "campana",
-            titulo: "Probar el aviso de 5 minutos",
-            descripcion: "El aviso de cambio de tarea sale en unos segundos.",
-            etiquetaAccesible: "Probar notificación anticipatoria de cambio de actividad",
-            alPulsar: () => router.push("/agenda?aviso=prueba"),
-          },
-          {
-            icono: "paleta",
-            titulo: "Apariencia del alumno",
-            descripcion: "Colores, letra, tamaño de los botones y alto contraste.",
-            etiquetaAccesible: "Configurar preferencias sensoriales y temas visuales",
-            alPulsar: () => router.push("/preferencias"),
-          },
-          {
-            icono: "imagen",
-            titulo: "Buscar pictogramas",
-            descripcion: "Pictogramas de ARASAAC para las tareas.",
-            etiquetaAccesible: "Abrir buscador de pictogramas ARASAAC",
-            alPulsar: () => router.push("/demo-pictogramas"),
-          },
-          {
-            icono: "cronometro",
-            titulo: "Reloj visual",
-            descripcion: "El tiempo que queda, como un disco que se va vaciando.",
-            etiquetaAccesible: "Abrir demostración de reloj visual Time Timer",
-            alPulsar: () => router.push("/demo-reloj"),
-          },
-        ]}
+        alNavegar={(destino) => {
+          if (destino === "35" || destino === "31") {
+            setVistaActiva(destino);
+          } else if (destino === "51") {
+            router.push("/demo-pictogramas");
+          } else if (destino === "47" || destino === "47c") {
+            router.push("/agenda");
+          }
+        }}
       />
     </>
   );
