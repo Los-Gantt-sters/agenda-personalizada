@@ -6,7 +6,7 @@
 --   - título corto («Abre el grifo») y texto en Lectura Fácil («Gira el grifo despacio...», 07b);
 --   - pictograma ARASAAC o propio (07);
 --   - foto real, vídeo y audio (07c, 07d y el botón Audio), guardados como recursos_multimedia en
---     el bucket privado de T-10.3 (20261124100000_storage_multimedia_pasos.sql).
+--     el bucket privado de T-10.3 (20261125100000_storage_multimedia_pasos.sql).
 -- La tarea guarda qué formatos puede elegir el alumno (cambios 17-11: «se mostrarán los que el
 -- profesor le dé permiso»).
 --
@@ -362,7 +362,9 @@ $$;
 REVOKE ALL ON FUNCTION public.pasos_de_tarea(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.pasos_de_tarea(UUID) TO authenticated;
 
--- La misma secuencia_dia de SCRUM-71; solo cambian los pasos y se añaden los formatos permitidos.
+-- La misma secuencia_dia de SCRUM-71 y SCRUM-265 (20261123100000_auto_pendiente.sql, con el motivo
+-- de las tareas pendientes); solo cambian los pasos y se añaden los formatos permitidos. Devuelve
+-- las mismas columnas, así que basta con reemplazarla.
 CREATE OR REPLACE FUNCTION public.secuencia_dia(p_estudiante UUID, p_fecha DATE)
 RETURNS TABLE (
     id UUID,
@@ -373,7 +375,8 @@ RETURNS TABLE (
     duracion_prevista_min INTEGER,
     orden INTEGER,
     estado TEXT,
-    tarea JSONB
+    tarea JSONB,
+    pendiente_motivo TEXT
 )
 LANGUAGE sql
 STABLE
@@ -386,11 +389,8 @@ AS $$
         a.tarea_id,
         a.fecha,
         COALESCE(a.hora_inicio, t.hora_inicio) AS hora_inicio,
-        CASE
-            WHEN a.hora_inicio IS NOT NULL AND a.hora_fin IS NOT NULL AND a.hora_fin > a.hora_inicio
-                THEN (EXTRACT(EPOCH FROM (a.hora_fin - a.hora_inicio)) / 60)::INTEGER
-            ELSE t.duracion_estimada_minutos
-        END AS duracion_prevista_min,
+        public.duracion_asignacion_min(a.hora_inicio, a.hora_fin, t.duracion_estimada_minutos)
+            AS duracion_prevista_min,
         a.orden,
         CASE a.estado
             WHEN 'hecho' THEN 'hecha'
@@ -404,7 +404,8 @@ AS $$
             'descripcion', t.descripcion,
             'formatos_permitidos', to_jsonb(t.formatos_permitidos),
             'pasos', public.pasos_de_tarea(t.id)
-        ) AS tarea
+        ) AS tarea,
+        a.pendiente_motivo::TEXT AS pendiente_motivo
     FROM public.asignaciones a
     JOIN public.tareas t ON t.id = a.tarea_id
     WHERE a.estudiante_id = p_estudiante

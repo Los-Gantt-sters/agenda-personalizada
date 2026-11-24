@@ -1,6 +1,6 @@
 // Pasos de una tarea con su multimedia (SCRUM-96 · T-10.3, HU-10).
 // - Lee y guarda los pasos con las funciones de la base de datos de T-10.1 (pasos_de_tarea y
-//   guardar_pasos, en supabase/migrations/20261124000000_pasos_multimedia.sql).
+//   guardar_pasos, en supabase/migrations/20261125000000_pasos_multimedia.sql).
 // - Sube la foto, el vídeo y el audio de cada paso al bucket PRIVADO multimedia-pasos, ya
 //   comprimidos y validados (compresionMultimedia.ts), y los enseña con URLs firmadas que caducan.
 // - Al guardar, borra del bucket los archivos que el tutor ha cambiado o quitado, para no dejar

@@ -132,9 +132,9 @@ describe("Pantalla 10b «Retomar tarea» (SCRUM-264: T-08.6)", () => {
     await user.press(screen.getByRole("button", { name: "Siguiente: paso 2" }));
     await user.press(screen.getByRole("button", { name: "Siguiente: paso 3" }));
 
-    // Se le acaba el tiempo con la tarea a medias.
+    // Se le acaba el tiempo con la tarea a medias: sale su 10b (SCRUM-266).
     tutor.modificar("e2", { estado: "pendiente", pendiente_motivo: "tiempo_agotado" });
-    await user.press(await screen.findByTestId("mini-e2"));
+    expect(await screen.findByTestId("pantalla-tarea-pendiente")).toBeTruthy();
     expect(
       screen.getByText("Puedes retomarla ahora desde el paso en el que la dejaste."),
     ).toBeTruthy();

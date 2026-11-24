@@ -4,7 +4,7 @@
 //   (4-8 MB) queda en unos 150-400 KB, que cargan rápido en la tableta del alumno.
 // - Vídeo y audio: el navegador no puede recomprimirlos sin librerías pesadas, así que se limitan
 //   por tipo, tamaño y duración (vídeo corto, 07d). El bucket también tiene límite de tamaño y tipos
-//   (supabase/migrations/20261124100000_storage_multimedia_pasos.sql).
+//   (supabase/migrations/20261125100000_storage_multimedia_pasos.sql).
 // La compresión funciona en web, que es donde se usa el editor; en la app nativa se sube tal cual.
 import { Platform } from "react-native";
 
