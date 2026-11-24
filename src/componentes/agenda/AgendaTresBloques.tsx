@@ -264,6 +264,8 @@ function Mini({
   const hecha = entrada.estado === "hecha";
   const bloqueada = entrada.estado === "bloqueada";
   const porRetomar = esPendienteRetomar(entrada);
+  // Pantalla 06 (SCRUM-266): si se le pasó la hora, la tarjeta lo dice.
+  const tiempoAgotado = porRetomar && entrada.pendiente_motivo === "tiempo_agotado";
   const estilos = useEstilos(crearEstilos);
   const { colores, canal } = useApariencia();
   const verDibujo = canal !== "soloTexto";
@@ -285,7 +287,7 @@ function Mini({
     <Pressable
       testID={`mini-${entrada.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`${entrada.tarea.titulo}, ${entrada.hora_inicio ? `a las ${horaCorta(entrada)}` : "sin hora fija"}${hecha ? ", hecha" : ""}${bloqueada ? ", hoy no toca" : ""}${porRetomar ? ", pendiente de retomar" : ""}`}
+      accessibilityLabel={`${entrada.tarea.titulo}, ${entrada.hora_inicio ? `a las ${horaCorta(entrada)}` : "sin hora fija"}${hecha ? ", hecha" : ""}${bloqueada ? ", hoy no toca" : ""}${porRetomar ? `, pendiente de retomar${tiempoAgotado ? " porque se acabó el tiempo" : ""}` : ""}`}
       accessibilityHint="Abre la tarea"
       onPress={() => onAbrir(entrada)}
       style={({ pressed }) => [
@@ -335,12 +337,14 @@ function Mini({
               { fontSize: (compacta ? 14 : 16) * escala },
               !enFila && estilos.centrado,
             ]}
-            numberOfLines={1}
+            // «Pendiente (tiempo agotado)» no cabe en una línea en la columna estrecha de «Hecho»; con
+            // letra extra grande en la tableta necesita tres.
+            numberOfLines={tiempoAgotado ? 3 : 1}
           >
             {bloqueada
               ? "Hoy no toca"
               : porRetomar
-                ? `${horaCorta(entrada)} · Pendiente`
+                ? `${horaCorta(entrada)} · Pendiente${tiempoAgotado ? " (tiempo agotado)" : ""}`
                 : horaCorta(entrada)}
           </Texto>
         </View>

@@ -75,6 +75,22 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     expect(r[1]).toMatchObject({ inicio_real: null, fin_real: null });
   });
 
+  it("pasa a la agenda por qué una tarea quedó pendiente (SCRUM-265 y SCRUM-266)", async () => {
+    sb.rpc.mockResolvedValue({
+      data: [
+        { id: "a1", estado: "pendiente", pendiente_motivo: "tiempo_agotado", tarea: { id: "t1" } },
+        { id: "a2", estado: "pendiente", pendiente_motivo: null, tarea: { id: "t2" } },
+      ],
+      error: null,
+    });
+    sb.from.mockReturnValue(consultaFalsa({ data: [], error: null }));
+
+    const r = await obtenerSecuenciaDia("al1", "2026-11-05");
+
+    expect(r[0].pendiente_motivo).toBe("tiempo_agotado");
+    expect(r[1].pendiente_motivo).toBeNull();
+  });
+
   it("si no se pueden leer las horas reales, la agenda se enseña igual", async () => {
     sb.rpc.mockResolvedValue({ data: [{ id: "a1", hora_inicio: null, tarea: {} }], error: null });
     sb.from.mockReturnValue(consultaFalsa({ data: null, error: new Error("sin permiso") }));
