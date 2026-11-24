@@ -1,19 +1,34 @@
+/**
+ * Pantalla 05 — Acceso para adultos sin selección manual de rol ni botón demo alumno
+ * siguiendo exactamente el boceto `BOCETOS_NUEVOS/definitiva_v2/pantallas/05.html`
+ * (SCRUM-228 / SCRUM-243 · MOD HU-02).
+ *
+ * Características clave del boceto definitivo:
+ * - Cabecera con título «Acceso para adultos», icono de llave y chip derecho «Sin sesión».
+ * - Columna izquierda con identidad «Hospitalarias · Fundación Purísima Concepción» y texto:
+ *   «Acceso único para personal del centro y familias. El sistema detecta automáticamente tu rol desde la base de datos.»
+ * - SIN botones de selección manual de rol («Docente», «Familia», «Admin») ni botón demo de alumno.
+ * - Tarjeta derecha con campos «Correo electrónico», «Contraseña» (con botón mostrar/ocultar)
+ *   y botón primario «Iniciar sesión» que redirige automáticamente según el rol de BBDD
+ *   (Tutor -> 33, Familia -> 34, Admin -> 48, Cocina -> 54).
+ */
+
 import React, { useState } from "react";
 import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { signInSupervisor, getRoleHomeRoute } from "../src/servicios/authService";
-import { AUTH_GENERIC_ERROR_MESSAGE, SupervisorRole } from "../src/tipos/auth";
-import type { Paleta } from "../src/temas";
 import { Pantalla } from "../src/pantalla";
+import { getRoleHomeRoute, signInSupervisor } from "../src/servicios/authService";
+import type { Paleta } from "../src/temas";
+import { AUTH_GENERIC_ERROR_MESSAGE } from "../src/tipos/auth";
 import { Icono, LogoColegio, Texto, useApariencia, useEstilos } from "../src/ui";
 
 export default function LoginScreen() {
@@ -75,35 +90,19 @@ export default function LoginScreen() {
     }
   };
 
-  const setDemoRole = (role: SupervisorRole) => {
-    setErrorMessage(null);
-    setValidationErrors({});
-    switch (role) {
-      case "admin":
-        setEmail("admin@purisima.es");
-        setPassword("AdminPurisima2026!");
-        break;
-      case "familiar":
-        setEmail("familia.garcia@purisima.es");
-        setPassword("FamiliaSegura2026!");
-        break;
-      case "especialista":
-        setEmail("terapeuta@purisima.es");
-        setPassword("Terapeuta2026!");
-        break;
-      case "tutor_docente":
-      default:
-        setEmail("tutor.docente@purisima.es");
-        setPassword("TutorDocente2026!");
-        break;
-    }
-  };
+  const derechaSinSesion = (
+    <View style={styles.chipSinSesion} testID="chip-sin-sesion-05">
+      <Icono nombre="persona" color={colores.textoSecundario} tam={20} />
+      <Texto style={styles.textoSinSesion}>Sin sesión</Texto>
+    </View>
+  );
 
   return (
     <Pantalla
       titulo="Acceso para adultos"
       simbolo={<Icono nombre="llave" color={colores.primario} tam={32} />}
-      // Se llega desde «¿Cuál es tu clase?»; si se entra directo a /login, Atrás lleva a esa pantalla
+      derecha={derechaSinSesion}
+      // Se llega desde «¿Cuál es tu clase?» (01); si se entra directo a /login, Atrás lleva a esa pantalla
       alAtras={() => (router.canGoBack?.() ? router.back() : router.replace("/"))}
       etiquetaAtras="Atrás: volver a elegir clase"
       sinAyuda
@@ -112,46 +111,23 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardContainer}
       >
-        {/* Solo se desplaza si sale el teclado; sin él, todo cabe en la pantalla. */}
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.columnaLateral}>
+          {/* Columna izquierda: identidad del centro y aviso de detección automática de rol (05.html) */}
+          <View style={styles.columnaLateral} testID="columna-identidad-05">
             <LogoColegio ancho={300} />
-            <Texto style={styles.subtitle}>Tutores, familias y administración del colegio</Texto>
-            <View style={styles.demoSection}>
-              <Texto style={styles.demoSectionTitle}>Accesos de prueba (demo)</Texto>
-              <View style={styles.demoButtonGroup}>
-                <TouchableOpacity
-                  style={styles.demoButton}
-                  onPress={() => setDemoRole("tutor_docente")}
-                  accessibilityRole="button"
-                  accessibilityLabel="Rellenar como Tutor Docente"
-                >
-                  <Texto style={styles.demoButtonText}>Docente</Texto>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.demoButton}
-                  onPress={() => setDemoRole("familiar")}
-                  accessibilityRole="button"
-                  accessibilityLabel="Rellenar como Familia"
-                >
-                  <Texto style={styles.demoButtonText}>Familia</Texto>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.demoButton}
-                  onPress={() => setDemoRole("admin")}
-                  accessibilityRole="button"
-                  accessibilityLabel="Rellenar como Administrador"
-                >
-                  <Texto style={styles.demoButtonText}>Admin</Texto>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <Texto style={styles.marcaTitulo}>Hospitalarias</Texto>
+            <Texto style={styles.marcaSubtitulo}>Fundación Purísima Concepción</Texto>
+            <Texto style={styles.subtitle} testID="texto-rol-automatico-05">
+              Acceso único para personal del centro y familias. El sistema detecta automáticamente
+              tu rol desde la base de datos.
+            </Texto>
           </View>
 
-          <View style={styles.card}>
+          {/* Tarjeta derecha: formulario único Correo + Contraseña + Iniciar sesión */}
+          <View style={styles.card} testID="tarjeta-login-adultos-05">
             {errorMessage && (
               <View
                 style={styles.errorAlert}
@@ -168,12 +144,13 @@ export default function LoginScreen() {
                 Correo electrónico
               </Texto>
               <TextInput
+                testID="input-correo-05"
                 style={[
                   styles.input,
                   { fontFamily: fuente.normal },
                   validationErrors.email ? styles.inputError : null,
                 ]}
-                placeholder="ejemplo@purisima.es"
+                placeholder="usuario@purisima.es"
                 placeholderTextColor={colores.textoSecundario}
                 value={email}
                 onChangeText={(text) => {
@@ -199,6 +176,7 @@ export default function LoginScreen() {
               </Texto>
               <View>
                 <TextInput
+                  testID="input-password-05"
                   style={[
                     styles.input,
                     { fontFamily: fuente.normal },
@@ -230,7 +208,7 @@ export default function LoginScreen() {
                   <Icono
                     nombre={verPassword ? "ojoTachado" : "ojo"}
                     color={colores.textoSecundario}
-                    tam={26}
+                    tam={24}
                   />
                 </TouchableOpacity>
               </View>
@@ -238,6 +216,7 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
+              testID="btn-iniciar-sesion-05"
               style={[styles.submitButton, loading ? styles.submitButtonDisabled : null]}
               onPress={handleLogin}
               disabled={loading}
@@ -276,7 +255,21 @@ const crearEstilos = (c: Paleta) =>
       flex: 1,
       backgroundColor: c.fondo,
     },
-    // Dos columnas en la tableta: logo y accesos de prueba a la izquierda, formulario a la derecha
+    chipSinSesion: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      height: 44,
+      paddingHorizontal: 14,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: c.borde,
+      backgroundColor: c.superficie,
+    },
+    textoSinSesion: {
+      fontSize: 15,
+      color: c.textoSecundario,
+    },
     scrollContent: {
       flexGrow: 1,
       flexDirection: "row",
@@ -284,26 +277,37 @@ const crearEstilos = (c: Paleta) =>
       justifyContent: "center",
       alignItems: "center",
       alignContent: "center",
-      gap: 40,
+      gap: 48,
       padding: 20,
     },
     columnaLateral: {
-      width: 330,
-      gap: 18,
+      width: 360,
+      gap: 8,
+    },
+    marcaTitulo: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: c.primario,
+    },
+    marcaSubtitulo: {
+      fontSize: 18,
+      color: c.primario,
+    },
+    subtitle: {
+      marginTop: 10,
+      fontSize: 17,
+      lineHeight: 24,
+      color: c.textoSecundario,
     },
     card: {
       width: "100%",
-      maxWidth: 460,
+      maxWidth: 440,
       backgroundColor: c.superficie,
-      borderRadius: 14,
+      borderRadius: 12,
       borderWidth: 2,
       borderColor: c.borde,
       padding: 28,
       gap: 18,
-    },
-    subtitle: {
-      fontSize: 17,
-      color: c.textoSecundario,
     },
     errorAlert: {
       flexDirection: "row",
@@ -329,17 +333,17 @@ const crearEstilos = (c: Paleta) =>
       color: c.texto,
     },
     input: {
-      minHeight: 56,
+      minHeight: 48,
       borderWidth: 2,
       borderColor: c.borde,
-      borderRadius: 10,
-      paddingHorizontal: 16,
-      fontSize: 18,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      fontSize: 17,
       color: c.texto,
       backgroundColor: c.superficie,
     },
     inputConBoton: {
-      paddingRight: 60,
+      paddingRight: 56,
     },
     inputError: {
       borderColor: c.peligro,
@@ -348,9 +352,9 @@ const crearEstilos = (c: Paleta) =>
     botonVer: {
       position: "absolute",
       right: 4,
-      top: 4,
-      width: 48,
-      height: 48,
+      top: 2,
+      width: 44,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -366,7 +370,7 @@ const crearEstilos = (c: Paleta) =>
       fontWeight: "700",
     },
     submitButton: {
-      minHeight: 60,
+      minHeight: 58,
       backgroundColor: c.primario,
       borderRadius: 12,
       alignItems: "center",
@@ -380,33 +384,5 @@ const crearEstilos = (c: Paleta) =>
       color: c.textoSobrePrimario,
       fontSize: 20,
       fontWeight: "700",
-    },
-    demoSection: {
-      width: "100%",
-      gap: 8,
-    },
-    demoSectionTitle: {
-      fontSize: 15,
-      color: c.textoSecundario,
-    },
-    demoButtonGroup: {
-      flexDirection: "row",
-      gap: 8,
-      flexWrap: "wrap",
-    },
-    demoButton: {
-      minHeight: 48,
-      paddingHorizontal: 16,
-      borderRadius: 10,
-      borderWidth: 2,
-      borderColor: c.borde,
-      backgroundColor: c.superficie,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    demoButtonText: {
-      fontSize: 15,
-      fontWeight: "700",
-      color: c.texto,
     },
   });

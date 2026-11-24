@@ -3,7 +3,7 @@
  * Alineado con requisitos RF1.1, RF1.2, RF1.3, RF1.4, RF1.8 y RNF1.3.
  */
 
-export type SupervisorRole = "tutor_docente" | "familiar" | "admin" | "especialista";
+export type SupervisorRole = "tutor_docente" | "familiar" | "admin" | "cocina" | "especialista";
 export type UserRole = SupervisorRole | "estudiante";
 
 export interface SupervisorProfile {
