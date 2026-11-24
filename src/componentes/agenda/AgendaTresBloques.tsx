@@ -11,10 +11,11 @@
 // Con «soloMirar» (familias) no salen «Empezar» ni «Terminar»: la agenda se ve igual, sin tocarla.
 // RF3.1: «Qué se ve» (botón Accesibilidad o preferencias): solo dibujos, solo texto o los dos. La
 // ayuda de voz sigue leyendo el nombre de cada tarea aunque no se vea escrito.
+// T-08.6 (SCRUM-264): tarjeta ámbar mínima en «Hecho» para las tareas que hay que retomar.
 import { useEffect, useState } from "react";
 import { Animated, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import type { BloquesAgenda, EntradaAgenda } from "./tipos";
-import { franjaHoraria, horaCorta, necesitaEmpezar } from "./logica";
+import { esPendienteRetomar, franjaHoraria, horaCorta, necesitaEmpezar } from "./logica";
 import { RADIO } from "./colores";
 import { PictogramaTarea } from "./PictogramaTarea";
 import { BotonAccionTarea } from "../ejecucion-tarea/BotonAccionTarea";
@@ -262,17 +263,20 @@ function Mini({
   const enFila = !horizontal || compacta;
   const hecha = entrada.estado === "hecha";
   const bloqueada = entrada.estado === "bloqueada";
+  const porRetomar = esPendienteRetomar(entrada);
+  // Pantalla 06 (SCRUM-266): si se le pasó la hora, la tarjeta lo dice.
+  const tiempoAgotado = porRetomar && entrada.pendiente_motivo === "tiempo_agotado";
   const estilos = useEstilos(crearEstilos);
   const { colores, canal } = useApariencia();
   const verDibujo = canal !== "soloTexto";
   const verTexto = canal !== "soloPictograma";
   const rellenoSello = hecha ? colores.exito : colores.aviso;
-  const sello = (hecha || bloqueada) && (
+  const sello = (hecha || bloqueada || porRetomar) && (
     <View
       style={[estilos.sello, !verDibujo && estilos.selloEnLinea, { backgroundColor: rellenoSello }]}
     >
       <Icono
-        nombre={hecha ? "check" : "candado"}
+        nombre={hecha ? "check" : porRetomar ? "alerta" : "candado"}
         color={colorSobre(rellenoSello)}
         tam={18}
         grosor={3}
@@ -283,7 +287,7 @@ function Mini({
     <Pressable
       testID={`mini-${entrada.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`${entrada.tarea.titulo}, ${entrada.hora_inicio ? `a las ${horaCorta(entrada)}` : "sin hora fija"}${hecha ? ", hecha" : ""}${bloqueada ? ", hoy no toca" : ""}`}
+      accessibilityLabel={`${entrada.tarea.titulo}, ${entrada.hora_inicio ? `a las ${horaCorta(entrada)}` : "sin hora fija"}${hecha ? ", hecha" : ""}${bloqueada ? ", hoy no toca" : ""}${porRetomar ? `, pendiente de retomar${tiempoAgotado ? " porque se acabó el tiempo" : ""}` : ""}`}
       accessibilityHint="Abre la tarea"
       onPress={() => onAbrir(entrada)}
       style={({ pressed }) => [
@@ -295,6 +299,7 @@ function Mini({
             ? { flexDirection: "row", minHeight: ALTO_COMPACTA * escala }
             : { flexDirection: "row", flex: 1, maxWidth: 360 },
         bloqueada && { borderStyle: "dashed", borderColor: colores.aviso },
+        porRetomar && { borderWidth: 3, borderColor: colores.aviso },
         pressed && estilos.pulsado,
       ]}
     >
@@ -332,9 +337,15 @@ function Mini({
               { fontSize: (compacta ? 14 : 16) * escala },
               !enFila && estilos.centrado,
             ]}
-            numberOfLines={1}
+            // «Pendiente (tiempo agotado)» no cabe en una línea en la columna estrecha de «Hecho»; con
+            // letra extra grande en la tableta necesita tres.
+            numberOfLines={tiempoAgotado ? 3 : 1}
           >
-            {bloqueada ? "Hoy no toca" : horaCorta(entrada)}
+            {bloqueada
+              ? "Hoy no toca"
+              : porRetomar
+                ? `${horaCorta(entrada)} · Pendiente${tiempoAgotado ? " (tiempo agotado)" : ""}`
+                : horaCorta(entrada)}
           </Texto>
         </View>
       ) : null}
@@ -396,6 +407,10 @@ function BloqueAhora({
     ? Math.max(48, Math.min(tamPicto - 36, (tam.width - 24 * 2 - 24) / 2))
     : tamPicto;
   const accion = ahora && necesitaEmpezar(ahora) ? "empezar" : "terminar";
+  // Sin tarea en «Ahora» puede que aún quede alguna a medias: entonces el día no ha terminado.
+  const finDelDia = bloques.diaTerminado
+    ? "Has terminado todo por hoy"
+    : "Tienes tareas por retomar";
 
   return (
     <View
@@ -404,7 +419,7 @@ function BloqueAhora({
       accessibilityLabel={
         ahora
           ? `Ahora: ${ahora.tarea.titulo}${ahora.estado === "en_curso" ? ", en curso" : ""}`
-          : "Has terminado todo por hoy"
+          : finDelDia
       }
       style={[estilos.bloque, estilos.bloqueAhora, tam]}
     >
@@ -472,9 +487,13 @@ function BloqueAhora({
           </>
         ) : (
           <View style={estilos.ahoraTarjeta}>
-            <PictogramaInterfaz nombre="celebrar" etiqueta="Fin del día" tam={tamPicto * 0.8} />
+            <PictogramaInterfaz
+              nombre={bloques.diaTerminado ? "celebrar" : "esperar"}
+              etiqueta={bloques.diaTerminado ? "Fin del día" : finDelDia}
+              tam={tamPicto * 0.8}
+            />
             <Texto style={[estilos.ahoraTitulo, { fontSize: 40 * escala }]}>
-              ¡Has terminado todo por hoy!
+              {bloques.diaTerminado ? "¡Has terminado todo por hoy!" : finDelDia}
             </Texto>
           </View>
         )}

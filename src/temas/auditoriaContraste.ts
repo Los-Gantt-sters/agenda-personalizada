@@ -126,7 +126,7 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   {
     id: "aviso-superficie",
     elemento: "Mensaje de aviso",
-    usoEn: "Paleta (estados)",
+    usoEn: "Paleta (estados), aviso de tarea auto-pendiente de las pantallas 41 y 42b",
     tipo: "texto",
     pares: [["aviso", "superficie"]],
   },
@@ -147,7 +147,7 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   {
     id: "aviso-fondo",
     elemento: "Mensaje de aviso sobre la pantalla",
-    usoEn: "Paleta (estados)",
+    usoEn: "Paleta (estados), «Auto-pendiente (tiempo agotado)» de las agendas 39 y 40",
     tipo: "texto",
     pares: [["aviso", "fondo"]],
   },
@@ -274,8 +274,9 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   // ---- Rediseño «Piedra»: iconos sobre rellenos de color (blanco o negro con colorSobre) ----
   {
     id: "sello-hecha",
-    elemento: "Marca de tarea hecha sobre el sello verde",
-    usoEn: "AgendaTresBloques (sello), RefuerzoPositivo (insignia)",
+    elemento: "Marca de tarea hecha sobre el sello verde y texto del botón «Sí, he terminado»",
+    usoEn:
+      "AgendaTresBloques y AgendaAdultoAlumno (sello), RefuerzoPositivo (insignia), PantallaConfirmarFin (botón)",
     tipo: "texto",
     pares: [
       ["#FFFFFF", "exito"],
@@ -284,8 +285,9 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   },
   {
     id: "sello-bloqueada",
-    elemento: "Candado de tarea bloqueada sobre el sello de aviso",
-    usoEn: "AgendaTresBloques (sello)",
+    elemento: "Candado o alerta sobre el sello de aviso, y etiqueta del motivo de la pantalla 10b",
+    usoEn:
+      "AgendaTresBloques y AgendaAdultoAlumno (sello), PantallaTareaPendiente (círculo y etiqueta)",
     tipo: "texto",
     pares: [
       ["#FFFFFF", "aviso"],

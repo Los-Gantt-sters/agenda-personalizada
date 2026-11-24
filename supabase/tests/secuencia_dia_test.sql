@@ -58,7 +58,7 @@ BEGIN
     --    las que no tienen hora, al final. Sin canceladas, desactivadas, otros días ni otros alumnos.
     SELECT array_agg(s.tarea->>'titulo' ORDER BY ord) INTO filas
     FROM public.secuencia_dia(marcos, '2026-11-12') WITH ORDINALITY AS s(id, estudiante_id, tarea_id,
-         fecha, hora_inicio, duracion_prevista_min, orden, estado, tarea, ord);
+         fecha, hora_inicio, duracion_prevista_min, orden, estado, tarea, pendiente_motivo, ord);
     IF filas IS DISTINCT FROM ARRAY['Asamblea', 'Ordenar mi mesa', 'Huerto', 'Recreo', 'Comer', 'Leer un cuento'] THEN
         RAISE EXCEPTION 'FALLA orden/filtros: %', filas;
     END IF;
@@ -66,7 +66,7 @@ BEGIN
     -- 2. Estados traducidos al formato de la agenda
     SELECT array_agg(s.estado ORDER BY ord) INTO filas
     FROM public.secuencia_dia(marcos, '2026-11-12') WITH ORDINALITY AS s(id, estudiante_id, tarea_id,
-         fecha, hora_inicio, duracion_prevista_min, orden, estado, tarea, ord);
+         fecha, hora_inicio, duracion_prevista_min, orden, estado, tarea, pendiente_motivo, ord);
     IF filas IS DISTINCT FROM ARRAY['hecha', 'en_curso', 'bloqueada', 'pendiente', 'hecha', 'pendiente'] THEN
         RAISE EXCEPTION 'FALLA estados: %', filas;
     END IF;
