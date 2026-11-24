@@ -28,15 +28,24 @@ INSERT INTO public.alumnos (id, centro_id, aula_id, codigo_expediente, nombre, e
     ('00000000-0000-0000-0000-0000000000e5', '00000000-0000-0000-0000-00000000c0c0', '00000000-0000-0000-0000-0000000000f1',
      'EXP-COM5', 'Carla', 'archivado', true, 'normal', '{huevo}', '⚽');
 
--- Usuarios: el alumno encargado, la cocina (rol nuevo) y una familia (sin permiso)
+-- Usuarios: el alumno encargado, la cocina (rol nuevo), una familia (sin permiso), un alumno que
+-- NO es encargado, un tutor y una cuenta de cocina desactivada
 INSERT INTO auth.users (id, email) VALUES
     ('00000000-0000-0000-0000-0000000000a1', 'encargado@prueba'),
     ('00000000-0000-0000-0000-0000000000a2', 'cocina@prueba'),
-    ('00000000-0000-0000-0000-0000000000a3', 'familia@prueba');
+    ('00000000-0000-0000-0000-0000000000a3', 'familia@prueba'),
+    ('00000000-0000-0000-0000-0000000000a4', 'alumno@prueba'),
+    ('00000000-0000-0000-0000-0000000000a5', 'tutor@prueba'),
+    ('00000000-0000-0000-0000-0000000000a6', 'cocina.baja@prueba');
 INSERT INTO public.perfiles (id, centro_id, email, nombre_completo, rol) VALUES
     ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000c0c0', 'encargado@prueba', 'Alumno encargado', 'estudiante'),
     ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-00000000c0c0', 'cocina@prueba', 'Cocina Central', 'cocina'),
-    ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-00000000c0c0', 'familia@prueba', 'Familia', 'familiar');
+    ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-00000000c0c0', 'familia@prueba', 'Familia', 'familiar'),
+    ('00000000-0000-0000-0000-0000000000a4', '00000000-0000-0000-0000-00000000c0c0', 'alumno@prueba', 'Otro alumno', 'estudiante'),
+    ('00000000-0000-0000-0000-0000000000a5', '00000000-0000-0000-0000-00000000c0c0', 'tutor@prueba', 'Tutora', 'tutor_docente'),
+    ('00000000-0000-0000-0000-0000000000a6', '00000000-0000-0000-0000-00000000c0c0', 'cocina.baja@prueba', 'Cocina antigua', 'cocina');
+UPDATE public.perfiles SET encargado_comedor = true WHERE id = '00000000-0000-0000-0000-0000000000a1';
+UPDATE public.perfiles SET activo = false WHERE id = '00000000-0000-0000-0000-0000000000a6';
 
 -- Un recuento de AYER no debe contar hoy
 INSERT INTO public.recuentos_comedor (fecha, aula_id, ausentes)
@@ -49,6 +58,9 @@ DECLARE
     encargado CONSTANT TEXT := '00000000-0000-0000-0000-0000000000a1';
     cocina    CONSTANT TEXT := '00000000-0000-0000-0000-0000000000a2';
     familia   CONSTANT TEXT := '00000000-0000-0000-0000-0000000000a3';
+    alumno    CONSTANT TEXT := '00000000-0000-0000-0000-0000000000a4';
+    tutor     CONSTANT TEXT := '00000000-0000-0000-0000-0000000000a5';
+    cocina_baja CONSTANT TEXT := '00000000-0000-0000-0000-0000000000a6';
     triangulo CONSTANT UUID := '00000000-0000-0000-0000-0000000000f1';
     circulo   CONSTANT UUID := '00000000-0000-0000-0000-0000000000f2';
     miriam    CONSTANT UUID := '00000000-0000-0000-0000-0000000000e1';
@@ -160,6 +172,36 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN fallo := true;
     END;
     IF NOT fallo THEN RAISE EXCEPTION 'FALLA una familia ve el recuento'; END IF;
+
+    -- Un alumno que no es el encargado no puede ver ni cambiar el recuento (falsearía el parte)
+    PERFORM set_config('request.jwt.claim.sub', alumno, true);
+    fallo := false;
+    BEGIN
+        PERFORM public.confirmar_recuento_comedor(triangulo, ARRAY[miriam]);
+    EXCEPTION WHEN insufficient_privilege THEN fallo := true;
+    END;
+    IF NOT fallo THEN RAISE EXCEPTION 'FALLA un alumno que no es encargado cambia el recuento'; END IF;
+    fallo := false;
+    BEGIN
+        PERFORM * FROM public.recuento_comedor_hoy();
+    EXCEPTION WHEN insufficient_privilege THEN fallo := true;
+    END;
+    IF NOT fallo THEN RAISE EXCEPTION 'FALLA un alumno que no es encargado ve el recuento'; END IF;
+
+    -- Un tutor sí puede contar (por si no está el alumno encargado)
+    PERFORM set_config('request.jwt.claim.sub', tutor, true);
+    IF (SELECT count(*) FROM public.recuento_comedor_hoy()) < 2 THEN
+        RAISE EXCEPTION 'FALLA el tutor no ve el recuento';
+    END IF;
+
+    -- Una cuenta de cocina desactivada ya no ve el parte
+    PERFORM set_config('request.jwt.claim.sub', cocina_baja, true);
+    fallo := false;
+    BEGIN
+        PERFORM public.parte_cocina_dia();
+    EXCEPTION WHEN insufficient_privilege THEN fallo := true;
+    END;
+    IF NOT fallo THEN RAISE EXCEPTION 'FALLA una cuenta de cocina desactivada ve el parte'; END IF;
 
     -- 8. Sin sesión (anon) no se puede llamar a nada
     IF has_function_privilege('anon', 'public.parte_cocina_dia()', 'EXECUTE')

@@ -80,12 +80,13 @@ Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`, `NOTICE: 
 Cada mañana un alumno encargado pasa por las clases y apunta **quién falta** (pantalla 11); Cocina ve al momento cuántos menús de cada tipo preparar (pantalla 54). Migración `20261125100000_recuento_comedor.sql`:
 
 - **Rol `cocina`** en `perfiles`: la cocina entra con su propia cuenta.
+- **Marca `encargado_comedor`** en `perfiles`: solo los alumnos marcados (más tutores y admin) hacen el recuento; si cualquier alumno pudiera, podría falsear el parte de cocina. De momento se marca desde la base de datos. Las funciones comprueban además que la cuenta esté **activa**.
 - **Tabla `recuentos_comedor`**: una fila por clase y día (`UNIQUE (fecha, aula_id)`) con los `ausentes`, quién lo confirmó y a qué hora. Se escribe y se lee por las funciones; directamente, solo el admin.
 
 | Función | Quién | Para qué |
 |---|---|---|
-| `recuento_comedor_hoy()` | estudiante, tutor, admin | Clases con alumnos activos y sus compañeros (nombre de pila, icono, color), y si ya están contadas hoy |
-| `confirmar_recuento_comedor(aula, ausentes)` | estudiante, tutor, admin | Guarda (o corrige) quién falta hoy en esa clase; rechaza ausentes de otra clase |
+| `recuento_comedor_hoy()` | alumno encargado (`perfiles.encargado_comedor`), tutor, admin | Clases con alumnos activos y sus compañeros (nombre de pila, icono, color), y si ya están contadas hoy |
+| `confirmar_recuento_comedor(aula, ausentes)` | alumno encargado (`perfiles.encargado_comedor`), tutor, admin | Guarda (o corrige) quién falta hoy en esa clase; rechaza ausentes de otra clase |
 | `parte_cocina_dia()` | cocina, admin | Menús por tipo y total **sin los que faltan**, aulas confirmadas X de Y, última clase con hora, alergias de los que comen |
 
 El día es el del centro (`hoy_centro()`, Europe/Madrid). `recuento_comedor_test.sql` simula a los usuarios con `request.jwt.claim.sub` y comprueba el recuento, la corrección, los ausentes de otra clase, los permisos por rol y que el recuento de ayer no cuenta.

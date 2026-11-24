@@ -100,6 +100,7 @@ erDiagram
         varchar email UK
         varchar nombre_completo
         varchar rol "admin, tutor_docente, familiar, especialista, estudiante, cocina"
+        boolean encargado_comedor "alumno que hace el recuento"
         boolean activo
     }
 

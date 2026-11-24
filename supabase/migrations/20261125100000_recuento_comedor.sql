@@ -6,8 +6,10 @@
 -- Cocina ve al momento cuántos menús de cada tipo preparar (pantalla 54, «Cocina · Parte del día»).
 --
 -- 1. Rol «cocina» en perfiles: la cocina entra con su propia cuenta y solo ve el parte.
+--    Marca encargado_comedor en perfiles: qué alumnos pueden hacer el recuento.
 -- 2. Tabla recuentos_comedor: una fila por clase y día con los alumnos que faltan.
--- 3. Funciones (SECURITY DEFINER, cada una comprueba el rol de quien llama):
+-- 3. Funciones (SECURITY DEFINER, cada una comprueba el rol de quien llama y que su cuenta esté
+--    activa; si no, se podría falsear el parte de cocina, que lleva alergias):
 --    - recuento_comedor_hoy():                  clases y compañeros para el alumno encargado.
 --    - confirmar_recuento_comedor(aula, faltan): guarda el recuento de una clase.
 --    - parte_cocina_dia():                       parte de la 54 restando a los que faltan.
@@ -22,6 +24,47 @@ ALTER TABLE public.perfiles DROP CONSTRAINT IF EXISTS perfiles_rol_check;
 ALTER TABLE public.perfiles
     ADD CONSTRAINT perfiles_rol_check
     CHECK (rol IN ('admin', 'tutor_docente', 'familiar', 'especialista', 'estudiante', 'cocina'));
+
+-- Solo los alumnos encargados del comedor hacen el recuento (de momento se marca desde la base de
+-- datos; la pantalla para marcarlo queda para otra tarea). Los tutores y el admin, siempre.
+ALTER TABLE public.perfiles
+    ADD COLUMN IF NOT EXISTS encargado_comedor BOOLEAN NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.perfiles.encargado_comedor IS
+    'SCRUM-102 (HU-12): el alumno puede hacer el recuento del comedor (pantalla 11).';
+
+-- Quién puede hacer el recuento: alumno encargado, tutor o admin, con la cuenta activa
+CREATE OR REPLACE FUNCTION public.puede_hacer_recuento_comedor()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.perfiles p
+        WHERE p.id = auth.uid()
+          AND p.activo
+          AND (
+              p.rol IN ('admin', 'tutor_docente')
+              OR (p.rol = 'estudiante' AND p.encargado_comedor)
+          )
+    );
+$$;
+
+-- Quién ve el parte del día: cocina o admin, con la cuenta activa
+CREATE OR REPLACE FUNCTION public.puede_ver_parte_cocina()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.perfiles p
+        WHERE p.id = auth.uid() AND p.activo AND p.rol IN ('cocina', 'admin')
+    );
+$$;
 
 -- ---- 2. Recuentos del día ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.recuentos_comedor (
@@ -74,9 +117,7 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-    IF public.auth_user_role() IS DISTINCT FROM 'estudiante'
-       AND public.auth_user_role() IS DISTINCT FROM 'tutor_docente'
-       AND NOT public.is_admin() THEN
+    IF NOT public.puede_hacer_recuento_comedor() THEN
         RAISE EXCEPTION 'Sin permiso para el recuento del comedor' USING ERRCODE = '42501';
     END IF;
 
@@ -128,9 +169,7 @@ DECLARE
     v_ausentes UUID[];
     v_hora TIMESTAMPTZ;
 BEGIN
-    IF public.auth_user_role() IS DISTINCT FROM 'estudiante'
-       AND public.auth_user_role() IS DISTINCT FROM 'tutor_docente'
-       AND NOT public.is_admin() THEN
+    IF NOT public.puede_hacer_recuento_comedor() THEN
         RAISE EXCEPTION 'Sin permiso para el recuento del comedor' USING ERRCODE = '42501';
     END IF;
 
@@ -182,7 +221,7 @@ DECLARE
     v_hoy DATE := public.hoy_centro();
     v_parte JSONB;
 BEGIN
-    IF public.auth_user_role() IS DISTINCT FROM 'cocina' AND NOT public.is_admin() THEN
+    IF NOT public.puede_ver_parte_cocina() THEN
         RAISE EXCEPTION 'Sin permiso para el parte de cocina' USING ERRCODE = '42501';
     END IF;
 
@@ -249,10 +288,14 @@ COMMENT ON FUNCTION public.parte_cocina_dia() IS
     'SCRUM-102: parte del día para Cocina (pantalla 54), restando a los que faltan según el recuento.';
 
 REVOKE ALL ON FUNCTION public.hoy_centro() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.puede_hacer_recuento_comedor() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.puede_ver_parte_cocina() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.recuento_comedor_hoy() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.confirmar_recuento_comedor(UUID, UUID[]) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.parte_cocina_dia() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.hoy_centro() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.puede_hacer_recuento_comedor() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.puede_ver_parte_cocina() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.recuento_comedor_hoy() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.confirmar_recuento_comedor(UUID, UUID[]) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.parte_cocina_dia() TO authenticated;
