@@ -40,7 +40,7 @@ const EXITO: AuthResult = {
   },
 };
 const FALLO: AuthResult = { success: false, error: "La secuencia de dibujos no coincide." };
-const MENSAJE = "No es esa. Prueba otra vez";
+const MENSAJE = "Esos dibujos no son los tuyos.";
 
 async function abrirCredencialDeAlejandro(user: ReturnType<typeof userEvent.setup>) {
   await user.press(screen.getByTestId("tarjeta-clase-tri"));
@@ -89,7 +89,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     expect(mockDestino).toHaveBeenCalledWith("ale");
   });
 
-  it("si la secuencia es incorrecta no entra, avisa y deja la secuencia vacía", async () => {
+  it("si la secuencia es incorrecta no entra y enseña la pantalla 04b (SCRUM-248)", async () => {
     mockLogin.mockResolvedValue(FALLO);
     const user = userEvent.setup();
     await render(<LoginEstudiantesScreen />);
@@ -98,8 +98,30 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     await tocarDibujos(user, "sol", "coche", "casa");
 
     expect(await screen.findByText(MENSAJE)).toBeTruthy();
-    expect(screen.getByLabelText("0 de 3 dibujos seleccionados")).toBeTruthy();
+    // Los 3 dibujos se quedan a la vista y no salen «Borrar dibujo» ni «Entrar»
+    expect(screen.getByLabelText("3 de 3 dibujos seleccionados")).toBeTruthy();
+    expect(screen.queryByTestId("btn-borrar-dibujo")).toBeNull();
+    expect(screen.queryByTestId("btn-entrar-credencial")).toBeNull();
+    expect(screen.getByTestId("btn-borrar-todo")).toBeTruthy();
+    // «Adelante» tampoco vuelve a probar los mismos dibujos
+    expect(screen.getByTestId("btn-barra-adelante")).toBeDisabled();
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("tras el error, «Borrar todo» vacía los huecos y quita el aviso", async () => {
+    mockLogin.mockResolvedValue(FALLO);
+    const user = userEvent.setup();
+    await render(<LoginEstudiantesScreen />);
+
+    await abrirCredencialDeAlejandro(user);
+    await tocarDibujos(user, "sol", "coche", "casa");
+    await screen.findByText(MENSAJE);
+    await user.press(screen.getByTestId("btn-borrar-todo"));
+
+    expect(screen.queryByText(MENSAJE)).toBeNull();
+    expect(screen.getByLabelText("0 de 3 dibujos seleccionados")).toBeTruthy();
+    expect(screen.getByTestId("btn-borrar-dibujo")).toBeTruthy();
+    expect(screen.getByTestId("btn-entrar-credencial")).toBeDisabled();
   });
 
   it("tras un error se puede volver a intentar y entrar", async () => {
@@ -110,6 +132,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
     await abrirCredencialDeAlejandro(user);
     await tocarDibujos(user, "sol", "coche", "casa");
     await screen.findByText(MENSAJE);
+    await user.press(screen.getByTestId("btn-borrar-todo"));
     await tocarDibujos(user, "manzana", "perro", "estrella");
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/agenda"));

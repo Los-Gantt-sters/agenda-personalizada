@@ -8,6 +8,9 @@ export const PICTOGRAMAS_INTERFAZ = {
   colegio: { id: 3082, respaldo: "🏫" },
   tocar: { id: 3293, respaldo: "👆" },
   contrasena: { id: 27691, respaldo: "🔑" },
+  // «Borrar todo» tras una contraseña equivocada (pantalla 04b, SCRUM-248): una goma, no la X de
+  // «Borrar dibujo», para que no se confundan
+  borrar: { id: 2286, respaldo: "🧽" },
   esperar: { id: 36914, respaldo: "⏳" },
   terminar: { id: 5358, respaldo: "🏁" },
   celebrar: { id: 16649, respaldo: "🎉" },

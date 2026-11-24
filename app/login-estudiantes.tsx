@@ -44,8 +44,9 @@ import {
   useEstilos,
 } from "../src/ui";
 
-// Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
-const MENSAJE_SECUENCIA_INCORRECTA = "No es esa. Prueba otra vez";
+// Aviso de la pantalla 04b: amable y sin decir si el alumno existe (RF1.8). Qué hacer después lo
+// dice el botón «Borrar todo», con su pictograma.
+const MENSAJE_SECUENCIA_INCORRECTA = "Esos dibujos no son los tuyos.";
 
 export interface LoginEstudiantesScreenProps {
   /**
@@ -108,8 +109,8 @@ export default function LoginEstudiantesScreen({
   };
 
   const cambiarSecuencia = (nueva: string[]) => {
-    // Al volver a tocar dibujos tras un fallo, el aviso ya ha cumplido: se quita.
-    if (nueva.length > secuencia.length) setMensajeError(null);
+    // Tras un fallo, «Borrar todo» empieza un intento nuevo: el aviso ya ha cumplido y se quita.
+    setMensajeError(null);
     setSecuencia(nueva);
   };
 
@@ -150,8 +151,8 @@ export default function LoginEstudiantesScreen({
     setComprobando(false);
 
     if (!resultado?.success) {
+      // Pantalla 04b: los 3 dibujos se quedan en rojo hasta que pulse «Borrar todo»
       setMensajeError(MENSAJE_SECUENCIA_INCORRECTA);
-      setSecuencia([]);
       return;
     }
 
@@ -165,7 +166,8 @@ export default function LoginEstudiantesScreen({
 
   // ---- Paso 3: contraseña de 3 dibujos ----
   if (clase && alumno) {
-    const completa = secuencia.length === LONGITUD_SECUENCIA_DIBUJOS;
+    // Con el aviso de error a la vista no se puede volver a entrar con los mismos dibujos
+    const completa = secuencia.length === LONGITUD_SECUENCIA_DIBUJOS && !mensajeError;
     return (
       <Pantalla
         titulo={`¿Eres ${alumno.nombre}?`}
