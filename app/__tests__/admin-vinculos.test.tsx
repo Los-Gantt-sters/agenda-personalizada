@@ -66,7 +66,7 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
     prepararDatos();
   });
 
-  it("tiene un acceso provisional a «Aulas y clases» con su aviso (SCRUM-259)", async () => {
+  it("tiene un accesos provisionales a «Aulas y clases» y «Menús y alergias» con su aviso (SCRUM-259 y 260)", async () => {
     const user = userEvent.setup();
     await render(<ConsolaVinculos />);
     await screen.findByTestId("fila-a1");
@@ -74,6 +74,8 @@ describe("Consola de vínculos - SCRUM-61 (T-03.3)", () => {
     expect(screen.getByText(/Acceso provisional/)).toBeTruthy();
     await user.press(screen.getByRole("button", { name: "Ir a configurar aulas y clases" }));
     expect(mockPush).toHaveBeenCalledWith("/admin/aulas");
+    await user.press(screen.getByRole("button", { name: "Ir a menús, dietas y alergias" }));
+    expect(mockPush).toHaveBeenCalledWith("/admin/menus");
   });
 
   it("muestra cada estudiante con su aula, su tutor de aula y su familia", async () => {
