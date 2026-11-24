@@ -12,7 +12,15 @@ import React from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { MarcoPantalla } from "../../pantalla/MarcoPantalla";
 import type { Paleta } from "../../temas";
-import { FORMA, Icono, PictogramaInterfaz, Texto, useApariencia, useEstilos } from "../../ui";
+import {
+  FORMA,
+  Icono,
+  PictogramaInterfaz,
+  Texto,
+  colorSobre,
+  useApariencia,
+  useEstilos,
+} from "../../ui";
 import { AGENDA_ADULTO_DEMO, type TareaAgendaAdulto } from "./datosAgendaAdulto";
 
 export type RolAdultoAgenda = "tutor" | "familia";
@@ -175,7 +183,12 @@ export function AgendaAdultoAlumno({
                         esAutoPendiente ? estilos.selloAutoPendiente : estilos.selloHecha,
                       ]}
                     >
-                      <Texto style={estilos.textoSello}>{esAutoPendiente ? "!" : "✓"}</Texto>
+                      <Icono
+                        nombre={esAutoPendiente ? "alerta" : "check"}
+                        tam={14}
+                        grosor={3}
+                        color={colorSobre(esAutoPendiente ? colores.aviso : colores.exito)}
+                      />
                     </View>
                   </View>
                   <Texto style={estilos.miniTitulo}>{tarea.titulo}</Texto>
@@ -386,9 +399,10 @@ const crearEstilos = (c: Paleta) =>
       justifyContent: "center",
       gap: 4,
     },
+    // SCRUM-266: ámbar con los colores del tema, como la tarjeta de la agenda del alumno (06).
     miniTarjetaAutoPendiente: {
-      borderColor: "#D97706",
-      backgroundColor: "#FFFBEB",
+      borderWidth: 3,
+      borderColor: c.aviso,
     },
     contenedorMiniPicto: {
       position: "relative",
@@ -412,12 +426,7 @@ const crearEstilos = (c: Paleta) =>
       backgroundColor: c.exito,
     },
     selloAutoPendiente: {
-      backgroundColor: "#D97706",
-    },
-    textoSello: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: "#FFFFFF",
+      backgroundColor: c.aviso,
     },
     miniTitulo: {
       fontSize: 16,
@@ -431,7 +440,7 @@ const crearEstilos = (c: Paleta) =>
       textAlign: "center",
     },
     textoAutoPendiente: {
-      color: "#92400E",
+      color: c.aviso,
       fontWeight: "700",
     },
     cuerpoAhora: {
