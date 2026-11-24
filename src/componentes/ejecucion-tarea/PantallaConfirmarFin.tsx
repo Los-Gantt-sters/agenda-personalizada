@@ -2,11 +2,10 @@
 // Sale al pulsar «Terminar». «Sí, he terminado» pasa a la felicitación; «No, sigo» y «Atrás» vuelven
 // a la tarea, en el mismo paso y con el mismo formato (eso lo guarda AgendaDelDia).
 // Es una pantalla completa, con su cabecera y su barra de abajo: sin ventanas emergentes ni scroll.
-// «Sí» no hace caso durante un momento al aparecer: el toque que abrió la pantalla (o un segundo
-// toque sin querer) no puede dar la tarea por terminada.
-import { useEffect, useRef, useState, type ReactNode } from "react";
+// Regla de la profesora: un solo toque. «Sí» responde siempre al primero, sin espera al aparecer; si
+// el alumno se equivoca, «Atrás» en la felicitación deshace «Terminar».
+import { useRef, useState, type ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
-import { BLOQUEO_AL_APARECER_MS } from "./BotonAccionTarea";
 import { PictogramaTarea } from "../agenda/PictogramaTarea";
 import type { Tarea } from "../agenda/tipos";
 import { Pantalla } from "../../pantalla";
@@ -29,7 +28,6 @@ export function PantallaConfirmarFin({
   onSi,
   onNo,
   conSonido = false,
-  bloqueoAlAparecerMs = BLOQUEO_AL_APARECER_MS,
 }: {
   tarea: Pick<Tarea, "titulo" | "pictograma_url" | "emoji">;
   /** «Sí, he terminado». */
@@ -37,7 +35,6 @@ export function PantallaConfirmarFin({
   /** «No, sigo» y «Atrás»: vuelve al último paso de la tarea. */
   onNo: () => void;
   conSonido?: boolean;
-  bloqueoAlAparecerMs?: number;
 }) {
   const { colores, canal, escalaLetra: L } = useApariencia();
   const e = useEstilos(crearEstilos);
@@ -46,13 +43,9 @@ export function PantallaConfirmarFin({
   const verDibujo = canal !== "soloTexto";
   const verTexto = canal !== "soloPictograma";
 
-  const aparecio = useRef(0);
   const confirmado = useRef(false);
-  useEffect(() => {
-    aparecio.current = Date.now();
-  }, []);
   const decirSi = () => {
-    if (confirmado.current || Date.now() - aparecio.current < bloqueoAlAparecerMs) return;
+    if (confirmado.current) return;
     confirmado.current = true;
     onSi();
   };
