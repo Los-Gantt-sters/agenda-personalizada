@@ -171,11 +171,12 @@ export function VistaTareaFamiliaCasa42b({
         </View>
 
         {/* Aviso informativo de auto-pendiente idéntico a 41 */}
+        {/* SCRUM-266: la regla la aplica el servidor (SCRUM-265); colores del tema y sin emoji */}
         <View style={estilos.avisoAutoPendiente} testID="aviso-auto-pendiente-42b">
+          <Icono nombre="cronometro" tam={18} color={colores.aviso} />
           <Texto style={estilos.textoAvisoAutoPendiente}>
-            {
-              "⏱ Si finaliza el horario programado y no se ha pulsado «Terminar tarea», se marca automáticamente como Pendiente"
-            }
+            Si finaliza el horario programado y no se ha pulsado «Terminar tarea», se marca
+            automáticamente como Pendiente
           </Texto>
         </View>
 
@@ -340,18 +341,22 @@ const crearEstilos = (c: Paleta) =>
       color: c.texto,
     },
     avisoAutoPendiente: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
       paddingVertical: 6,
       paddingHorizontal: 14,
       borderRadius: 8,
-      backgroundColor: "#FFFBEB",
-      borderWidth: 1,
-      borderColor: "#F59E0B",
-      alignItems: "center",
+      backgroundColor: c.superficie,
+      borderWidth: FORMA.borde,
+      borderColor: c.aviso,
     },
     textoAvisoAutoPendiente: {
+      flexShrink: 1,
       fontSize: 13,
-      fontWeight: "600",
-      color: "#92400E",
+      fontWeight: "700",
+      color: c.aviso,
       textAlign: "center",
     },
     tarjetaPaso: {
