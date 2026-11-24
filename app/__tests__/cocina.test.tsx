@@ -64,6 +64,9 @@ describe("Pantalla 54 · Cocina · Parte del día", () => {
     await render(<ParteDelDiaCocina />);
 
     expect(await screen.findByText("Faltan 2 aulas")).toBeTruthy();
+    // El total cuenta como presentes a los de las clases sin contar: es provisional
+    expect(screen.getByLabelText("Total comensales (provisional): 34")).toBeTruthy();
+    expect(screen.getByText("Provisional")).toBeTruthy();
     expect(screen.queryByTestId("parte-confirmado")).toBeNull();
     expect(screen.getByText("Todavía no ha llegado el recuento de ninguna clase")).toBeTruthy();
   });
@@ -95,6 +98,29 @@ describe("Pantalla 54 · Cocina · Parte del día", () => {
     expect(await screen.findByLabelText("Total comensales: 34")).toBeTruthy();
   });
 
+  it("la fecha de la cabecera es la del parte (día del centro), no la del dispositivo", async () => {
+    await render(<ParteDelDiaCocina />);
+    expect(await screen.findByText("Miércoles, 25 de noviembre")).toBeTruthy();
+  });
+
+  it("si una respuesta antigua llega tarde, no pisa la más reciente", async () => {
+    const user = userEvent.setup();
+    let resolverPrimera: (v: unknown) => void = () => {};
+    mockParte
+      .mockResolvedValueOnce(ok(PARTE)) // carga inicial
+      .mockReturnValueOnce(new Promise((r) => (resolverPrimera = r))) // «Actualizar» lento
+      .mockResolvedValueOnce(ok({ ...PARTE, total: 30 })); // «Actualizar» rápido
+    await render(<ParteDelDiaCocina />);
+    await screen.findByLabelText("Total comensales: 34");
+
+    await user.press(screen.getByTestId("btn-actualizar-parte"));
+    await user.press(screen.getByTestId("btn-actualizar-parte"));
+    expect(await screen.findByLabelText("Total comensales: 30")).toBeTruthy();
+
+    await act(async () => resolverPrimera(ok({ ...PARTE, total: 99 })));
+    expect(screen.getByLabelText("Total comensales: 30")).toBeTruthy();
+  });
+
   it("se actualiza solo cada minuto y, si falla al refrescar, deja el último parte", async () => {
     jest.useFakeTimers();
     try {
@@ -113,6 +139,10 @@ describe("Pantalla 54 · Cocina · Parte del día", () => {
       });
       expect(screen.getByLabelText("Total comensales: 33")).toBeTruthy();
       expect(screen.queryByTestId("parte-error")).toBeNull();
+      // …pero avisa de que no está al día y de qué hora son los datos
+      expect(screen.getByTestId("parte-sin-actualizar")).toHaveTextContent(
+        /No se ha podido actualizar\. Estos datos son de las \d\d:\d\d\./,
+      );
       expect(mockParte).toHaveBeenCalledTimes(3);
     } finally {
       jest.useRealTimers();

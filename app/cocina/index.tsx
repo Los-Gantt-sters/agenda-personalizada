@@ -20,7 +20,19 @@ import { Icono, Texto, fechaDeHoy, useApariencia, useEstilos } from "../../src/u
 const REFRESCO_PARTE_MS = 60_000;
 
 type Estado =
-  { tipo: "cargando" } | { tipo: "error"; mensaje: string } | { tipo: "ok"; parte: ParteCocinaDia };
+  | { tipo: "cargando" }
+  | { tipo: "error"; mensaje: string }
+  // horaDatos: cuándo llegó este parte (HH:MM); sinActualizar: el último refresco falló
+  | { tipo: "ok"; parte: ParteCocinaDia; horaDatos: string; sinActualizar: boolean };
+
+const horaActual = () =>
+  new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+/** Fecha del parte («2026-11-25») en texto, la del centro; si aún no hay parte, la de hoy. */
+function fechaDelParte(fecha?: string): string {
+  const [a, m, d] = (fecha ?? "").split("-").map(Number);
+  return a && m && d ? fechaDeHoy(new Date(a, m - 1, d)) : fechaDeHoy();
+}
 
 export default function ParteDelDiaCocina() {
   const router = useRouter();
@@ -29,17 +41,21 @@ export default function ParteDelDiaCocina() {
   const e = useEstilos(crearEstilos);
   const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
   const montado = useRef(true);
+  // Solo cuenta la respuesta de la última petición (las anteriores pueden llegar más tarde)
+  const ultimaPeticion = useRef(0);
 
-  // Pide el parte; si falla al refrescar, se queda el último que había (no se borra la pantalla)
+  // Pide el parte. Si falla al refrescar, se queda el último que había, pero con un aviso de que no
+  // está al día y de qué hora es: la cocina no debe preparar menús con datos viejos sin saberlo.
   const pedirParte = useCallback(() => {
+    const peticion = ++ultimaPeticion.current;
     obtenerParteCocinaDia().then((r) => {
-      if (!montado.current) return;
+      if (!montado.current || peticion !== ultimaPeticion.current) return;
       if (r.success && r.data) {
-        setEstado({ tipo: "ok", parte: r.data });
+        setEstado({ tipo: "ok", parte: r.data, horaDatos: horaActual(), sinActualizar: false });
       } else {
         setEstado((antes) =>
           antes.tipo === "ok"
-            ? antes
+            ? { ...antes, sinActualizar: true }
             : { tipo: "error", mensaje: r.error ?? "No se ha podido cargar el parte." },
         );
       }
@@ -72,7 +88,9 @@ export default function ParteDelDiaCocina() {
       simbolo={<Icono nombre="lista" color={colores.primario} tam={36} />}
       derecha={
         <View style={e.cabeceraDerecha}>
-          <Texto style={e.fecha}>{fechaDeHoy()}</Texto>
+          <Texto style={e.fecha}>
+            {fechaDelParte(estado.tipo === "ok" ? estado.parte.fecha : undefined)}
+          </Texto>
           {sesion ? (
             <Pressable
               style={e.botonSalir}
@@ -109,14 +127,29 @@ export default function ParteDelDiaCocina() {
           </Pressable>
         </View>
       ) : (
-        <Parte parte={estado.parte} alActualizar={pedirParte} />
+        <Parte
+          parte={estado.parte}
+          horaDatos={estado.horaDatos}
+          sinActualizar={estado.sinActualizar}
+          alActualizar={pedirParte}
+        />
       )}
     </Pantalla>
   );
 }
 
 /** Contenido del parte: tarjetas de menús y total, aulas confirmadas y alergias. */
-function Parte({ parte, alActualizar }: { parte: ParteCocinaDia; alActualizar: () => void }) {
+function Parte({
+  parte,
+  horaDatos,
+  sinActualizar,
+  alActualizar,
+}: {
+  parte: ParteCocinaDia;
+  horaDatos: string;
+  sinActualizar: boolean;
+  alActualizar: () => void;
+}) {
   const { colores } = useApariencia();
   const e = useEstilos(crearEstilos);
   const completo = parte.aulasTotal > 0 && parte.aulasConfirmadas >= parte.aulasTotal;
@@ -124,6 +157,15 @@ function Parte({ parte, alActualizar }: { parte: ParteCocinaDia; alActualizar: (
 
   return (
     <ScrollView contentContainerStyle={e.contenido}>
+      {sinActualizar ? (
+        <View style={e.avisoDesfasado} accessibilityRole="alert" testID="parte-sin-actualizar">
+          <Icono nombre="alerta" color={colores.peligro} tam={24} grosor={2.6} />
+          <Texto style={e.textoDesfasado}>
+            {`No se ha podido actualizar. Estos datos son de las ${horaDatos}.`}
+          </Texto>
+        </View>
+      ) : null}
+
       {/* Una tarjeta por tipo de menú que hay hoy, y el total al final */}
       <View style={e.tarjetas} testID="tarjetas-menus">
         {parte.menus.map((m) => (
@@ -141,10 +183,12 @@ function Parte({ parte, alActualizar }: { parte: ParteCocinaDia; alActualizar: (
         <View
           style={e.tarjeta}
           accessible
-          accessibilityLabel={`Total comensales: ${parte.total}`}
+          accessibilityLabel={`Total comensales${completo ? "" : " (provisional)"}: ${parte.total}`}
           testID="total-comensales"
         >
           <Texto style={e.etiquetaTarjeta}>TOTAL COMENSALES</Texto>
+          {/* Mientras falten clases por contar, se cuenta a sus alumnos como presentes */}
+          {completo ? null : <Texto style={e.provisional}>Provisional</Texto>}
           <Texto style={[e.numero, { color: colores.exito }]}>{parte.total}</Texto>
         </View>
       </View>
@@ -245,6 +289,18 @@ const crearEstilos = (c: Paleta) =>
       backgroundColor: c.superficie,
     },
     etiquetaTarjeta: { fontSize: 16, color: c.textoSecundario, textAlign: "center" },
+    provisional: { fontSize: 15, fontWeight: "700", color: c.aviso },
+    avisoDesfasado: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 3,
+      borderColor: c.peligro,
+      backgroundColor: c.superficie,
+    },
+    textoDesfasado: { flexShrink: 1, fontSize: 18, fontWeight: "700", color: c.peligro },
     numero: { fontSize: 44, fontWeight: "700" },
     panel: {
       flexDirection: "row",
