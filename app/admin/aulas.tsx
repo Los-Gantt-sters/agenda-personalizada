@@ -165,6 +165,8 @@ export default function ConfigurarAulas() {
     const aula = aulas[eligiendo];
     return (
       <Pantalla
+        sinAyuda
+        sinAccesibilidad
         titulo={`Icono de ${aula.nombre}`}
         simbolo={<IconoAula iconoForma={aula.iconoForma} iconoUrl={aula.iconoUrl} tam={36} />}
         alAtras={() => setEligiendo(null)}
@@ -183,6 +185,8 @@ export default function ConfigurarAulas() {
 
   return (
     <Pantalla
+      sinAyuda
+      sinAccesibilidad
       titulo="Configurar aulas y clases"
       simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
       alAdelante={cargando || errorCarga || guardando ? null : () => void guardar()}

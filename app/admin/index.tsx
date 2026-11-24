@@ -203,6 +203,8 @@ export default function PanelAdministracion() {
 
   return (
     <Pantalla
+      sinAyuda
+      sinAccesibilidad
       titulo="Panel de Administración · Centro Escolar"
       simbolo={<Icono nombre="escudo" color={colores.primario} tam={32} />}
       derecha={

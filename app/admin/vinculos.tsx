@@ -128,6 +128,8 @@ export default function ConsolaVinculos() {
   if (edicion) {
     return (
       <Pantalla
+        sinAyuda
+        sinAccesibilidad
         titulo={`${edicion.tipo === "aula" ? "Tutor de aula" : "Familia"} de ${nombreCompleto(edicion.alumno)}`}
         simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
         alAtras={() => setEdicion(null)}
@@ -150,6 +152,8 @@ export default function ConsolaVinculos() {
 
   return (
     <Pantalla
+      sinAyuda
+      sinAccesibilidad
       titulo="Tutores y familias"
       simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
       derecha={
