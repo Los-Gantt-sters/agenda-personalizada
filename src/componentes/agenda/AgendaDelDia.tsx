@@ -18,6 +18,9 @@
 // T-08.6 (SCRUM-264): una tarea a medias abre la pantalla 10b («Retomar tarea»). El aviso de 5 minutos
 // es la pantalla 08b para el alumno: espera a «Vale» y le devuelve justo donde estaba. Nunca corta la
 // felicitación ni «¿Has terminado?»; a los adultos solo les sale la franja de arriba.
+// HU-10 (SCRUM-95): una tarea con pasos se hace paso a paso (07-07d) al pulsar «Empezar»; su último
+// paso lleva a «¿Has terminado?» (08) y «No, sigo» vuelve a ese paso. «Mostrar pasos» en «Ahora»
+// abre todos los pasos a la vez (07f), desde donde también se puede empezar.
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import type { RepositorioAgenda } from "./tipos";
@@ -30,6 +33,8 @@ import { esPendienteRetomar } from "./logica";
 import { Pantalla } from "../../pantalla/Pantalla";
 import { Texto, useApariencia } from "../../ui";
 import { PantallaConfirmarFin } from "../ejecucion-tarea/PantallaConfirmarFin";
+import { PantallaPasos07, type VistaPasos } from "../pasos/PantallaPasos07";
+import { PantallaTodosPasos07f } from "../pasos/PantallaTodosPasos07f";
 import { RefuerzoPositivo } from "../ejecucion-tarea/RefuerzoPositivo";
 import type { Emocion } from "../ejecucion-tarea/emociones";
 import {
@@ -132,6 +137,11 @@ export function AgendaDelDia({
   const [vistas, setVistas] = useState<Record<string, VistaTarea>>({});
   // Lo mismo para el detalle abierto, aparte: mirar los pasos no adelanta la tarea al empezarla.
   const [vistaDetalle, setVistaDetalle] = useState<VistaTarea | undefined>(undefined);
+  // HU-10: paso y formato de cada tarea con pasos (07), para volver a ellos desde 08.
+  const [vistasPasos, setVistasPasos] = useState<Record<string, VistaPasos>>({});
+  // HU-10: tarea cuyos pasos se están viendo todos a la vez (07f).
+  const [todosPasosId, setTodosPasosId] = useState<string | null>(null);
+  const todosPasos = entradas.find((e) => e.id === todosPasosId) ?? null;
   // Cerrar el aviso solo lo quita de la pantalla: la tarea en curso sigue igual.
   const { aviso, cerrar: cerrarAviso } = useAvisoAnticipado(entradas, preferenciasAviso, onAviso);
 
@@ -139,12 +149,18 @@ export function AgendaDelDia({
   const aConfirmar = bloques.ahora?.id === confirmandoId ? bloques.ahora : null;
   if (confirmandoId && !aConfirmar) setConfirmandoId(null);
 
-  const olvidarVista = (idEntrada: string) =>
+  const olvidarVista = (idEntrada: string) => {
     setVistas((actuales) => {
       const resto = { ...actuales };
       delete resto[idEntrada];
       return resto;
     });
+    setVistasPasos((actuales) => {
+      const resto = { ...actuales };
+      delete resto[idEntrada];
+      return resto;
+    });
+  };
 
   const cerrarDetalle = () => {
     setAbiertaId(null);
@@ -232,6 +248,29 @@ export function AgendaDelDia({
     );
   }
 
+  // ---- Pantalla 07f: todos los pasos a la vez; «Empezar tarea» lleva al Paso 1 (07) ----
+  if (todosPasos) {
+    const puedeEmpezar =
+      !soloMirar && bloques.ahora?.id === todosPasos.id && todosPasos.estado === "pendiente";
+    return (
+      <PantallaTodosPasos07f
+        key={`todos-pasos-${todosPasos.id}`}
+        tarea={todosPasos.tarea}
+        alAtras={() => setTodosPasosId(null)}
+        onEmpezar={
+          puedeEmpezar
+            ? () => {
+                setTodosPasosId(null);
+                setEmpezadaAqui(todosPasos.id);
+                void empezar(todosPasos.id);
+              }
+            : undefined
+        }
+        conSonido={marco.conSonido}
+      />
+    );
+  }
+
   // ---- Pantalla 10: una tarea ya hecha solo enseña el tick, el dibujo y su nombre ----
   if (abierta?.estado === "hecha") {
     return (
@@ -252,7 +291,7 @@ export function AgendaDelDia({
       <PantallaTareaPendiente
         key={`pendiente-${abierta.id}`}
         entrada={abierta}
-        conPasoGuardado={Boolean(vistas[abierta.id])}
+        conPasoGuardado={Boolean(vistas[abierta.id] ?? vistasPasos[abierta.id])}
         onRetomar={
           puedeRetomar
             ? () => {
@@ -301,6 +340,29 @@ export function AgendaDelDia({
     !soloMirar && ahora?.estado === "en_curso" && (abrirTareaEnCurso || empezadaAqui === ahora.id)
       ? ahora
       : null;
+  // HU-10: con pasos, la tarea se hace paso a paso (07-07d). «Atrás» en el Paso 1 deshace «Empezar».
+  if (enCurso && (enCurso.tarea.pasos?.length ?? 0) > 0) {
+    return (
+      <PantallaPasos07
+        key={`pasos-${enCurso.id}`}
+        entrada={enCurso}
+        alSalir={() => {
+          if (!enCurso.pendiente_motivo) olvidarVista(enCurso.id);
+          void deshacerEmpezar(enCurso.id);
+        }}
+        etiquetaSalir={
+          enCurso.pendiente_motivo ? "Atrás: dejarla pendiente" : "Atrás: todavía no he empezado"
+        }
+        alTerminar={() => pedirFin(enCurso.id)}
+        verReloj={verReloj}
+        conSonido={marco.conSonido}
+        aviso={franjaAviso}
+        pie={pieError}
+        vistaInicial={vistasPasos[enCurso.id]}
+        onCambioVista={(vista) => setVistasPasos((v) => ({ ...v, [enCurso.id]: vista }))}
+      />
+    );
+  }
   if (enCurso) {
     return (
       <PantallaTarea
@@ -357,6 +419,7 @@ export function AgendaDelDia({
             soloMirar={soloMirar}
             verReloj={verReloj}
             onAbrir={(e) => setAbiertaId(e.id)}
+            onMostrarPasos={(e) => setTodosPasosId(e.id)}
           />
           {pieError}
         </View>

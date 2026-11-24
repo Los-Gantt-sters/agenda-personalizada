@@ -30,7 +30,8 @@ export type NombreIcono =
   | "flechaAtras"
   | "accesibilidad"
   | "lista"
-  | "buscar";
+  | "buscar"
+  | "mas";
 
 const TRAZOS: Record<NombreIcono, React.ReactNode> = {
   llave: (
@@ -159,6 +160,8 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
     </>
   ),
   lista: <Path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
+  // HU-10 (28s): «Añadir paso», «Subir foto»...
+  mas: <Path d="M12 5v14M5 12h14" />,
   estrella: <Path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />,
   buscar: (
     <>
