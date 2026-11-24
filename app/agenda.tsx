@@ -41,7 +41,7 @@ const PANEL_DE: Partial<Record<UserRole, Href>> = {
   tutor_docente: "/docente/agenda",
   especialista: "/docente/agenda",
   familiar: "/familiar/resumen",
-  admin: "/admin/vinculos",
+  admin: "/admin",
 };
 
 export default function PantallaAgenda() {
