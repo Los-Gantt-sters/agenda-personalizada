@@ -226,6 +226,7 @@ describe("SCRUM-57 · Seguridad de acceso", () => {
       ["familiar", "/familiar/resumen"],
       ["especialista", "/especialista/terapias"],
       ["admin", "/admin/dashboard"],
+      ["cocina", "/cocina"],
     ])("permite al rol %s acceder a su zona %s", (role, route) => {
       expect(checkRouteAccess(buildSession(role), route, NOW_MS)).toEqual({ allowed: true });
     });
@@ -238,6 +239,12 @@ describe("SCRUM-57 · Seguridad de acceso", () => {
       ["familiar", "/especialista/terapias"],
       ["tutor_docente", "/familiar/resumen"],
       ["especialista", "/docente/agenda"],
+      // HU-12: la cocina solo ve su parte del día, y nadie más que admin entra en la cocina
+      ["cocina", "/admin/dashboard"],
+      ["cocina", "/docente/agenda"],
+      ["cocina", "/familiar/resumen"],
+      ["tutor_docente", "/cocina"],
+      ["familiar", "/cocina"],
     ])("deniega al rol %s el acceso a %s (escalada de privilegios)", (role, route) => {
       expect(checkRouteAccess(buildSession(role), route, NOW_MS)).toMatchObject({
         allowed: false,
@@ -247,8 +254,8 @@ describe("SCRUM-57 · Seguridad de acceso", () => {
 
     it("el administrador puede supervisar todas las zonas", () => {
       const admin = buildSession("admin");
-      ["/docente/agenda", "/familiar/resumen", "/especialista/terapias"].forEach((route) =>
-        expect(checkRouteAccess(admin, route, NOW_MS)).toEqual({ allowed: true }),
+      ["/docente/agenda", "/familiar/resumen", "/especialista/terapias", "/cocina"].forEach(
+        (route) => expect(checkRouteAccess(admin, route, NOW_MS)).toEqual({ allowed: true }),
       );
     });
 

@@ -32,6 +32,7 @@ export const PROTECTED_ROUTES: Record<string, UserRole[]> = {
   "/docente": ["tutor_docente", "admin"],
   "/familiar": ["familiar", "admin"],
   "/especialista": ["especialista", "admin"],
+  "/cocina": ["cocina", "admin"], // HU-12: parte del día (pantalla 54)
 };
 
 /** Rutas públicas accesibles sin sesión. */

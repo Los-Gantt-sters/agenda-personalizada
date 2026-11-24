@@ -18,6 +18,8 @@ export function normalizeRole(roleCandidate?: string | null): UserRole {
     "admin",
     "especialista",
     "estudiante",
+    // HU-12: si no estuviera, una cuenta de cocina entraría como tutor (el valor por defecto)
+    "cocina",
   ];
   if (roleCandidate && validRoles.includes(roleCandidate as UserRole)) {
     return roleCandidate as UserRole;
@@ -38,6 +40,8 @@ export function getRoleHomeRoute(role: UserRole): string {
       return "/especialista/terapias";
     case "estudiante":
       return "/estudiante/agenda";
+    case "cocina":
+      return "/cocina"; // HU-12: parte del día (pantalla 54)
     case "tutor_docente":
     default:
       return "/docente/agenda";

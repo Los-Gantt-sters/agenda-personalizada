@@ -33,12 +33,15 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
       expect(getRoleHomeRoute("especialista")).toBe("/especialista/terapias");
       expect(getRoleHomeRoute("estudiante")).toBe("/estudiante/agenda");
       expect(getRoleHomeRoute("tutor_docente")).toBe("/docente/agenda");
+      expect(getRoleHomeRoute("cocina")).toBe("/cocina"); // HU-12, pantalla 54
     });
 
     it("debe validar y normalizar roles desconocidos al default tutor_docente", () => {
       expect(normalizeRole("admin")).toBe("admin");
       expect(normalizeRole("familiar")).toBe("familiar");
       expect(normalizeRole("estudiante")).toBe("estudiante");
+      // HU-12: la cocina no puede acabar como tutor por no estar en la lista
+      expect(normalizeRole("cocina")).toBe("cocina");
       expect(normalizeRole("rol_inexistente")).toBe("tutor_docente");
       expect(normalizeRole(undefined)).toBe("tutor_docente");
     });
