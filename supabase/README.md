@@ -204,6 +204,7 @@ erDiagram
         time hora_fin
         integer orden
         varchar estado "pendiente, en_curso, completada, bloqueada, cancelada"
+        varchar pendiente_motivo "tiempo_agotado, profesor"
         boolean plan_b_activado
     }
 
