@@ -68,6 +68,7 @@ erDiagram
     ALUMNOS ||--o{ ASIGNACIONES : planifica
     TAREAS ||--o{ ASIGNACIONES : programa
     ASIGNACIONES ||--o| EJECUCIONES : monitoriza
+    AULAS ||--o{ RECUENTOS_COMEDOR : "recuento diario"
 
     ALUMNOS ||--o{ AVISOS_PETICIONES : solicita
     PERFILES ||--o{ AVISOS_PETICIONES : atiende
@@ -98,7 +99,7 @@ erDiagram
         uuid centro_id FK
         varchar email UK
         varchar nombre_completo
-        varchar rol "admin, tutor_docente, familiar, especialista, estudiante"
+        varchar rol "admin, tutor_docente, familiar, especialista, estudiante, cocina"
         boolean activo
     }
 
@@ -208,6 +209,15 @@ erDiagram
         varchar estado "pendiente, en_curso, completada, bloqueada, cancelada"
         varchar pendiente_motivo "tiempo_agotado, profesor"
         boolean plan_b_activado
+    }
+
+    RECUENTOS_COMEDOR {
+        uuid id PK
+        date fecha "dia del centro"
+        uuid aula_id FK
+        uuid_array ausentes "alumnos que no comen hoy"
+        uuid confirmado_por FK
+        timestamptz confirmado_en
     }
 
     EJECUCIONES {

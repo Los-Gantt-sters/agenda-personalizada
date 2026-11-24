@@ -55,13 +55,17 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261110000000_secuencia_dia.sql \
          supabase/migrations/20261123100000_auto_pendiente.sql \
          supabase/tests/secuencia_dia_test.sql \
-         supabase/tests/auto_pendiente_test.sql; do
+         supabase/migrations/20261124000000_aulas_configurables.sql \
+         supabase/migrations/20261124100000_menus_y_alergias.sql \
+         supabase/migrations/20261125100000_recuento_comedor.sql \
+         supabase/tests/auto_pendiente_test.sql \
+         supabase/tests/recuento_comedor_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan` y `NOTICE: auto_pendiente: las 11 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan` y `NOTICE: recuento_comedor: las 8 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
@@ -70,3 +74,18 @@ Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan` y `NOTICE:
 > **Orden de despliegue:** aplicar `20261123100000_auto_pendiente.sql` solo cuando la pantalla 10b (SCRUM-264) esté en `main`. Sin ella, una tarea caducada se ve como una pendiente normal y vuelve a «Ahora».
 
 `supabase_minimo.sql` crea lo mínimo de Supabase (esquema `auth`, `auth.uid()`, roles `authenticated` y `anon`) para que las migraciones carguen en un PostgreSQL normal. Con Supabase real o `supabase start` no hace falta.
+
+## Recuento del comedor y parte del día (SCRUM-102 · T-12.1, HU-12)
+
+Cada mañana un alumno encargado pasa por las clases y apunta **quién falta** (pantalla 11); Cocina ve al momento cuántos menús de cada tipo preparar (pantalla 54). Migración `20261125100000_recuento_comedor.sql`:
+
+- **Rol `cocina`** en `perfiles`: la cocina entra con su propia cuenta.
+- **Tabla `recuentos_comedor`**: una fila por clase y día (`UNIQUE (fecha, aula_id)`) con los `ausentes`, quién lo confirmó y a qué hora. Se escribe y se lee por las funciones; directamente, solo el admin.
+
+| Función | Quién | Para qué |
+|---|---|---|
+| `recuento_comedor_hoy()` | estudiante, tutor, admin | Clases con alumnos activos y sus compañeros (nombre de pila, icono, color), y si ya están contadas hoy |
+| `confirmar_recuento_comedor(aula, ausentes)` | estudiante, tutor, admin | Guarda (o corrige) quién falta hoy en esa clase; rechaza ausentes de otra clase |
+| `parte_cocina_dia()` | cocina, admin | Menús por tipo y total **sin los que faltan**, aulas confirmadas X de Y, última clase con hora, alergias de los que comen |
+
+El día es el del centro (`hoy_centro()`, Europe/Madrid). `recuento_comedor_test.sql` simula a los usuarios con `request.jwt.claim.sub` y comprueba el recuento, la corrección, los ausentes de otra clase, los permisos por rol y que el recuento de ayer no cuenta.
