@@ -1,7 +1,7 @@
 // Lógica del aviso anticipatorio (T-16.1, HU-16): qué tarea viene y cuándo hay que avisar (RF4.6).
 // Sin React, para poder probarla aparte.
 import type { EntradaAgenda } from "../agenda/tipos";
-import { normalizarHora, ordenarSecuencia } from "../agenda/logica";
+import { esPendienteRetomar, normalizarHora, ordenarSecuencia } from "../agenda/logica";
 import type { EventoAviso, PreferenciasAviso } from "./tipos";
 
 const MINUTO_MS = 60_000;
@@ -20,7 +20,8 @@ export function momentoAviso(entrada: EntradaAgenda, antelacionMin: number): Dat
 
 /**
  * La siguiente tarea: la primera pendiente que todavía no ha empezado según la hora. Las hechas,
- * en curso, canceladas y bloqueadas no cuentan. `excluir` quita las que ya se han avisado.
+ * en curso, canceladas, bloqueadas y las que hay que retomar no cuentan. `excluir` quita las que ya
+ * se han avisado.
  */
 export function siguienteTarea(
   entradas: readonly EntradaAgenda[],
@@ -30,7 +31,10 @@ export function siguienteTarea(
   return (
     ordenarSecuencia(entradas).find(
       (e) =>
-        e.estado === "pendiente" && momentoInicio(e).getTime() > ahora.getTime() && !excluir(e),
+        e.estado === "pendiente" &&
+        !esPendienteRetomar(e) &&
+        momentoInicio(e).getTime() > ahora.getTime() &&
+        !excluir(e),
     ) ?? null
   );
 }

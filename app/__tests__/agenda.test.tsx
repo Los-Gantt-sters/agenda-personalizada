@@ -41,10 +41,23 @@ async function empezarLavarse() {
   await screen.findByTestId("pantalla-tarea-en-curso");
 }
 
-/** Pulsa «Terminar» en la pantalla de la tarea y espera a la felicitación. */
-async function terminarTarea() {
+/** Pulsa «Terminar» y espera a la pantalla 08 («¿Has terminado?»). */
+async function pedirTerminar() {
   await pasaElBloqueo();
   tocar(screen.getByRole("button", { name: "Terminar" }));
+  await screen.findByTestId("pantalla-confirmar-fin");
+}
+
+/** Contesta «Sí, he terminado» en la pantalla 08. */
+async function decirQueSi() {
+  await pasaElBloqueo();
+  tocar(screen.getByRole("button", { name: "Sí, he terminado" }));
+}
+
+/** Pulsa «Terminar», confirma en la pantalla 08 y espera a la felicitación. */
+async function terminarTarea() {
+  await pedirTerminar();
+  await decirQueSi();
   await screen.findByText("¡Muy bien!");
 }
 
@@ -183,8 +196,8 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
     await screen.findByTestId("bloque-ahora");
     // Sin pasar por la pantalla de la tarea: «Terminar» en la agenda.
     expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
-    await pasaElBloqueo();
-    tocar(screen.getByRole("button", { name: "Terminar" }));
+    await pedirTerminar();
+    await decirQueSi();
     await screen.findByText("Has terminado: Lavarse las manos");
 
     await user.press(screen.getByTestId("btn-barra-atras"));
@@ -196,6 +209,159 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
     await render(<PantallaAgenda />);
     await empezarLavarse();
     expect(JSON.stringify(screen.toJSON())).not.toContain('"type":"TextInput"');
+  });
+});
+
+describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
+  const abrirAgenda = async () => {
+    const demo = crearRepositorioMemoria(agendaDemo(hoyISO()));
+    await render(<AgendaDelDia repo={demo.repo} estudianteId={ESTUDIANTE_DEMO} />);
+    await empezarLavarse();
+    return demo;
+  };
+  const estadoLavarse = async (repo: ReturnType<typeof crearRepositorioMemoria>["repo"]) =>
+    (await repo.obtenerSecuenciaDia(ESTUDIANTE_DEMO, hoyISO())).find((e) => e.id === "e2")?.estado;
+  /** Avanza hasta el paso 3 y deja elegido el formato «solo texto». */
+  const irAlPaso3SoloTexto = async () => {
+    const user = userEvent.setup();
+    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
+    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
+    await user.press(screen.getByRole("radio", { name: "Ver solo el texto" }));
+    expect(screen.getByText("Paso 3 de 4: Frota las manos.")).toBeTruthy();
+  };
+  const sigueEnPaso3SoloTexto = async () => {
+    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    expect(screen.getByText("Paso 3 de 4: Frota las manos.")).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "Ver solo el texto" }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
+  };
+
+  it("«Terminar» pregunta antes, sin ventana emergente y sin dar la tarea por hecha", async () => {
+    const { repo } = await abrirAgenda();
+    await pedirTerminar();
+
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("¿Has terminado?");
+    // «No, sigo» a la izquierda y «Sí, he terminado» a la derecha.
+    const nombres = screen.getAllByRole("button").map((b) => b.props.accessibilityLabel);
+    expect(nombres.indexOf("No, sigo")).toBeGreaterThanOrEqual(0);
+    expect(nombres.indexOf("Sí, he terminado")).toBe(nombres.indexOf("No, sigo") + 1);
+    expect(JSON.stringify(screen.toJSON())).not.toContain("RCTModalHostView");
+    expect(await estadoLavarse(repo)).toBe("en_curso");
+  });
+
+  it("«No, sigo» vuelve al último paso, con el mismo formato", async () => {
+    const { repo } = await abrirAgenda();
+    await irAlPaso3SoloTexto();
+    await pedirTerminar();
+
+    await userEvent.setup().press(screen.getByRole("button", { name: "No, sigo" }));
+
+    await sigueEnPaso3SoloTexto();
+    expect(await estadoLavarse(repo)).toBe("en_curso");
+  });
+
+  it("«Atrás» también vuelve al último paso y «Terminar» sigue funcionando", async () => {
+    await abrirAgenda();
+    await irAlPaso3SoloTexto();
+    await pedirTerminar();
+
+    await userEvent.setup().press(screen.getByTestId("btn-barra-atras"));
+    await sigueEnPaso3SoloTexto();
+
+    await pedirTerminar();
+    expect(screen.getByTestId("pantalla-confirmar-fin")).toBeTruthy();
+  });
+
+  it("el toque que abre la pantalla no vale como «Sí»; después, pasa a la felicitación", async () => {
+    const { repo } = await abrirAgenda();
+    await pedirTerminar();
+
+    tocar(screen.getByRole("button", { name: "Sí, he terminado" }));
+    expect(screen.queryByText("¡Muy bien!")).toBeNull();
+    expect(await estadoLavarse(repo)).toBe("en_curso");
+
+    await decirQueSi();
+    expect(await screen.findByText("¡Muy bien!")).toBeTruthy();
+    await waitFor(async () => expect(await estadoLavarse(repo)).toBe("hecha"));
+  });
+
+  it("«Atrás» en la felicitación también vuelve al último paso", async () => {
+    await abrirAgenda();
+    await irAlPaso3SoloTexto();
+    await terminarTarea();
+
+    await userEvent.setup().press(screen.getByTestId("btn-barra-atras"));
+
+    await sigueEnPaso3SoloTexto();
+  });
+
+  it("si deshace «Empezar», al volver a empezar la tarea arranca en el paso 1", async () => {
+    await abrirAgenda();
+    await irAlPaso3SoloTexto();
+
+    await userEvent.setup().press(screen.getByTestId("btn-barra-atras"));
+    await screen.findByRole("button", { name: "Empezar" });
+    await empezarLavarse();
+
+    expect(screen.getByText("Paso 1 de 4: Abre el grifo.")).toBeTruthy();
+  });
+
+  it("si el tutor bloquea la tarea mientras se pregunta, vuelve a la agenda", async () => {
+    const { tutor } = await abrirAgenda();
+    await pedirTerminar();
+
+    await act(async () => tutor.bloquear("e2"));
+
+    await waitFor(() => expect(screen.queryByTestId("pantalla-confirmar-fin")).toBeNull());
+    await waitFor(() => expect(etiqueta("bloque-ahora")).toBe("Ahora: Desayuno"));
+  });
+});
+
+describe("Pantalla 10 «Tarea hecha» (SCRUM-263: T-08.5)", () => {
+  it("enseña solo el tick, el dibujo, «Tarea hecha» y el nombre", async () => {
+    const user = userEvent.setup();
+    await render(<PantallaAgenda />);
+
+    await user.press(await screen.findByTestId("mini-e1"));
+
+    expect(screen.getByTestId("pantalla-tarea-hecha")).toBeTruthy();
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Asamblea");
+    expect(screen.getByTestId("tick-tarea-hecha")).toBeTruthy();
+    expect(screen.getByText("Tarea hecha")).toBeTruthy();
+    expect(screen.getAllByText("Asamblea")).toHaveLength(2);
+    // Nada más: ni descripción, ni hora, ni formatos, ni voz, ni valoración.
+    expect(screen.queryByText("Nos sentamos en círculo. Decimos qué día es hoy.")).toBeNull();
+    expect(screen.queryByText("9:00 a 9:30")).toBeNull();
+    expect(screen.queryByTestId("selector-formato")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Escuchar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
+    expect(screen.queryByText("¿Cómo te has sentido?")).toBeNull();
+    expect(JSON.stringify(screen.toJSON())).not.toContain("RCTModalHostView");
+  });
+
+  it("«Atrás» vuelve a la agenda", async () => {
+    const user = userEvent.setup();
+    await render(<PantallaAgenda />);
+    await user.press(await screen.findByTestId("mini-e1"));
+
+    await user.press(screen.getByTestId("btn-barra-atras"));
+
+    expect(await screen.findByTestId("bloque-ahora")).toBeTruthy();
+    expect(screen.queryByTestId("pantalla-tarea-hecha")).toBeNull();
+  });
+
+  it("una tarea recién terminada también se abre así desde «Hecho»", async () => {
+    const user = userEvent.setup();
+    await render(<PantallaAgenda />);
+    await empezarLavarse();
+    await terminarTarea();
+    await user.press(screen.getByRole("button", { name: "Seguir" }));
+
+    await user.press(await screen.findByTestId("mini-e2"));
+
+    expect(screen.getByTestId("pantalla-tarea-hecha")).toBeTruthy();
+    expect(screen.queryByText("Antes del desayuno nos lavamos las manos.")).toBeNull();
   });
 });
 

@@ -15,6 +15,7 @@ import {
   deshacerFin as aplicarDeshacerFin,
   dividirEnBloques,
   empezarTarea,
+  retomarTarea,
   type OpcionesBloques,
 } from "./logica";
 
@@ -145,6 +146,17 @@ export function useAgendaDia(
     [guardar, repo],
   );
 
+  /** T-08.6: «Retomar tarea». Devuelve false si no se puede retomar o ya hay otra en curso. */
+  const retomar = useCallback(
+    (idEntrada: string) =>
+      guardar(
+        idEntrada,
+        (antes) => retomarTarea(antes, idEntrada),
+        (e) => repo.marcarEnCurso(idEntrada, e.inicio_real!),
+      ),
+    [guardar, repo],
+  );
+
   /** RF4.3 y RF6.4: «Terminar». Devuelve false si la tarea no era la de «Ahora». */
   const confirmarFin = useCallback(
     (idEntrada: string) =>
@@ -192,6 +204,7 @@ export function useAgendaDia(
     error,
     errorGuardado,
     empezar,
+    retomar,
     confirmarFin,
     deshacerEmpezar,
     deshacerFin,
