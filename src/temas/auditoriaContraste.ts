@@ -274,8 +274,8 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   // ---- Rediseño «Piedra»: iconos sobre rellenos de color (blanco o negro con colorSobre) ----
   {
     id: "sello-hecha",
-    elemento: "Marca de tarea hecha sobre el sello verde",
-    usoEn: "AgendaTresBloques (sello), RefuerzoPositivo (insignia)",
+    elemento: "Marca de tarea hecha sobre el sello verde y texto del botón «Sí, he terminado»",
+    usoEn: "AgendaTresBloques (sello), RefuerzoPositivo (insignia), PantallaConfirmarFin (botón)",
     tipo: "texto",
     pares: [
       ["#FFFFFF", "exito"],
@@ -284,8 +284,8 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
   },
   {
     id: "sello-bloqueada",
-    elemento: "Candado de tarea bloqueada sobre el sello de aviso",
-    usoEn: "AgendaTresBloques (sello)",
+    elemento: "Candado o alerta sobre el sello de aviso, y etiqueta del motivo de la pantalla 10b",
+    usoEn: "AgendaTresBloques (sello), PantallaTareaPendiente (círculo y etiqueta)",
     tipo: "texto",
     pares: [
       ["#FFFFFF", "aviso"],

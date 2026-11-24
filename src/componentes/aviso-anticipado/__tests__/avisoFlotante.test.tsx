@@ -78,13 +78,15 @@ describe("AvisoFlotante (SCRUM-83: T-16.2 Ventana emergente con pictograma y vib
     expect(onCerrar).toHaveBeenCalledTimes(1);
   });
 
-  it("BDD: al tocar el aviso se cierra y la tarea en curso no cambia", async () => {
+  it("BDD (adultos): al tocar la franja se cierra y la tarea en curso no cambia", async () => {
     // A media mañana, para que las horas movidas no pasen de medianoche.
     jest.setSystemTime(new Date(2026, 10, 5, 10, 0, 20));
     const hoy = agendaDemoAviso(hoyISO());
     const { repo } = crearRepositorioMemoria(hoy);
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await render(<AgendaDelDia repo={repo} estudianteId={hoy[0].estudiante_id} />);
+    await render(
+      <AgendaDelDia repo={repo} estudianteId={hoy[0].estudiante_id} abrirTareaEnCurso={false} />,
+    );
     await act(async () => jest.advanceTimersByTime(0));
     expect(screen.getByTestId("bloque-ahora").props.accessibilityLabel).toBe(
       "Ahora: Lavarse las manos",

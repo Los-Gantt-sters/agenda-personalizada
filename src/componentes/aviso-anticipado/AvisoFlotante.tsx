@@ -3,6 +3,8 @@
 // Mejora de la profesora (noviembre de 2026): nada de ventanas emergentes, así que ya no flota
 // encima de la agenda: es una franja arriba del contenido de la pantalla, que lo empuja hacia abajo
 // sin taparlo. Se cierra al tocarla o a los 15 s y no toca la tarea en curso.
+// T-08.6 (SCRUM-264): el alumno ve el aviso a pantalla completa (PantallaAviso); esta franja queda
+// para los adultos que miran la agenda, a los que no conviene interrumpir.
 // Al aparecer vibra un poco (si el dispositivo puede) y, si el aviso es «sonoro», suena suave.
 // RNF4.3: con el tipo «visual» no suena nada. Con «reducir movimiento» aparece sin fundido.
 import { useEffect, useRef, useState } from "react";
@@ -41,6 +43,23 @@ function useReducirMovimiento(): boolean {
   return reducir;
 }
 
+/** Cada aviso nuevo (otra hora de emisión) vibra y, si es «sonoro», suena suave. */
+export function useSenalAviso(aviso: EventoAviso | null, vibracion: boolean) {
+  const emitido = aviso?.emitido_en;
+  const tipo = aviso?.tipo;
+  useEffect(() => {
+    if (!emitido) return;
+    if (vibracion) {
+      try {
+        Vibration.vibrate(VIBRACION_MS);
+      } catch {
+        // Sin vibración (tableta sin motor, navegador que no la permite): basta con lo que se ve.
+      }
+    }
+    if (tipo === "sonoro") reproducirSonido("aviso", 0.4);
+  }, [emitido, tipo, vibracion]);
+}
+
 export function AvisoFlotante({
   aviso,
   preferencias = AVISO_POR_DEFECTO,
@@ -62,22 +81,15 @@ export function AvisoFlotante({
     onCerrarRef.current = onCerrar;
   });
 
-  // Cada aviso nuevo (otra hora de emisión) vibra, suena si toca y vuelve a contar los 15 s.
+  useSenalAviso(aviso, vibracion);
+
+  // Cada aviso nuevo (otra hora de emisión) vuelve a contar los 15 s.
   const emitido = aviso?.emitido_en;
-  const tipo = aviso?.tipo;
   useEffect(() => {
     if (!emitido) return;
-    if (vibracion) {
-      try {
-        Vibration.vibrate(VIBRACION_MS);
-      } catch {
-        // Sin vibración (tableta sin motor, navegador que no la permite): basta con la tarjeta.
-      }
-    }
-    if (tipo === "sonoro") reproducirSonido("aviso", 0.4);
     const t = setTimeout(() => onCerrarRef.current(), duracionMs);
     return () => clearTimeout(t);
-  }, [emitido, tipo, vibracion, duracionMs]);
+  }, [emitido, duracionMs]);
 
   useEffect(() => {
     if (!emitido) return;
