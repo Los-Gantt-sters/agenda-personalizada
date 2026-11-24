@@ -124,6 +124,22 @@ export const VER_RELOJ: Record<VerReloj, { etiqueta: string; descripcion: string
   no: { etiqueta: "Sin reloj", descripcion: "La tarea se ve sin reloj" },
 };
 
+// ---- Pantalla al entrar: Hoy (06) o Semana completa (06b) (MOD HU-17, bocetos 24 y 26d) ----
+// Según su nivel cognitivo, el alumno entra directo a las tareas de hoy (baja carga) o a la semana
+// entera (visión global). Solo con «Semana» sale el botón «Ver semana» en la agenda del día.
+export type VistaAgendaPref = "diaria" | "semanal";
+
+export const VISTAS_AGENDA: Record<VistaAgendaPref, { etiqueta: string; descripcion: string }> = {
+  diaria: {
+    etiqueta: "Ir directo a Hoy",
+    descripcion: "Entra a las tareas de hoy (06). Menos cosas a la vista.",
+  },
+  semanal: {
+    etiqueta: "Semana completa",
+    descripcion: "Entra a la semana de lunes a domingo (06b) y puede ir a cada día.",
+  },
+};
+
 // ---- Necesidades que salen en «Ayuda» (mejora de la profesora, noviembre de 2026) ----
 // Se elige cuáles salen (aún no se guarda por alumno); «Urgencia» sale siempre.
 export const NECESIDADES_AYUDA: Record<ClaveNecesidadBasica, { etiqueta: string }> = {
@@ -141,6 +157,7 @@ export const ORDEN_MODOS_CANAL: ModoCanal[] = ["ambos", "soloPictograma", "soloT
 export const ORDEN_CAJAS_LETRA: CajaLetra[] = ["normal", "mayusculas"];
 export const ORDEN_TAREAS_VISIBLES: TareasVisibles[] = ["una", "tres", "todas"];
 export const ORDEN_VER_RELOJ: VerReloj[] = ["si", "no"];
+export const ORDEN_VISTAS_AGENDA: VistaAgendaPref[] = ["diaria", "semanal"];
 export const ORDEN_NECESIDADES_AYUDA: ClaveNecesidadBasica[] = ["bano", "agua", "descanso"];
 
 /** RI3.1: preferencias de visualización del estudiante que cubre este panel. */
@@ -157,6 +174,8 @@ export interface PreferenciasApariencia {
   tareasVisibles: TareasVisibles;
   /** Si se ve el reloj mientras se hace una tarea. */
   reloj: VerReloj;
+  /** MOD HU-17: pantalla al entrar (Hoy o Semana) y si puede ver la semana. */
+  vistaAgenda: VistaAgendaPref;
   /** Necesidades que salen en «Ayuda» (al menos una; «Urgencia» sale siempre). */
   necesidades: ClaveNecesidadBasica[];
 }
@@ -175,6 +194,7 @@ export const PREFERENCIAS_POR_DEFECTO: PreferenciasApariencia = {
   caja: "normal",
   tareasVisibles: "tres",
   reloj: "si",
+  vistaAgenda: "diaria",
   necesidades: ["bano", "agua", "descanso"],
 };
 
@@ -205,6 +225,9 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
       ? (c.tareasVisibles as TareasVisibles)
       : d.tareasVisibles,
     reloj: tiene(VER_RELOJ, c.reloj) ? (c.reloj as VerReloj) : d.reloj,
+    vistaAgenda: tiene(VISTAS_AGENDA, c.vistaAgenda)
+      ? (c.vistaAgenda as VistaAgendaPref)
+      : d.vistaAgenda,
     necesidades: normalizarNecesidades(c.necesidades),
   };
 }

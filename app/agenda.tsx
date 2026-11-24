@@ -16,12 +16,16 @@
 // de un minuto; con ?aviso=visual el aviso es solo visual, sin sonido ni vibración (RNF4.3). Se
 // pueden juntar: ?aviso=prueba,visual.
 // T-08.6: con ?pendiente=tiempo o ?pendiente=profesor la demo trae una tarea a medias (pantalla 10b).
-import { useEffect, useMemo } from "react";
+// MOD HU-17 (SCRUM-125): con ?vista=semanal (lo pone el inicio de sesión si el alumno tiene
+// «Semana» en Preferencias 24 / Permisos 26d) o con esa preferencia, primero se ve la semana (06b).
+// «Ver hoy», «Adelante» o tocar un día abren la agenda de ese día (06), y en la 06 un único botón
+// «Ver semana» vuelve a la 06b. Con «Hoy» no hay semana ni «Ver semana».
+import { useEffect, useMemo, useState } from "react";
+import { View } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   AgendaDelDia,
-  agendaDemo,
   agendaDemoAviso,
   agendaDemoPendiente,
   ESTUDIANTE_DEMO,
@@ -30,6 +34,12 @@ import {
   useModoSinDistracciones,
 } from "../src/componentes/agenda";
 import { AVISO_POR_DEFECTO, type PreferenciasAviso } from "../src/componentes/aviso-anticipado";
+import {
+  AgendaSemanal06b,
+  BotonVerSemana,
+  aFecha,
+  agendaDemoSemana,
+} from "../src/componentes/agenda-semanal";
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
 import { TAREAS_VISIBLES, usePreferenciasOpcional } from "../src/preferencias";
 import { useSesionOpcional } from "../src/sesion";
@@ -45,10 +55,11 @@ const PANEL_DE: Partial<Record<UserRole, Href>> = {
 };
 
 export default function PantallaAgenda() {
-  const { estudiante, aviso, pendiente } = useLocalSearchParams<{
+  const { estudiante, aviso, pendiente, vista } = useLocalSearchParams<{
     estudiante?: string;
     aviso?: string;
     pendiente?: string;
+    vista?: string;
   }>();
   const opcionesAviso = (aviso ?? "").split(",");
   const avisoPrueba = opcionesAviso.includes("prueba");
@@ -71,7 +82,7 @@ export default function PantallaAgenda() {
         ? agendaDemoPendiente(hoyISO(), "tiempo_agotado")
         : pendiente === "profesor"
           ? agendaDemoPendiente(hoyISO(), "profesor")
-          : agendaDemo(hoyISO());
+          : agendaDemoSemana(hoyISO());
     const demo = crearRepositorioMemoria(datos);
     return { repo: demo.repo, estudianteId: ESTUDIANTE_DEMO, tutorDemo: demo.tutor };
   }, [estudiante, avisoPrueba, pendiente]);
@@ -92,26 +103,56 @@ export default function PantallaAgenda() {
   const esAlumno = rol === "estudiante";
   const soloMirar = rol === "familiar";
 
+  // MOD HU-17: semana (06b) si llega ?vista=semanal o si así está en Preferencias.
+  const conSemana = vista === "semanal" || prefs?.preferencias.vistaAgenda === "semanal";
+  const hoy = hoyISO();
+  // Día abierto en la 06; null = se está viendo la semana (06b).
+  const [diaAbierto, setDiaAbierto] = useState<string | null>(() => (conSemana ? null : hoy));
+  const dia = conSemana ? diaAbierto : hoy;
+
+  if (dia === null) {
+    return (
+      <>
+        <StatusBar hidden />
+        <AgendaSemanal06b
+          repo={repo}
+          estudianteId={estudianteId}
+          hoy={hoy}
+          alAbrirDia={setDiaAbierto}
+          alVerHoy={() => setDiaAbierto(hoy)}
+        />
+      </>
+    );
+  }
+
+  const esHoy = dia === hoy;
   return (
     <>
       {/* T-06.4: tampoco se ve la barra de estado (hora, batería, notificaciones) en la tableta. */}
       <StatusBar hidden />
       <AgendaDelDia
+        // Otro día es otra agenda: se carga de cero.
+        key={dia}
         repo={repo}
         estudianteId={estudianteId}
+        fecha={dia}
         preferenciasAviso={preferenciasAviso}
         tareasVisibles={tareasVisibles}
-        soloMirar={soloMirar}
+        // Las tareas de otro día se miran, pero solo se empiezan las de hoy.
+        soloMirar={soloMirar || !esHoy}
         verReloj={verReloj}
         // El alumno entra directo a su tarea empezada; los adultos ven la agenda entera.
-        abrirTareaEnCurso={esAlumno}
+        abrirTareaEnCurso={esAlumno && esHoy}
         marco={{
           titulo: esAlumno ? "Mi agenda" : "Agenda del alumno",
           simbolo: <PictogramaInterfaz nombre="agenda" etiqueta="agenda" tam={44} />,
           derecha: (
-            <Texto style={{ fontSize: 20, fontWeight: "700", color: colores.textoSecundario }}>
-              {fechaDeHoy()}
-            </Texto>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Texto style={{ fontSize: 20, fontWeight: "700", color: colores.textoSecundario }}>
+                {fechaDeHoy(aFecha(dia))}
+              </Texto>
+              {conSemana ? <BotonVerSemana onPress={() => setDiaAbierto(null)} /> : null}
+            </View>
           ),
           // El alumno no sale de su agenda por error; los adultos vuelven a su panel.
           alAtras: esAlumno
