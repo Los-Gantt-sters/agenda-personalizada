@@ -134,6 +134,23 @@ describe("Pantalla 28s: editor de pasos (SCRUM-95: T-10.2)", () => {
     expect(onGuardado).not.toHaveBeenCalled();
   });
 
+  it("no deja archivos huérfanos: al quitar la foto subida en esta edición o al salir, se borra", async () => {
+    const repo = crearRepositorioPasosMemoria({ [TAREA]: PASOS });
+    const alAtras = jest.fn();
+    await render(
+      <EditorPasos28s tareaId={TAREA} repo={repo} alAtras={alAtras} onGuardado={() => {}} />,
+    );
+    await screen.findByTestId("fila-paso-1");
+    // La foto del paso 3 ya estaba guardada: quitarla no la borra hasta «Guardar» (lo hace el servicio).
+    await fireEvent.press(screen.getByTestId("fila-paso-3"));
+    await fireEvent.press(screen.getByTestId("btn-28s-quitar-foto"));
+    expect(repo.borradas).toEqual([]);
+
+    await fireEvent.press(screen.getByTestId("btn-barra-atras"));
+    expect(alAtras).toHaveBeenCalledTimes(1);
+    expect(repo.borradas).toEqual([]);
+  });
+
   it("«Atrás» vuelve a los datos de la tarea (28) sin guardar", async () => {
     const { guardar, alAtras } = await abrir();
     await fireEvent.press(screen.getByTestId("btn-barra-atras"));

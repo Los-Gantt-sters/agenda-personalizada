@@ -9,6 +9,8 @@ export function crearRepositorioPasosMemoria(inicial: Record<string, PasoTarea[]
     Object.entries(inicial).map(([id, pasos]) => [id, pasos.map((p) => ({ ...p }))]),
   );
   let siguienteId = 1;
+  // Rutas que el editor ha mandado borrar (para comprobarlo en las pruebas).
+  const borradas: string[] = [];
 
   const repo: RepositorioPasos = {
     async obtenerPasos(tareaId) {
@@ -41,6 +43,9 @@ export function crearRepositorioPasosMemoria(inicial: Record<string, PasoTarea[]
         duracion_segundos: archivo.duracionSegundos,
       };
     },
+    async borrarMultimedia(rutas) {
+      borradas.push(...rutas);
+    },
   };
-  return repo;
+  return Object.assign(repo, { borradas });
 }

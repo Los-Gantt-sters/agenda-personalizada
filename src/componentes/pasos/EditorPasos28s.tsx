@@ -9,7 +9,7 @@
 // Las fotos se comprimen y todo se valida antes de subir (T-10.3, compresionMultimedia). Mientras
 // no se pulse «Guardar» no cambia nada de la tarea: los archivos ya subidos que no se guardan se
 // quedan sin usar en el bucket.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -104,6 +104,24 @@ function useGrabadora() {
   return { disponible, grabando, empezar, parar };
 }
 
+/** Lo que necesita el buscador de pictogramas del editor (28p). */
+export interface PropsBuscadorPictograma {
+  terminoInicial: string;
+  alElegir: (p: { id: number; url: string; origen: "arasaac" | "propio" }) => void;
+  alAtras: () => void;
+}
+
+/** Buscador por defecto: solo ARASAAC (SelectorPictograma28p). */
+function BuscadorArasaac({ terminoInicial, alElegir, alAtras }: PropsBuscadorPictograma) {
+  return (
+    <SelectorPictograma28p
+      terminoInicial={terminoInicial}
+      alElegir={(p) => alElegir({ id: p.id, url: p.urlImagen, origen: "arasaac" })}
+      alAtras={alAtras}
+    />
+  );
+}
+
 export function EditorPasos28s({
   tareaId,
   repo,
@@ -112,6 +130,7 @@ export function EditorPasos28s({
   alAtras,
   alSalir,
   onGuardado,
+  BuscadorPictograma = BuscadorArasaac,
 }: {
   tareaId: string;
   repo: RepositorioPasos;
@@ -125,6 +144,11 @@ export function EditorPasos28s({
   alSalir?: () => void;
   /** Tras guardar bien (→ 28ok). */
   onGuardado: (pasos: PasoTarea[]) => void;
+  /**
+   * Buscador de pictogramas (28p). En el flujo de tareas (HU-07) es BuscadorPictogramas28p, con
+   * ARASAAC y «Mi biblioteca»; si no se da, el buscador de ARASAAC de SelectorPictograma28p.
+   */
+  BuscadorPictograma?: (props: PropsBuscadorPictograma) => ReactElement;
 }) {
   const { colores } = useApariencia();
   const e = useEstilos(crearEstilos);
@@ -137,6 +161,15 @@ export function EditorPasos28s({
   const [error, setError] = useState<string | null>(null);
   const [eligiendoPicto, setEligiendoPicto] = useState(false);
   const grabadora = useGrabadora();
+  // Archivos subidos en esta edición. Si al final no se guardan (se cambian, se quitan o se sale
+  // con «Atrás»), se borran del bucket para no dejar fotos de alumnos sueltas (RGPD).
+  const subidas = useRef(new Set<string>());
+  const descartar = (rutas: (string | null | undefined)[]) => {
+    const sobran = rutas.filter((r): r is string => Boolean(r && subidas.current.has(r)));
+    sobran.forEach((r) => subidas.current.delete(r));
+    if (sobran.length) void repo.borrarMultimedia(sobran);
+  };
+  const rutasDe = (p: PasoTarea) => [p.foto?.ruta, p.video?.ruta, p.audio?.ruta];
 
   useEffect(() => {
     if (filas) return;
@@ -181,6 +214,7 @@ export function EditorPasos28s({
   };
   const quitar = () => {
     if (!actual) return;
+    descartar(rutasDe(actual.paso));
     setFilas((fs) => (fs ?? []).filter((_, i) => i !== elegido));
     setElegido((i) => Math.max(0, Math.min(i, lista.length - 2)));
   };
@@ -196,6 +230,9 @@ export function EditorPasos28s({
         return;
       }
       const recurso = await repo.subirMultimedia(tareaId, tipo, preparado.archivo);
+      if (recurso.ruta) subidas.current.add(recurso.ruta);
+      // La que había antes, si se subió en esta misma edición, ya no hace falta.
+      descartar([actual?.paso[tipo]?.ruta]);
       cambiarPaso({ [tipo]: recurso } as Partial<PasoTarea>);
     } catch {
       setError("No se ha podido subir el archivo. Prueba otra vez.");
@@ -214,10 +251,11 @@ export function EditorPasos28s({
     setError(null);
     setGuardando(true);
     try {
-      const guardados = await repo.guardarPasos(
-        tareaId,
-        lista.map((f, i) => ({ ...f.paso, orden: i + 1 })),
-      );
+      const finales = lista.map((f, i) => ({ ...f.paso, orden: i + 1 }));
+      const guardados = await repo.guardarPasos(tareaId, finales);
+      const usadas = new Set(finales.flatMap(rutasDe));
+      descartar([...subidas.current].filter((r) => !usadas.has(r)));
+      subidas.current.clear();
       onGuardado(guardados);
     } catch {
       setError("No se ha podido guardar. Revisa la conexión y prueba otra vez.");
@@ -228,13 +266,13 @@ export function EditorPasos28s({
 
   if (eligiendoPicto && actual) {
     return (
-      <SelectorPictograma28p
+      <BuscadorPictograma
         terminoInicial={tituloDe(actual.paso)}
         alElegir={(p) => {
           cambiarPaso({
             pictograma_id: p.id,
-            pictograma_url: p.urlImagen,
-            pictograma_origen: "arasaac",
+            pictograma_url: p.url,
+            pictograma_origen: p.origen,
           });
           setEligiendoPicto(false);
         }}
@@ -270,7 +308,11 @@ export function EditorPasos28s({
     <Pantalla
       titulo="Crear o editar tarea · Pasos y multimedia"
       derecha={derecha}
-      alAtras={alAtras}
+      alAtras={() => {
+        // Sale sin guardar: lo subido en esta edición no se va a usar.
+        descartar([...subidas.current]);
+        alAtras();
+      }}
       etiquetaAtras="Atrás: datos de la tarea"
       alAdelante={guardando || subiendo || !filas ? null : () => void guardar()}
       textoAdelante={guardando ? "Guardando…" : "Guardar"}
@@ -474,7 +516,10 @@ export function EditorPasos28s({
                             {
                               icono: "cerrar" as NombreIcono,
                               texto: "Quitar",
-                              onPress: () => cambiarPaso({ foto: null }),
+                              onPress: () => {
+                                descartar([actual.paso.foto?.ruta]);
+                                cambiarPaso({ foto: null });
+                              },
                               testID: "btn-28s-quitar-foto",
                             },
                           ]
@@ -511,7 +556,10 @@ export function EditorPasos28s({
                             {
                               icono: "cerrar" as NombreIcono,
                               texto: "Quitar",
-                              onPress: () => cambiarPaso({ video: null }),
+                              onPress: () => {
+                                descartar([actual.paso.video?.ruta]);
+                                cambiarPaso({ video: null });
+                              },
                               testID: "btn-28s-quitar-video",
                             },
                           ]
@@ -569,7 +617,10 @@ export function EditorPasos28s({
                             {
                               icono: "cerrar" as NombreIcono,
                               texto: "Quitar",
-                              onPress: () => cambiarPaso({ audio: null }),
+                              onPress: () => {
+                                descartar([actual.paso.audio?.ruta]);
+                                cambiarPaso({ audio: null });
+                              },
                               testID: "btn-28s-quitar-audio",
                             },
                           ]

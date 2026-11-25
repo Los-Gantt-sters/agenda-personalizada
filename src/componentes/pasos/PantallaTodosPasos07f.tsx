@@ -215,7 +215,8 @@ const crearEstilos = (c: Paleta) =>
     textoPasoGrande: { fontSize: 18, lineHeight: 25, color: c.texto },
     filaEmpezar: { flexDirection: "row", justifyContent: "flex-end" },
     botonEmpezar: {
-      minHeight: 64,
+      // Igual de grande que «Empezar» en la agenda (revisión de Jaime).
+      minHeight: 72,
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
