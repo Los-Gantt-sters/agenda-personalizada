@@ -42,14 +42,15 @@ const TAREAS: TareaProgreso[] = [
     pendiente_motivo: "tiempo_agotado",
     emocion: null,
   }),
-  tarea("a5", "2026-11-24", { titulo: "Recreo", hora: "11:00" }),
-  tarea("a6", "2026-11-25", { titulo: "Taller", estado: "bloqueada", emocion: null }),
+  tarea("a5", "2026-11-24", { titulo: "Recreo", hora: "11:00", plan_b: true }),
   tarea("a7", "2026-11-26", {
     titulo: "Comedor",
     hora: "13:30",
     estado: "en_curso",
     emocion: null,
   }),
+  // Viernes 27: aún no ha llegado su hora
+  tarea("a6", "2026-11-27", { titulo: "Taller", estado: "pendiente", emocion: null }),
   tarea("b1", "2026-11-17", { titulo: "Tarea antigua" }),
 ];
 
@@ -109,11 +110,10 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     expect(
       within(screen.getByTestId("kpi-completadas")).getByText("57 % de las tareas"),
     ).toBeTruthy();
-    expect(within(screen.getByTestId("kpi-pendientes")).getByText("3")).toBeTruthy();
+    // Pendientes: solo la que se pasó de hora; debajo, lo que está en curso o aún no toca
+    expect(within(screen.getByTestId("kpi-pendientes")).getByText("1")).toBeTruthy();
     expect(
-      within(screen.getByTestId("kpi-pendientes")).getByText(
-        "1 sin terminar · 1 en curso · 1 bloqueada",
-      ),
+      within(screen.getByTestId("kpi-pendientes")).getByText("Además, 1 en curso · 1 por hacer"),
     ).toBeTruthy();
     expect(within(screen.getByTestId("kpi-emocion")).getByText("Contento (75 %)")).toBeTruthy();
     // Resumen a la derecha, en tarjetas
@@ -121,13 +121,13 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
       "Días con todo hecho: 1 de 4 (lunes 23).",
     );
     expect(screen.getByTestId("resumen-plan-b")).toHaveTextContent(
-      "Plan B activado 1 vez: Huerto (lunes 23).",
+      "Plan B activado 2 veces: Huerto (lunes 23) y Recreo (martes 24).",
     );
     expect(screen.getByTestId("resumen-ayuda")).toHaveTextContent(
       "Ha pedido ayuda 1 vez: urgencia (1).",
     );
-    expect(screen.getByTestId("resumen-sin-terminar")).toHaveTextContent(
-      "Sin terminar o bloqueadas: Lectura fácil (martes 24) y Taller (bloqueada, miércoles 25).",
+    expect(screen.getByTestId("resumen-pendientes")).toHaveTextContent(
+      "1 tarea pendiente: Lectura fácil (martes 24).",
     );
     expect(screen.getByTestId("resumen-urgencias")).toHaveTextContent(
       /^Urgencia sin atender: martes 24 a las/,
@@ -144,18 +144,17 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     // Cabe: se queda con dos ejemplos
     await medir("resumen-periodo", 400);
     await medir("contenido-resumen", 380);
-    expect(screen.getByTestId("resumen-sin-terminar")).toHaveTextContent(
-      "Sin terminar o bloqueadas: Lectura fácil (martes 24) y Taller (bloqueada, miércoles 25).",
+    expect(screen.getByTestId("resumen-plan-b")).toHaveTextContent(
+      "Plan B activado 2 veces: Huerto (lunes 23) y Recreo (martes 24).",
     );
 
     // No cabe: un ejemplo y cuántos más, en dos líneas como mucho
     await medir("contenido-resumen", 450);
-    expect(screen.getByTestId("resumen-sin-terminar")).toHaveTextContent(
-      "Sin terminar o bloqueadas: Lectura fácil (martes 24) y 1 más.",
+    expect(screen.getByTestId("resumen-plan-b")).toHaveTextContent(
+      "Plan B activado 2 veces: Huerto (lunes 23) y 1 más.",
     );
     expect(
-      within(screen.getByTestId("resumen-sin-terminar")).getByText(/Lectura fácil/).props
-        .numberOfLines,
+      within(screen.getByTestId("resumen-plan-b")).getByText(/Huerto/).props.numberOfLines,
     ).toBe(2);
     expect(screen.getByTestId("resumen-dias")).toHaveTextContent(
       "Días con todo hecho: 1 de 4 (lunes 23).",
@@ -191,7 +190,7 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     expect(screen.getByTestId("fila-tarea-a3").props.accessibilityLabel).toContain(
       "Preparar la mochila, casa",
     );
-    expect(within(screen.getByTestId("fila-tarea-a4")).getByText("Sin terminar")).toBeTruthy();
+    expect(within(screen.getByTestId("fila-tarea-a4")).getByText("Pendiente")).toBeTruthy();
     expect(within(screen.getByTestId("fila-tarea-a1")).getByText("Hecha")).toBeTruthy();
   });
 
@@ -206,7 +205,8 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
 
     await fireEvent.press(screen.getByTestId("pagina-siguiente"));
     expect(screen.getByTestId("texto-pagina")).toHaveTextContent("Página 2 de 2");
-    expect(within(screen.getByTestId("fila-tarea-a6")).getByText("Bloqueada")).toBeTruthy();
+    // Los cuatro estados: Hecha, Pendiente, En curso y Por hacer (no hay «Bloqueada»)
+    expect(within(screen.getByTestId("fila-tarea-a6")).getByText("Por hacer")).toBeTruthy();
     expect(within(screen.getByTestId("fila-tarea-a7")).getByText("En curso")).toBeTruthy();
     expect(screen.queryByTestId("fila-tarea-a1")).toBeNull();
     expect(screen.getByTestId("pagina-siguiente")).toBeDisabled();

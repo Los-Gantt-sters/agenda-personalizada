@@ -68,8 +68,6 @@ function tareasDelDia(fecha: string, ahora: Date): TareaProgreso[] {
     } else if (n % 11 === 0) {
       estado = "pendiente";
       motivo = "tiempo_agotado";
-    } else if (n % 17 === 0 && p.ambito === "centro") {
-      estado = "bloqueada";
     }
     const hecha = estado === "hecha";
     return {
@@ -138,7 +136,6 @@ export function consolidarProgreso(
       hechas: cuenta((t) => t.estado === "hecha"),
       pendientes: cuenta((t) => t.estado === "pendiente"),
       en_curso: cuenta((t) => t.estado === "en_curso"),
-      bloqueadas: cuenta((t) => t.estado === "bloqueada"),
       sin_terminar: cuenta(
         (t) => t.estado === "pendiente" && t.pendiente_motivo === "tiempo_agotado",
       ),

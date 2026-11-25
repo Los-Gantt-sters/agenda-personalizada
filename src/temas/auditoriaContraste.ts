@@ -159,20 +159,6 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
     pares: [["exito", "exitoSuave"]],
   },
   {
-    id: "aviso-avisoSuave",
-    elemento: "Etiqueta de estado «Sin terminar»",
-    usoEn: "ProgresoHistorial43 (tabla)",
-    tipo: "texto",
-    pares: [["aviso", "avisoSuave"]],
-  },
-  {
-    id: "peligro-peligroSuave",
-    elemento: "Etiqueta de estado «Bloqueada»",
-    usoEn: "ProgresoHistorial43 (tabla)",
-    tipo: "texto",
-    pares: [["peligro", "peligroSuave"]],
-  },
-  {
     id: "aviso-resalteSuave",
     elemento: "Etiqueta de estado «Pendiente» y porcentaje de un día sin completar",
     usoEn: "ProgresoHistorial43 (tabla y «Ver días»)",
@@ -187,11 +173,11 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
     pares: [["texto", "exitoSuave"]],
   },
   {
-    id: "texto-avisoSuave",
-    elemento: "Tarjeta naranja del resumen (sin terminar o bloqueadas)",
+    id: "texto-resalteSuave",
+    elemento: "Tarjeta amarilla del resumen (tareas pendientes)",
     usoEn: "ProgresoHistorial43 (resumen del periodo)",
     tipo: "texto",
-    pares: [["texto", "avisoSuave"]],
+    pares: [["texto", "resalteSuave"]],
   },
   {
     id: "texto-peligroSuave",

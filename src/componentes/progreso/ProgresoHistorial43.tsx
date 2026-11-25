@@ -19,6 +19,7 @@ import type { Paleta } from "../../temas";
 import { FORMA, Icono, LetraFija, Texto, useApariencia, useEstilos } from "../../ui";
 import { CalendarioPeriodo } from "./CalendarioPeriodo";
 import {
+  aISO,
   cambiarTipo,
   periodoQueContiene,
   textoDiaCorto,
@@ -28,14 +29,14 @@ import {
 } from "./periodos";
 import { Boton, Etiqueta } from "./piezas";
 import {
-  detalleSinHacer,
+  contarEstados,
+  detallePendientes,
   emocionMasFrecuente,
   estadoVisible,
   etiquetaAmbito,
   etiquetaEmocion,
   paginar,
   porcentajeHechas,
-  tareasSinHacer,
   tarjetasResumen,
   type TonoTarjeta,
 } from "./resumen";
@@ -103,6 +104,8 @@ function Pantalla43({
   const e = useEstilos(crearEstilos);
   const { colores, escalaLetra } = useApariencia();
   const hoy = useMemo(() => hoyFijo ?? new Date(), [hoyFijo]);
+  // Para separar «Pendiente» (se le pasó la hora) de «Por hacer» (aún no toca).
+  const hoyISO = aISO(hoy);
 
   const [periodo, setPeriodoElegido] = useState<Periodo>(
     () => periodoInicial ?? periodoQueContiene("semana", hoy),
@@ -234,7 +237,7 @@ function Pantalla43({
         ) : (
           <>
             {/* 2. Indicadores */}
-            <Indicadores datos={datos} />
+            <Indicadores datos={datos} hoy={hoyISO} />
 
             <View style={e.zona}>
               {/* 3. Tabla de tareas o de días (izquierda) */}
@@ -248,9 +251,10 @@ function Pantalla43({
                 pagina={pagina}
                 alCambiarPagina={setPagina}
                 alAbrirDia={abrirDia}
+                hoy={hoyISO}
               />
               {/* 4. Resumen del periodo (derecha) */}
-              <ResumenPeriodo datos={error ? null : datos} />
+              <ResumenPeriodo datos={error ? null : datos} hoy={hoyISO} />
             </View>
           </>
         )}
@@ -316,13 +320,15 @@ export function iniciales(nombre: string): string {
 }
 
 /** Los tres indicadores del periodo, como en el boceto. */
-function Indicadores({ datos }: { datos: ProgresoAlumno | null }) {
+function Indicadores({ datos, hoy }: { datos: ProgresoAlumno | null; hoy: string }) {
   const e = useEstilos(crearEstilos);
   const { colores } = useApariencia();
   const r = datos?.resumen;
   const pct = r ? porcentajeHechas(r.hechas, r.total) : 0;
   const emocion = datos ? emocionMasFrecuente(datos) : null;
-  const sinHacer = datos ? tareasSinHacer(datos) : 0;
+  // «Pendientes»: las que se pasaron sin hacer. Debajo, lo que está en curso o aún no toca.
+  const pendientes = datos ? contarEstados(datos, hoy).pendientes : 0;
+  const detalle = datos ? detallePendientes(datos, hoy) : "";
   return (
     <View style={e.filaIndicadores}>
       <View
@@ -345,14 +351,14 @@ function Indicadores({ datos }: { datos: ProgresoAlumno | null }) {
         style={e.indicador}
         testID="kpi-pendientes"
         accessible
-        accessibilityLabel={
-          datos ? `Pendientes: ${sinHacer}. ${detalleSinHacer(datos)}` : "Pendientes"
-        }
+        accessibilityLabel={datos ? `Pendientes: ${pendientes}. ${detalle}` : "Pendientes"}
       >
         <Texto style={e.rotulo}>Pendientes</Texto>
-        <Texto style={[e.valor, { color: colores.aviso }]}>{datos ? String(sinHacer) : "—"}</Texto>
+        <Texto style={[e.valor, { color: colores.aviso }]}>
+          {datos ? String(pendientes) : "—"}
+        </Texto>
         <Texto style={e.detalle} numberOfLines={1}>
-          {datos ? detalleSinHacer(datos) || "Ninguna sin terminar" : ""}
+          {detalle}
         </Texto>
       </View>
       <View
@@ -388,6 +394,7 @@ function Tabla({
   pagina,
   alCambiarPagina,
   alAbrirDia,
+  hoy,
 }: {
   datos: ProgresoAlumno | null;
   cargando: boolean;
@@ -398,6 +405,8 @@ function Tabla({
   pagina: number;
   alCambiarPagina: (p: number) => void;
   alAbrirDia: (fecha: string) => void;
+  /** AAAA-MM-DD. */
+  hoy: string;
 }) {
   const e = useEstilos(crearEstilos);
   const { colores, escalaLetra } = useApariencia();
@@ -438,7 +447,7 @@ function Tabla({
           ))
         ) : (
           (pag.elementos as TareaProgreso[]).map((t) => (
-            <FilaTarea key={t.id} tarea={t} conDia={conDia} altoFila={altoFila} />
+            <FilaTarea key={t.id} tarea={t} conDia={conDia} altoFila={altoFila} hoy={hoy} />
           ))
         )}
       </View>
@@ -498,15 +507,17 @@ function FilaTarea({
   tarea: t,
   conDia,
   altoFila,
+  hoy,
 }: {
   tarea: TareaProgreso;
   conDia: boolean;
   altoFila: number;
+  hoy: string;
 }) {
   const e = useEstilos(crearEstilos);
   const { escalaLetra } = useApariencia();
   const ancho = (n: number) => ({ width: Math.round(n * escalaLetra) });
-  const estado = estadoVisible(t);
+  const estado = estadoVisible(t, hoy);
   // Con letra grande la columna de la tarea se estrecha: deja dos líneas para que se lea.
   const lineasTarea = escalaLetra > 1 ? 2 : 1;
   const ambito = etiquetaAmbito(t.ambito);
@@ -586,7 +597,7 @@ function FilaDia({
 }
 
 /** El resumen de la derecha: tarjetas de color que se ajustan al alto que hay (sin scroll). */
-function ResumenPeriodo({ datos }: { datos: ProgresoAlumno | null }) {
+function ResumenPeriodo({ datos, hoy }: { datos: ProgresoAlumno | null; hoy: string }) {
   const e = useEstilos(crearEstilos);
   const [compacto, setCompacto] = useState(false);
   // Con datos nuevos se vuelve al detalle completo y se mide otra vez.
@@ -596,7 +607,7 @@ function ResumenPeriodo({ datos }: { datos: ProgresoAlumno | null }) {
     setCompacto(false);
   }
   const { detalle, lineas } = compacto ? RESUMEN_COMPACTO : RESUMEN_COMPLETO;
-  const tarjetas = datos ? tarjetasResumen(datos, detalle) : [];
+  const tarjetas = datos ? tarjetasResumen(datos, hoy, detalle) : [];
   const alto = useRef({ caja: 0, contenido: 0 });
   const comprobar = () => {
     const { caja, contenido } = alto.current;
@@ -668,8 +679,8 @@ function coloresTarjeta(tono: TonoTarjeta, c: Paleta): { fondo: string; borde: s
       return { fondo: c.exitoSuave, borde: c.exito };
     case "primario":
       return { fondo: c.superficieDestacada, borde: c.primario };
-    case "aviso":
-      return { fondo: c.avisoSuave, borde: c.aviso };
+    case "pendiente":
+      return { fondo: c.resalteSuave, borde: c.resalte };
     case "peligro":
       return { fondo: c.peligroSuave, borde: c.peligro };
     default:

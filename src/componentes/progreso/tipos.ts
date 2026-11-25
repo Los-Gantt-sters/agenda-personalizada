@@ -1,7 +1,13 @@
 // Tipos de la pantalla 43 «Progreso e historial» (HU-25, SCRUM-146). Son los del JSON que devuelve
 // la función progreso_alumno de Supabase (SCRUM-145, supabase/migrations/20261128000000_progreso_alumno.sql).
 
-export type EstadoProgreso = "hecha" | "pendiente" | "en_curso" | "bloqueada";
+/**
+ * Los estados de una tarea en la base: hecha, en curso o pendiente. En la 43 una pendiente se ve
+ * como «Pendiente» si se le pasó la hora (tiene pendiente_motivo o es de un día pasado) y como «Por
+ * hacer» si aún no ha llegado su hora (resumen.ts, esPendiente). La base aún admite «bloqueada»
+ * (esquema inicial), pero ninguna pantalla la pone: el servicio la cuenta como pendiente.
+ */
+export type EstadoProgreso = "hecha" | "pendiente" | "en_curso";
 
 /** Dónde se hace la tarea: en clase («centro») o en casa («hogar»). */
 export type AmbitoTarea = "centro" | "hogar";
@@ -29,9 +35,9 @@ export interface TareaProgreso {
 export interface ResumenProgreso {
   total: number;
   hechas: number;
+  /** Pendientes: las sin empezar y las sin terminar. */
   pendientes: number;
   en_curso: number;
-  bloqueadas: number;
   /** Pendientes porque se acabó su tiempo sin terminarlas. */
   sin_terminar: number;
   /** Tareas con el Plan B activado. */

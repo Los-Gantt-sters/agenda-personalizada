@@ -6,14 +6,15 @@ import type { AmbitoTarea, ProgresoAlumno, TareaProgreso } from "./tipos";
 
 /**
  * Tono del estado en la tabla: decide los colores de la etiqueta (siempre con su texto, nunca solo
- * color). «pendiente» es el amarillo de lo que está por hacer.
+ * color). «pendiente» es el amarillo de lo que se quedó sin hacer; «neutro», el gris de lo que aún
+ * no toca.
  */
-export type TonoEstado = "exito" | "aviso" | "peligro" | "primario" | "pendiente";
+export type TonoEstado = "exito" | "primario" | "pendiente" | "neutro";
 
 export interface EstadoVisible {
   texto: string;
   tono: TonoEstado;
-  icono: "check" | "reloj" | "alerta" | "candado";
+  icono: "check" | "reloj" | "alerta";
 }
 
 /** Las 5 emociones de la app y las que admite también la base de datos (valoracion_emocional). */
@@ -48,35 +49,50 @@ export function etiquetaAmbito(ambito: AmbitoTarea): string {
   return ambito === "hogar" ? "Casa" : "Clase";
 }
 
-export function estadoVisible(tarea: TareaProgreso): EstadoVisible {
-  switch (tarea.estado) {
-    case "hecha":
-      return { texto: "Hecha", tono: "exito", icono: "check" };
-    case "en_curso":
-      return { texto: "En curso", tono: "primario", icono: "reloj" };
-    case "bloqueada":
-      return { texto: "Bloqueada", tono: "peligro", icono: "candado" };
-    default:
-      return tarea.pendiente_motivo === "tiempo_agotado"
-        ? { texto: "Sin terminar", tono: "aviso", icono: "alerta" }
-        : { texto: "Pendiente", tono: "pendiente", icono: "reloj" };
+/**
+ * Se le pasó la hora sin hacerla. La base la marca sola al acabar su franja (pendiente_motivo
+ * «tiempo_agotado», SCRUM-265) y el tutor puede dejarla a medias («profesor»). Una pendiente de un
+ * día ya pasado también cuenta (por ejemplo, las que no tienen hora, que no caducan).
+ */
+export function esPendiente(tarea: TareaProgreso, hoy: string): boolean {
+  return tarea.estado === "pendiente" && (Boolean(tarea.pendiente_motivo) || tarea.fecha < hoy);
+}
+
+/**
+ * Los cuatro estados: Hecha, En curso, Pendiente (se le pasó la hora sin hacerla) y Por hacer (aún
+ * no ha llegado su hora). `hoy` es AAAA-MM-DD.
+ */
+export function estadoVisible(tarea: TareaProgreso, hoy: string): EstadoVisible {
+  if (tarea.estado === "hecha") return { texto: "Hecha", tono: "exito", icono: "check" };
+  if (tarea.estado === "en_curso") return { texto: "En curso", tono: "primario", icono: "reloj" };
+  return esPendiente(tarea, hoy)
+    ? { texto: "Pendiente", tono: "pendiente", icono: "alerta" }
+    : { texto: "Por hacer", tono: "neutro", icono: "reloj" };
+}
+
+/** Cuántas tareas hay en cada estado (lo que no está hecho lo cuenta el indicador «Pendientes»). */
+export function contarEstados(
+  p: ProgresoAlumno,
+  hoy: string,
+): { pendientes: number; enCurso: number; porHacer: number } {
+  let pendientes = 0;
+  let enCurso = 0;
+  let porHacer = 0;
+  for (const t of p.tareas) {
+    if (t.estado === "en_curso") enCurso += 1;
+    else if (esPendiente(t, hoy)) pendientes += 1;
+    else if (t.estado === "pendiente") porHacer += 1;
   }
+  return { pendientes, enCurso, porHacer };
 }
 
-/** Tareas sin hacer: pendientes, en curso y bloqueadas. */
-export function tareasSinHacer(p: ProgresoAlumno): number {
-  return p.resumen.total - p.resumen.hechas;
-}
-
-/** Detalle de las tareas sin hacer: «1 sin terminar · 1 en curso · 1 bloqueada» (cabe en una línea). */
-export function detalleSinHacer(p: ProgresoAlumno): string {
-  const r = p.resumen;
+/** Lo que queda aparte de las pendientes: «Además, 1 en curso · 2 por hacer» (en una línea). */
+export function detallePendientes(p: ProgresoAlumno, hoy: string): string {
+  const { enCurso, porHacer } = contarEstados(p, hoy);
   const partes: string[] = [];
-  if (r.sin_terminar) partes.push(`${r.sin_terminar} sin terminar`);
-  if (r.en_curso) partes.push(`${r.en_curso} en curso`);
-  if (r.bloqueadas)
-    partes.push(`${r.bloqueadas} ${r.bloqueadas === 1 ? "bloqueada" : "bloqueadas"}`);
-  return partes.join(" · ");
+  if (enCurso) partes.push(`${enCurso} en curso`);
+  if (porHacer) partes.push(`${porHacer} por hacer`);
+  return partes.length ? `Además, ${partes.join(" · ")}` : "Nada en curso ni por hacer";
 }
 
 /** Porcentaje de tareas hechas (0 si no hay tareas). */
@@ -116,10 +132,10 @@ const horaLocal = (d: Date) =>
   `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
 /** Tono de una tarjeta del resumen: decide sus colores. */
-export type TonoTarjeta = "exito" | "neutro" | "primario" | "aviso" | "peligro";
+export type TonoTarjeta = "exito" | "neutro" | "primario" | "pendiente" | "peligro";
 
 export interface TarjetaResumen {
-  id: "dias" | "plan-b" | "ayuda" | "sin-terminar" | "urgencias";
+  id: "dias" | "plan-b" | "ayuda" | "pendientes" | "urgencias";
   tono: TonoTarjeta;
   /** Lo primero, en negrita: «Plan B activado 1 vez:». */
   titulo: string;
@@ -129,10 +145,10 @@ export interface TarjetaResumen {
 
 /**
  * Tarjetas del bloque «Resumen del periodo», de arriba abajo: días con todo hecho (si el periodo
- * tiene más de un día), Plan B, peticiones de ayuda y, solo si los hay, tareas sin terminar o
- * bloqueadas y urgencias sin atender. Como mucho 5, para que quepan sin scroll.
+ * tiene más de un día), Plan B, peticiones de ayuda y, solo si las hay, tareas pendientes y
+ * urgencias sin atender. Como mucho 5, para que quepan sin scroll. `hoy` es AAAA-MM-DD.
  */
-export function tarjetasResumen(p: ProgresoAlumno, maxDetalle = 2): TarjetaResumen[] {
+export function tarjetasResumen(p: ProgresoAlumno, hoy: string, maxDetalle = 2): TarjetaResumen[] {
   const unDia = p.desde === p.hasta;
   // En un día basta con la hora; en una semana o un mes, el día.
   const cuandoTarea = (t: TareaProgreso) =>
@@ -190,27 +206,17 @@ export function tarjetasResumen(p: ProgresoAlumno, maxDetalle = 2): TarjetaResum
     });
   }
 
-  const sinTerminar = p.tareas.filter(
-    (t) => t.estado === "pendiente" && t.pendiente_motivo === "tiempo_agotado",
-  );
-  const bloqueadas = p.tareas.filter((t) => t.estado === "bloqueada");
-  if (sinTerminar.length || bloqueadas.length) {
-    const titulo =
-      sinTerminar.length && bloqueadas.length
-        ? "Sin terminar o bloqueadas:"
-        : sinTerminar.length
-          ? "Sin terminar a tiempo:"
-          : "Bloqueadas:";
-    const ambas = Boolean(sinTerminar.length && bloqueadas.length);
-    const partes = [
-      ...sinTerminar.map((t) => `${t.titulo} (${cuandoTarea(t)})`),
-      ...bloqueadas.map((t) => `${t.titulo} (${ambas ? "bloqueada, " : ""}${cuandoTarea(t)})`),
-    ];
+  const pendientes = p.tareas.filter((t) => esPendiente(t, hoy));
+  if (pendientes.length) {
     tarjetas.push({
-      id: "sin-terminar",
-      tono: "aviso",
-      titulo,
-      texto: `${algunos(partes, maxDetalle)}.`,
+      id: "pendientes",
+      tono: "pendiente",
+      titulo:
+        pendientes.length === 1 ? "1 tarea pendiente:" : `${pendientes.length} tareas pendientes:`,
+      texto: `${algunos(
+        pendientes.map((t) => `${t.titulo} (${cuandoTarea(t)})`),
+        maxDetalle,
+      )}.`,
     });
   }
 

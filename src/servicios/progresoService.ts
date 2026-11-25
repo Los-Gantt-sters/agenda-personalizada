@@ -3,7 +3,12 @@
 // consulta. Tutor y familia ven todas las tareas del alumno, de clase y de casa; la función rechaza a
 // quien no supervisa al alumno.
 import { supabase } from "../lib/supabaseClient";
-import type { ProgresoAlumno, RepositorioProgreso } from "../componentes/progreso/tipos";
+import type {
+  ProgresoAlumno,
+  RepositorioProgreso,
+  ResumenProgreso,
+  TareaProgreso,
+} from "../componentes/progreso/tipos";
 
 const VACIO: Omit<ProgresoAlumno, "desde" | "hasta"> = {
   alumno: null,
@@ -12,7 +17,6 @@ const VACIO: Omit<ProgresoAlumno, "desde" | "hasta"> = {
     hechas: 0,
     pendientes: 0,
     en_curso: 0,
-    bloqueadas: 0,
     sin_terminar: 0,
     planes_b: 0,
   },
@@ -29,6 +33,24 @@ function mensajeDeError(error: { code?: string; message?: string }): string {
   return "No se ha podido cargar el progreso. Comprueba la conexión e inténtalo otra vez.";
 }
 
+/** Lo que devuelve progreso_alumno: aún puede traer tareas «bloqueada» y su cuenta. */
+type TareaCruda = Omit<TareaProgreso, "estado"> & { estado: TareaProgreso["estado"] | "bloqueada" };
+type RespuestaCruda = Partial<Omit<ProgresoAlumno, "tareas" | "resumen">> & {
+  tareas?: TareaCruda[];
+  resumen?: Partial<ResumenProgreso> & { bloqueadas?: number };
+};
+
+/**
+ * La 43 solo tiene Hecha, En curso, Pendiente y Por hacer. «bloqueada» viene del esquema inicial y
+ * ya no la pone ninguna pantalla: si llegara alguna, se cuenta como pendiente (no se pudo hacer),
+ * para que no se pierda.
+ */
+function sinBloqueadas(tarea: TareaCruda): TareaProgreso {
+  return tarea.estado === "bloqueada"
+    ? { ...tarea, estado: "pendiente", pendiente_motivo: "tiempo_agotado" }
+    : { ...tarea, estado: tarea.estado };
+}
+
 /** Progreso del alumno entre dos fechas AAAA-MM-DD (las dos incluidas). */
 export async function obtenerProgresoAlumno(
   estudianteId: string,
@@ -41,13 +63,20 @@ export async function obtenerProgresoAlumno(
     p_hasta: hasta,
   });
   if (error) throw new Error(mensajeDeError(error));
-  const datos = (data ?? {}) as Partial<ProgresoAlumno>;
+  const datos = (data ?? {}) as RespuestaCruda;
+  const { bloqueadas = 0, ...resumen } = datos.resumen ?? {};
+  const juntos = { ...VACIO.resumen, ...resumen };
   return {
     ...VACIO,
     ...datos,
     desde: datos.desde ?? desde,
     hasta: datos.hasta ?? hasta,
-    resumen: { ...VACIO.resumen, ...datos.resumen },
+    resumen: {
+      ...juntos,
+      pendientes: juntos.pendientes + bloqueadas,
+      sin_terminar: juntos.sin_terminar + bloqueadas,
+    },
+    tareas: (datos.tareas ?? []).map(sinBloqueadas),
   };
 }
 

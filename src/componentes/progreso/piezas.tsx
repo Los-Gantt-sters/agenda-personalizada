@@ -64,13 +64,13 @@ export function coloresDeTono(
   switch (tono) {
     case "exito":
       return { tinta: c.exito, fondo: c.exitoSuave, borde: c.exito };
-    case "aviso":
-      return { tinta: c.aviso, fondo: c.avisoSuave, borde: c.aviso };
-    case "peligro":
-      return { tinta: c.peligro, fondo: c.peligroSuave, borde: c.peligro };
     case "primario":
       return { tinta: c.primario, fondo: c.superficieDestacada, borde: c.primario };
+    case "neutro":
+      // «Por hacer»: aún no toca, así que va en gris
+      return { tinta: c.textoSecundario, fondo: c.fondo, borde: c.borde };
     default:
+      // «Pendiente»: amarillo, como en el boceto
       return { tinta: c.aviso, fondo: c.resalteSuave, borde: c.resalte };
   }
 }

@@ -32,13 +32,11 @@ export interface Paleta {
   aviso: string;
   /** Fondo suave de lo que ha ido bien (etiqueta «Hecha»): debajo va `exito` o `texto`. */
   exitoSuave: string;
-  /** Fondo suave de aviso (etiqueta «Sin terminar»): debajo va `aviso` o `texto`. */
-  avisoSuave: string;
-  /** Fondo suave de peligro (etiqueta «Bloqueada», urgencias): debajo va `peligro` o `texto`. */
+  /** Fondo suave de peligro (tarjeta de urgencias sin atender): debajo va `texto`. */
   peligroSuave: string;
-  /** Amarillo de lo que está por hacer (etiqueta «Pendiente»). Solo borde o relleno, nunca texto. */
+  /** Amarillo de lo que se quedó sin hacer (etiqueta «Pendiente»). Solo borde o relleno, nunca texto. */
   resalte: string;
-  /** Fondo suave del amarillo de por hacer: debajo va `aviso` o `texto`. */
+  /** Fondo suave del amarillo de pendiente: debajo va `aviso` o `texto`. */
   resalteSuave: string;
 }
 
@@ -78,7 +76,6 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       peligro: "#B3261E",
       aviso: "#7A5600",
       exitoSuave: "#E5F1E8",
-      avisoSuave: "#FBEEDA",
       peligroSuave: "#FBE8E6",
       resalte: "#EAB308",
       resalteSuave: "#FEF7CD",
@@ -103,7 +100,6 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       peligro: "#FF8A8A",
       aviso: "#F0C445",
       exitoSuave: "#1E3A2C",
-      avisoSuave: "#3D2A14",
       peligroSuave: "#3F2329",
       resalte: "#F0C445",
       resalteSuave: "#34321A",
@@ -128,7 +124,6 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       peligro: "#A83A32",
       aviso: "#7A5A00",
       exitoSuave: "#E2F1E6",
-      avisoSuave: "#F8EDD6",
       peligroSuave: "#F8E6E3",
       resalte: "#E0AE12",
       resalteSuave: "#FBF6CF",
@@ -154,7 +149,6 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       peligro: "#B00000",
       aviso: "#6B4B00",
       exitoSuave: "#FFFFFF",
-      avisoSuave: "#FFFFFF",
       peligroSuave: "#FFFFFF",
       resalte: "#6B4B00",
       resalteSuave: "#FFFFFF",
@@ -179,7 +173,6 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       peligro: "#FF6B6B",
       aviso: "#FFD400",
       exitoSuave: "#0B0B0B",
-      avisoSuave: "#0B0B0B",
       peligroSuave: "#0B0B0B",
       resalte: "#FFD400",
       resalteSuave: "#0B0B0B",

@@ -1,6 +1,7 @@
 import { consolidarProgreso, progresoDemo } from "../datosDemo";
 import {
-  detalleSinHacer,
+  contarEstados,
+  detallePendientes,
   emocionMasFrecuente,
   estadoVisible,
   etiquetaAmbito,
@@ -8,10 +9,12 @@ import {
   etiquetaNecesidad,
   paginar,
   porcentajeHechas,
-  tareasSinHacer,
   tarjetasResumen,
 } from "../resumen";
 import type { AvisoProgreso, TareaProgreso } from "../tipos";
+
+// Martes 24: la tarea 7 (martes 24, sin motivo) aún no se ha pasado de hora.
+const HOY = "2026-11-24";
 
 function tarea(id: string, cambios: Partial<TareaProgreso> = {}): TareaProgreso {
   return {
@@ -45,7 +48,7 @@ const TAREAS = [
   tarea("3", { emocion: "triste" }),
   tarea("4", { estado: "pendiente", pendiente_motivo: "tiempo_agotado" }),
   tarea("5", { estado: "en_curso", fecha: "2026-11-24" }),
-  tarea("6", { estado: "bloqueada", fecha: "2026-11-24" }),
+  tarea("6", { estado: "pendiente", fecha: "2026-11-24", pendiente_motivo: "tiempo_agotado" }),
   tarea("7", { estado: "pendiente", fecha: "2026-11-24", ambito: "hogar" }),
 ];
 
@@ -56,10 +59,9 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     expect(progreso.resumen).toEqual({
       total: 7,
       hechas: 3,
-      pendientes: 2,
+      pendientes: 3,
       en_curso: 1,
-      bloqueadas: 1,
-      sin_terminar: 1,
+      sin_terminar: 2,
       planes_b: 1,
     });
     expect(progreso.emociones).toEqual([
@@ -73,8 +75,18 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
   });
 
   it("indicadores: pendientes, su detalle y la emoción más frecuente", () => {
-    expect(tareasSinHacer(progreso)).toBe(4);
-    expect(detalleSinHacer(progreso)).toBe("1 sin terminar · 1 en curso · 1 bloqueada");
+    expect(contarEstados(progreso, HOY)).toEqual({ pendientes: 2, enCurso: 1, porHacer: 1 });
+    expect(detallePendientes(progreso, HOY)).toBe("Además, 1 en curso · 1 por hacer");
+    // Al día siguiente, la que quedó sin hacer el martes ya es pendiente
+    expect(contarEstados(progreso, "2026-11-25")).toEqual({
+      pendientes: 3,
+      enCurso: 1,
+      porHacer: 0,
+    });
+    expect(detallePendientes(progreso, "2026-11-25")).toBe("Además, 1 en curso");
+    expect(
+      detallePendientes(consolidarProgreso([tarea("1")], [], "2026-11-23", "2026-11-23"), HOY),
+    ).toBe("Nada en curso ni por hacer");
     expect(emocionMasFrecuente(progreso)).toEqual({
       clave: "contento",
       etiqueta: "Contento",
@@ -84,17 +96,35 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     expect(porcentajeHechas(0, 0)).toBe(0);
   });
 
-  it("estado de cada fila con texto, tono e icono (nunca solo color)", () => {
-    expect(estadoVisible(TAREAS[0])).toEqual({ texto: "Hecha", tono: "exito", icono: "check" });
-    expect(estadoVisible(TAREAS[3])).toEqual({
-      texto: "Sin terminar",
-      tono: "aviso",
+  it("cuatro estados con texto, tono e icono (nunca solo color): Hecha, En curso, Pendiente y Por hacer", () => {
+    expect(estadoVisible(TAREAS[0], HOY)).toEqual({
+      texto: "Hecha",
+      tono: "exito",
+      icono: "check",
+    });
+    expect(estadoVisible(TAREAS[4], HOY)).toEqual({
+      texto: "En curso",
+      tono: "primario",
+      icono: "reloj",
+    });
+    // Se le pasó la hora (la base le pone el motivo «tiempo_agotado»): Pendiente, en amarillo
+    expect(estadoVisible(TAREAS[3], HOY)).toEqual({
+      texto: "Pendiente",
+      tono: "pendiente",
       icono: "alerta",
     });
-    expect(estadoVisible(TAREAS[4]).texto).toBe("En curso");
-    expect(estadoVisible(TAREAS[5])).toMatchObject({ texto: "Bloqueada", icono: "candado" });
-    // Pendiente va en amarillo, como en el boceto
-    expect(estadoVisible(TAREAS[6])).toMatchObject({ texto: "Pendiente", tono: "pendiente" });
+    expect(estadoVisible(TAREAS[5], HOY).texto).toBe("Pendiente");
+    expect(
+      estadoVisible(tarea("8", { estado: "pendiente", pendiente_motivo: "profesor" }), HOY).texto,
+    ).toBe("Pendiente");
+    // Aún no ha llegado su hora: Por hacer, en gris
+    expect(estadoVisible(TAREAS[6], HOY)).toEqual({
+      texto: "Por hacer",
+      tono: "neutro",
+      icono: "reloj",
+    });
+    // Si su día ya pasó (por ejemplo, una sin hora, que no caduca), es Pendiente
+    expect(estadoVisible(TAREAS[6], "2026-11-25").texto).toBe("Pendiente");
   });
 
   it("etiquetas de emociones (las de la app y las de la base), necesidades y ámbitos", () => {
@@ -106,7 +136,7 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     expect(etiquetaAmbito("centro")).toBe("Clase");
   });
 
-  it("tarjetas del resumen: días completos, Plan B, ayuda, sin terminar y urgencias", () => {
+  it("tarjetas del resumen: días completos, Plan B, ayuda, pendientes y urgencias", () => {
     const urgencia = aviso("urgencia", { urgencia: true, atendido: false });
     const conAvisos = consolidarProgreso(
       TAREAS,
@@ -117,7 +147,7 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     // La hora de la urgencia se cuenta en la hora local
     const d = new Date(urgencia.creado_en);
     const hora = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    expect(tarjetasResumen(conAvisos)).toEqual([
+    expect(tarjetasResumen(conAvisos, HOY)).toEqual([
       { id: "dias", tono: "exito", titulo: "Días con todo hecho:", texto: "0 de 2." },
       {
         id: "plan-b",
@@ -132,10 +162,10 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
         texto: "baño (1) y urgencia (1).",
       },
       {
-        id: "sin-terminar",
-        tono: "aviso",
-        titulo: "Sin terminar o bloqueadas:",
-        texto: "Tarea 4 (lunes 23) y Tarea 6 (bloqueada, martes 24).",
+        id: "pendientes",
+        tono: "pendiente",
+        titulo: "2 tareas pendientes:",
+        texto: "Tarea 4 (lunes 23) y Tarea 6 (martes 24).",
       },
       {
         id: "urgencias",
@@ -148,7 +178,7 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
 
   it("si no ha pasado nada, lo dice; en un día no hay tarjeta de días", () => {
     expect(
-      tarjetasResumen(consolidarProgreso([tarea("1")], [], "2026-11-23", "2026-11-23")),
+      tarjetasResumen(consolidarProgreso([tarea("1")], [], "2026-11-23", "2026-11-23"), HOY),
     ).toEqual([
       { id: "plan-b", tono: "neutro", titulo: "Plan B:", texto: "no se ha activado." },
       { id: "ayuda", tono: "primario", titulo: "Ayuda:", texto: "no ha pedido ayuda." },
@@ -162,7 +192,7 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
       "2026-11-23",
       "2026-11-29",
     );
-    expect(tarjetasResumen(semana)[0].texto).toBe("1 de 2 (lunes 23).");
+    expect(tarjetasResumen(semana, HOY)[0].texto).toBe("1 de 2 (lunes 23).");
   });
 
   it("si hay muchos Plan B o avisos, nombra unos pocos y dice cuántos más", () => {
@@ -173,7 +203,7 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
       "2026-11-23",
       "2026-11-23",
     );
-    const [planB, ayuda] = tarjetasResumen(muchos);
+    const [planB, ayuda] = tarjetasResumen(muchos, HOY);
     expect(planB.titulo).toBe("Plan B activado 5 veces:");
     expect(planB.texto).toBe("A (09:00), B (09:00) y 3 más.");
     expect(ayuda.texto).toBe("baño (2), agua (1), descanso (1) y 1 más.");

@@ -21,7 +21,6 @@ describe("progresoService - SCRUM-146 (pantalla 43, HU-25)", () => {
         hechas: 1,
         pendientes: 1,
         en_curso: 0,
-        bloqueadas: 0,
         sin_terminar: 0,
         planes_b: 0,
       },
@@ -41,6 +40,48 @@ describe("progresoService - SCRUM-146 (pantalla 43, HU-25)", () => {
     });
     expect(r).toEqual(respuesta);
     expect(repositorioProgresoSupabase.obtener).toBe(obtenerProgresoAlumno);
+  });
+
+  it("si la base trae alguna tarea «bloqueada» (esquema inicial), la cuenta como pendiente", async () => {
+    const tarea = {
+      id: "t1",
+      fecha: "2026-11-24",
+      hora: "10:00",
+      titulo: "Taller",
+      ambito: "centro",
+      estado: "bloqueada",
+      pendiente_motivo: null,
+      plan_b: false,
+      emocion: null,
+      inicio_real: null,
+      fin_real: null,
+    };
+    mockRpc.mockResolvedValue({
+      data: {
+        resumen: {
+          total: 2,
+          hechas: 1,
+          pendientes: 0,
+          en_curso: 0,
+          bloqueadas: 1,
+          sin_terminar: 0,
+        },
+        tareas: [tarea],
+      },
+      error: null,
+    });
+
+    const r = await obtenerProgresoAlumno(ALUMNO, "2026-11-23", "2026-11-29");
+
+    expect(r.tareas[0]).toMatchObject({ estado: "pendiente", pendiente_motivo: "tiempo_agotado" });
+    expect(r.resumen).toEqual({
+      total: 2,
+      hechas: 1,
+      pendientes: 1,
+      en_curso: 0,
+      sin_terminar: 1,
+      planes_b: 0,
+    });
   });
 
   it("si faltan partes de la respuesta, las rellena vacías", async () => {
