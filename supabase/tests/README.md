@@ -56,14 +56,16 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261110000000_secuencia_dia.sql \
          supabase/migrations/20261123100000_auto_pendiente.sql \
          supabase/migrations/20261124230000_requiere_inicio_fin.sql \
+         supabase/migrations/20261126000000_seguridad_perfiles_vinculos.sql \
          supabase/tests/secuencia_dia_test.sql \
-         supabase/tests/auto_pendiente_test.sql; do
+         supabase/tests/auto_pendiente_test.sql \
+         supabase/tests/seguridad_perfiles_vinculos_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan` y `NOTICE: auto_pendiente: las 11 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan` y `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
@@ -72,3 +74,12 @@ Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan` y `NOTICE:
 > **Orden de despliegue:** aplicar `20261123100000_auto_pendiente.sql` solo cuando la pantalla 10b (SCRUM-264) esté en `main`. Sin ella, una tarea caducada se ve como una pendiente normal y vuelve a «Ahora».
 
 `supabase_minimo.sql` crea lo mínimo de Supabase (esquema `auth`, `auth.uid()`, roles `authenticated` y `anon`) para que las migraciones carguen en un PostgreSQL normal. Con Supabase real o `supabase start` no hace falta.
+
+## Seguridad de perfiles y vínculos (SCRUM-278 · T-ADM.6)
+
+La migración `20261126000000_seguridad_perfiles_vinculos.sql` cierra dos políticas de `schema_inicial.sql` que dejaban saltarse la seguridad por filas:
+
+- **`perfiles`:** un usuario podía cambiarse su propio `rol` (un familiar podía hacerse `admin`). Ahora un disparador (`proteger_campos_perfil`) solo deja a administración cambiar `rol`, `activo`, `centro_id` y `email`. El resto del perfil (p. ej. el nombre) lo sigue cambiando cada usuario, y el editor SQL de Supabase y `service_role` no se bloquean.
+- **`vinculos_alumno_supervisor`:** cualquier tutor o familiar podía crear o borrar vínculos de cualquier alumno. Ahora solo administración o el tutor de ese alumno (`is_tutor_docente_of_student`). El alta de alumnos de un tutor sigue funcionando si es el tutor titular del aula.
+
+`seguridad_perfiles_vinculos_test.sql` comprueba las dos cosas con usuarios simulados (13 comprobaciones). Sin la migración falla con «una familia ha podido cambiarse el rol».
