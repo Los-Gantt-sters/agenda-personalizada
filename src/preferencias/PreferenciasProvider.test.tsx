@@ -42,6 +42,7 @@ describe("PreferenciasProvider", () => {
       caja: "normal",
       tareasVisibles: "tres",
       reloj: "si",
+      vistaAgenda: "diaria",
       necesidades: ["bano", "agua", "descanso"],
     });
   });
@@ -99,6 +100,7 @@ describe("PreferenciasProvider", () => {
       caja: "normal",
       tareasVisibles: "tres",
       reloj: "si",
+      vistaAgenda: "diaria",
       necesidades: ["bano", "agua", "descanso"],
     });
     expect(ref.tema?.nombre).toBe("claro");

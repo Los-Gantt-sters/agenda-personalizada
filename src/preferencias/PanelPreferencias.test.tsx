@@ -125,6 +125,9 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     await user.press(screen.getByTestId("btn-barra-adelante"));
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Reloj en la tarea");
     await user.press(screen.getByTestId("btn-barra-adelante"));
+    // MOD HU-17 (boceto 24): «Pantalla al entrar», Hoy (06) o Semana (06b).
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Pantalla al entrar");
+    await user.press(screen.getByTestId("btn-barra-adelante"));
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Qué puede pedir en Ayuda");
     expect(screen.getByTestId("btn-barra-adelante").props.accessibilityState).toMatchObject({
       disabled: true,
