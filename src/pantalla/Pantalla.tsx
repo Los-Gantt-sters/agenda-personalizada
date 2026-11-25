@@ -7,6 +7,8 @@
 // - Sin ventanas emergentes: «Accesibilidad» abre una pantalla completa encima de esta (esta no se
 //   quita, así que al volver todo sigue igual). «Ayuda» la pinta ProveedorNecesidades, también como
 //   pantalla completa encima de todo.
+// - En las pantallas de administración no hay ni «Ayuda» ni «Accesibilidad» (sinAyuda y
+//   sinAccesibilidad): son para el alumnado. Los huecos se quedan vacíos.
 // - En las pantallas de entrar (clase, foto y contraseña) no hay «Ayuda» (sinAyuda): el hueco se
 //   queda vacío para que las flechas sigan en el centro.
 // - En el navegador, la pestaña lleva el nombre de la pantalla («Mi agenda · Agensible»), no el de
@@ -46,6 +48,8 @@ export interface PantallaProps {
   conSonido?: boolean;
   /** Sin botón «Ayuda» (pantallas de entrar). El hueco se queda para no mover las flechas. */
   sinAyuda?: boolean;
+  /** Sin botón «Accesibilidad» (pantallas de administración). El hueco se queda para no mover las flechas. */
+  sinAccesibilidad?: boolean;
   children: ReactNode;
   testID?: string;
 }
@@ -84,6 +88,7 @@ export function Pantalla({
   textoAdelante = "Adelante",
   conSonido = false,
   sinAyuda = false,
+  sinAccesibilidad = false,
   children,
   testID,
 }: PantallaProps) {
@@ -126,7 +131,7 @@ export function Pantalla({
             ) : null
           }
           barraDerecha={
-            prefs ? (
+            prefs && !sinAccesibilidad ? (
               <BotonBarra
                 icono="accesibilidad"
                 texto="Accesibilidad"
