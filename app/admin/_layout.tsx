@@ -11,6 +11,7 @@ export default function ZonaAdministracion() {
         <Stack.Screen name="vinculos" options={{ title: "Tutores y familias" }} />
         <Stack.Screen name="aulas" options={{ title: "Aulas y clases" }} />
         <Stack.Screen name="menus" options={{ title: "Menús y alergias" }} />
+        <Stack.Screen name="codigos-qr" options={{ title: "Códigos QR de la visita" }} />
         <Stack.Screen name="dashboard" options={{ title: "Tutores y familias" }} />
       </Stack>
     </ZonaProtegida>
