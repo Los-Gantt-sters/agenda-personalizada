@@ -58,16 +58,18 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261124230000_requiere_inicio_fin.sql \
          supabase/migrations/20261126000000_seguridad_perfiles_vinculos.sql \
          supabase/migrations/20261128000000_progreso_alumno.sql \
+         supabase/migrations/20261128100000_agenda_compartida_y_franjas.sql \
          supabase/tests/secuencia_dia_test.sql \
          supabase/tests/auto_pendiente_test.sql \
          supabase/tests/seguridad_perfiles_vinculos_test.sql \
-         supabase/tests/progreso_alumno_test.sql; do
+         supabase/tests/progreso_alumno_test.sql \
+         supabase/tests/agenda_compartida_y_franjas_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan`, `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan` y `NOTICE: progreso_alumno: las 13 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan`, `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan` `NOTICE: progreso_alumno: las 13 comprobaciones pasan` y `NOTICE: agenda_compartida_y_franjas: las 14 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
@@ -107,6 +109,33 @@ const { data, error } = await supabase.rpc("progreso_alumno", {
 
 Mismos criterios que `secuencia_dia`: las canceladas no cuentan y `hecho`/`completada` salen como `hecha`. Las tareas desactivadas después sí cuentan, porque son historial.
 
-**Tutor y familia ven todas las tareas del alumno, de clase y de casa**: los dos tienen que saber qué hace en el colegio y en casa. Lo que no pueden es crear o cambiar tareas del otro ámbito, y eso lo siguen controlando las políticas de escritura de `tareas`. Como la política de lectura «Tareas: Lectura segregada RGPD» solo deja ver a cada uno su ámbito (y la usan otras pantallas), la función es `SECURITY DEFINER` y comprueba ella misma quién llama: rechaza (`42501`) a quien no es administración, tutor o especialista del alumno o su familia, y también al rol `authenticated` sin usuario. Así, un alumno no ve el progreso de otro. Desde el editor SQL de Supabase (sin sesión) funciona y lo ve todo.
+**Tutor y familia ven todas las tareas del alumno, de clase y de casa**: los dos tienen que saber qué hace en el colegio y en casa. Lo que se reparte es el horario para poner tareas (ver la sección siguiente). La función es `SECURITY DEFINER` y comprueba ella misma quién llama: rechaza (`42501`) a quien no es administración, tutor o especialista del alumno o su familia, y también al rol `authenticated` sin usuario. Así, un alumno no ve el progreso de otro. Desde el editor SQL de Supabase (sin sesión) funciona y lo ve todo.
 
 `progreso_alumno_test.sql` hace 13 comprobaciones: alumno y resumen, emociones, días, orden y campos de la tabla, avisos por día de Madrid, que el tutor ve también las tareas de casa, que la familia ve también las de clase, permisos, periodos no válidos, periodo vacío, sin sesión (app y editor SQL) y que `anon` no pueda ejecutarla.
+
+## Agenda completa y tramos horarios (SCRUM-144, HU-25)
+
+`20261128100000_agenda_compartida_y_franjas.sql` aplica la regla del centro:
+
+- **Tutor y familia ven la agenda completa del alumno**, lo que hace en el colegio y en casa. La política «Tareas: Lectura segregada RGPD» (que dejaba al tutor ver solo las de clase y a la familia solo las de casa) se sustituye por «Tareas: Lectura de la agenda completa». Quien supervisa al alumno (`supervisa_tarea`) ve todas sus tareas y también las del catálogo común que tiene asignadas. Con esto `secuencia_dia` (agenda 39/40) y los pasos (`puede_ver_tarea`, si está la migración de pasos) devuelven a los dos adultos las tareas de clase y de casa.
+- **Cada uno pone tareas en su tramo:** el tutor (y los especialistas) de 08:00 a 15:00 y la familia de 15:00 a 08:00, como en la pantalla 28c. Lo comprueba un disparador en `asignaciones` al poner una tarea en la agenda, al cambiarle el día o la hora y al quitarla.
+- **Cómo se calcula el tramo:** la franja va de la hora de inicio a la de fin (si no hay fin, el inicio más la duración estimada de la tarea). Si pasa de un tramo a otro (p. ej. de 14:30 a 15:30), no la puede poner ninguno de los dos. Si la tarea no tiene hora, manda su ámbito: `centro` es del tutor y `hogar` de la familia. Al que se sale de su tramo se le rechaza con `42501` y un mensaje que dice qué horario le toca.
+- **Lo que no se limita:** los cambios de estado (Empezar, Terminar, bloquear, Plan B) no dependen del tramo, aunque la app reenvíe la misma hora. Administración, el alumno y lo que se hace sin sesión (editor SQL, `service_role`, `pg_cron`) tampoco tienen límite.
+- **Lo que no cambia:** crear, cambiar y borrar la definición de una tarea sigue siendo por ámbito: la familia no crea tareas de clase ni el tutor de casa.
+
+`agenda_compartida_y_franjas_test.sql` hace 14 comprobaciones:
+
+1. Los tramos: mañana, tarde, noche, madrugada y los que pasan de uno a otro.
+2. La familia lee las tareas de clase y las del catálogo, y la agenda del día le devuelve las tres.
+3. El tutor lee también las de casa.
+4. Otro tutor y otra familia no ven nada.
+5. El tutor pone tareas por la mañana.
+6. El tutor no puede poner tareas por la tarde ni que pasen de las 15:00, ni tareas de casa sin hora.
+7. El tutor no mueve de hora ni de día la tarea de la familia, ni la quita.
+8. El tutor sí cambia su estado.
+9. El tutor mueve las suyas.
+10. La familia pone tareas por la tarde, de noche y de madrugada.
+11. La familia no puede poner tareas por la mañana ni que entren en las 08:00.
+12. La familia no mueve las suyas a la mañana ni quita las del tutor, pero sí quita las suyas.
+13. La familia no crea tareas de clase.
+14. Administración y el editor SQL no tienen límite de horario.

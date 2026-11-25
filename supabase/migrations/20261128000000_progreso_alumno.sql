@@ -18,11 +18,10 @@
 -- desactivadas después sí cuentan: lo que hizo el alumno sigue siendo su historial.
 --
 -- Tutor y familia ven TODAS las tareas del alumno, de clase y de casa: los dos tienen que saber qué
--- hace en el colegio y en casa. Lo que no pueden es crear o cambiar tareas del otro ámbito, y eso lo
--- siguen controlando las políticas de escritura de «tareas». Como la política de lectura «Tareas:
--- Lectura segregada RGPD» solo deja ver a cada uno su ámbito (y la usan otras pantallas), la función
--- es SECURITY DEFINER y comprueba ella misma quién llama: administración, los tutores y especialistas
--- del alumno y su familia. Nadie más (tampoco otro alumno) puede pedir el progreso.
+-- hace en el colegio y en casa (lo que se reparte es el horario para poner tareas: ver
+-- 20261128100000_agenda_compartida_y_franjas.sql, que también abre la lectura de «tareas»). La
+-- función es SECURITY DEFINER y comprueba ella misma quién llama: administración, los tutores y
+-- especialistas del alumno y su familia. Nadie más (tampoco otro alumno) puede pedir el progreso.
 --
 --   supabase.rpc("progreso_alumno", { p_estudiante, p_desde: "2026-11-23", p_hasta: "2026-11-29" })
 -- ==============================================================================

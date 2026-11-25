@@ -153,12 +153,8 @@ BEGIN
         RAISE EXCEPTION 'FALLA avisos: %', p->'avisos';
     END IF;
 
-    -- 7. El tutor ve todas las tareas, también las de casa, aunque la política de lectura de
-    --    «tareas» solo le deja ver las de clase
+    -- 7. El tutor ve todas las tareas, también las de casa
     PERFORM set_config('request.jwt.claim.sub', carmen, true);
-    IF (SELECT count(*) FROM public.tareas WHERE alumno_id = alejandro AND ambito = 'hogar') <> 0 THEN
-        RAISE EXCEPTION 'FALLA preparación: el tutor ya podía leer las tareas de casa';
-    END IF;
     p := public.progreso_alumno(alejandro, desde, hasta);
     IF (p->'resumen'->>'total')::INT <> 8
        OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p->'tareas') t WHERE t->>'ambito' = 'hogar') THEN
