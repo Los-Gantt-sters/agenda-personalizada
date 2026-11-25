@@ -31,6 +31,8 @@ export type NombreIcono =
   | "accesibilidad"
   | "lista"
   | "buscar"
+  | "escudo"
+  | "cubiertos"
   | "mas";
 
 const TRAZOS: Record<NombreIcono, React.ReactNode> = {
@@ -160,8 +162,6 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
     </>
   ),
   lista: <Path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
-  // HU-10 (28s): «Añadir paso», «Subir foto»...
-  mas: <Path d="M12 5v14M5 12h14" />,
   estrella: <Path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />,
   buscar: (
     <>
@@ -169,6 +169,9 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <Path d="M16 16l4.5 4.5" />
     </>
   ),
+  escudo: <Path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z" />,
+  cubiertos: <Path d="M5 3v7a3 3 0 006 0V3M8 3v18M16 3v18M16 3c2.5 1 3 4 3 7h-3" />,
+  mas: <Path d="M12 5v14M5 12h14" />,
 };
 
 export interface IconoProps {
