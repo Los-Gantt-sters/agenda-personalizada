@@ -90,6 +90,15 @@ describe("compresionMultimedia (SCRUM-96: T-10.3 compresión y validación)", ()
       });
     });
 
+    it("nunca sube la foto original (con su EXIF/GPS): si no se puede redibujar, da error", async () => {
+      // En las pruebas no hay navegador, así que no se puede redibujar.
+      const r = await prepararMultimedia("foto", new Blob(["x"], { type: "image/jpeg" }));
+      expect(r).toEqual({
+        ok: false,
+        error: expect.stringMatching(/No se ha podido preparar la foto/),
+      });
+    });
+
     it("no deja subir como foto un archivo que no es imagen", async () => {
       const r = await prepararMultimedia("foto", new Blob(["x"], { type: "text/plain" }));
       expect(r).toEqual({ ok: false, error: expect.stringMatching(/La foto tiene que ser/) });

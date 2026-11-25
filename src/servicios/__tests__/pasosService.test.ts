@@ -1,5 +1,6 @@
 import {
   BUCKET_MULTIMEDIA_PASOS,
+  borrarMultimedia,
   SEGUNDOS_URL_FIRMADA,
   firmarMultimediaPasos,
   guardarPasos,
@@ -133,6 +134,14 @@ describe("pasosService (SCRUM-96: T-10.3 almacenamiento seguro)", () => {
       .mockResolvedValueOnce({ data: null, error: new Error("No tienes permiso") });
     await expect(guardarPasos(TAREA, [])).rejects.toThrow("No tienes permiso");
     expect(b.remove).not.toHaveBeenCalled();
+  });
+
+  it("borra del bucket los archivos huérfanos y no llama a Storage si no hay ninguno", async () => {
+    const b = bucketFalso();
+    await borrarMultimedia([]);
+    expect(b.remove).not.toHaveBeenCalled();
+    await borrarMultimedia([`${TAREA}/foto/sin-usar.jpg`]);
+    expect(b.remove).toHaveBeenCalledWith([`${TAREA}/foto/sin-usar.jpg`]);
   });
 
   it("sube al bucket privado con su tipo y devuelve el recurso con URL firmada", async () => {
