@@ -2,8 +2,8 @@ import React from "react";
 import { Redirect } from "expo-router";
 
 /**
- * Redirección del panel principal de administración hacia la consola de vínculos (HU-03 / SCRUM-61).
+ * Redirección de la entrada del administrador hacia el panel de administración (pantalla 48).
  */
 export default function AdminDashboardScreen() {
-  return <Redirect href="/admin/vinculos" />;
+  return <Redirect href="/admin" />;
 }
