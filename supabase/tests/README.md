@@ -57,15 +57,17 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261123100000_auto_pendiente.sql \
          supabase/migrations/20261124230000_requiere_inicio_fin.sql \
          supabase/migrations/20261126000000_seguridad_perfiles_vinculos.sql \
+         supabase/migrations/20261128000000_progreso_alumno.sql \
          supabase/tests/secuencia_dia_test.sql \
          supabase/tests/auto_pendiente_test.sql \
-         supabase/tests/seguridad_perfiles_vinculos_test.sql; do
+         supabase/tests/seguridad_perfiles_vinculos_test.sql \
+         supabase/tests/progreso_alumno_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan` y `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan`, `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan` y `NOTICE: progreso_alumno: las 13 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
@@ -83,3 +85,28 @@ La migración `20261126000000_seguridad_perfiles_vinculos.sql` cierra dos polít
 - **`vinculos_alumno_supervisor`:** cualquier tutor o familiar podía crear o borrar vínculos de cualquier alumno. Ahora solo administración o el tutor de ese alumno (`is_tutor_docente_of_student`). El alta de alumnos de un tutor sigue funcionando si es el tutor titular del aula.
 
 `seguridad_perfiles_vinculos_test.sql` comprueba las dos cosas con usuarios simulados (13 comprobaciones). Sin la migración falla con «una familia ha podido cambiarse el rol».
+
+## Progreso del alumno (SCRUM-145 · T-25.1, HU-25)
+
+`progreso_alumno(p_estudiante, p_desde, p_hasta)` devuelve en un solo JSON lo que necesita la pantalla 43 «Progreso e historial», la misma para tutor y familia:
+
+```ts
+const { data, error } = await supabase.rpc("progreso_alumno", {
+  p_estudiante: estudianteId, // UUID del alumno
+  p_desde: "2026-11-23", // AAAA-MM-DD, incluido
+  p_hasta: "2026-11-29", // AAAA-MM-DD, incluido (como mucho, un año después de p_desde)
+});
+```
+
+- **`alumno`:** `{ id, nombre }`, para el título de la pantalla.
+- **`resumen`:** `total`, `hechas`, `pendientes`, `en_curso`, `bloqueadas`, `sin_terminar` (pendientes porque se acabó su tiempo, SCRUM-265) y `planes_b` (con Plan B activado).
+- **`emociones`:** `[{ emocion, total }]`, de la más a la menos frecuente (columna `ejecuciones.valoracion_emocional`).
+- **`dias`:** `[{ fecha, total, hechas }]` de cada día del periodo que tiene tareas.
+- **`tareas`:** la tabla, en orden de día y hora: `fecha`, `hora` (HH:MM, la de la asignación o la de la tarea), `titulo`, `pictograma_url`, `ambito` (`centro` o `hogar`), `estado` (`hecha`, `pendiente`, `en_curso` o `bloqueada`), `pendiente_motivo`, `plan_b`, `emocion`, `inicio_real` y `fin_real`.
+- **`avisos`:** lo que ha pedido en «Ayuda» en el periodo (`necesidad`, `urgencia`, `atendido`, `creado_en`), del más reciente al más antiguo. El día se cuenta con la hora de Madrid.
+
+Mismos criterios que `secuencia_dia`: las canceladas no cuentan y `hecho`/`completada` salen como `hecha`. Las tareas desactivadas después sí cuentan, porque son historial.
+
+**Tutor y familia ven todas las tareas del alumno, de clase y de casa**: los dos tienen que saber qué hace en el colegio y en casa. Lo que no pueden es crear o cambiar tareas del otro ámbito, y eso lo siguen controlando las políticas de escritura de `tareas`. Como la política de lectura «Tareas: Lectura segregada RGPD» solo deja ver a cada uno su ámbito (y la usan otras pantallas), la función es `SECURITY DEFINER` y comprueba ella misma quién llama: rechaza (`42501`) a quien no es administración, tutor o especialista del alumno o su familia, y también al rol `authenticated` sin usuario. Así, un alumno no ve el progreso de otro. Desde el editor SQL de Supabase (sin sesión) funciona y lo ve todo.
+
+`progreso_alumno_test.sql` hace 13 comprobaciones: alumno y resumen, emociones, días, orden y campos de la tabla, avisos por día de Madrid, que el tutor ve también las tareas de casa, que la familia ve también las de clase, permisos, periodos no válidos, periodo vacío, sin sesión (app y editor SQL) y que `anon` no pueda ejecutarla.
