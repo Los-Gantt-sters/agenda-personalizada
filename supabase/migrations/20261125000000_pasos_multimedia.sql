@@ -129,7 +129,33 @@ AS $$
     );
 $$;
 
--- Quién puede ver la tarea (las mismas reglas que «Tareas: Lectura segregada RGPD»).
+-- Alumno con el que ha entrado el usuario de la sesión (RGPD). El inicio de sesión visual
+-- (SCRUM-51, authService.signInEstudianteConDibujos) usa el correo técnico
+-- «alu-<id del alumno>@alumnos.agensible»; el alumno no puede cambiar su correo
+-- (trigger de SCRUM-278). NULL si la sesión no es de un alumno o no cuadra con ninguno.
+CREATE OR REPLACE FUNCTION public.alumno_de_sesion()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT a.id
+    FROM public.perfiles p
+    JOIN public.alumnos a
+      ON lower(p.email) = 'alu-' || a.id::text || '@alumnos.agensible'
+    WHERE p.id = auth.uid()
+      AND p.rol = 'estudiante'
+      AND p.activo
+    LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION public.alumno_de_sesion() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.alumno_de_sesion() TO authenticated;
+
+-- Quién puede ver la tarea: tutor y familia con las reglas de «Tareas: Lectura segregada RGPD» y
+-- el alumno SOLO sus tareas (las suyas o las que tiene asignadas), nunca las de otros alumnos ni
+-- las del hogar de otras familias (revisión de Jaime, RGPD).
 CREATE OR REPLACE FUNCTION public.puede_ver_tarea(p_tarea UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -145,7 +171,17 @@ AS $$
               OR (t.alumno_id IS NULL AND public.auth_user_role() IN ('tutor_docente', 'admin'))
               OR (public.is_tutor_docente_of_student(t.alumno_id) AND t.ambito = 'centro')
               OR (public.is_familiar_of_student(t.alumno_id) AND t.ambito = 'hogar')
-              OR public.auth_user_role() = 'estudiante'
+              OR (
+                  public.alumno_de_sesion() IS NOT NULL
+                  AND (
+                      t.alumno_id = public.alumno_de_sesion()
+                      OR EXISTS (
+                          SELECT 1 FROM public.asignaciones asg
+                          WHERE asg.tarea_id = t.id
+                            AND asg.estudiante_id = public.alumno_de_sesion()
+                      )
+                  )
+              )
           )
     );
 $$;
@@ -196,6 +232,17 @@ CREATE POLICY "Multimedia: Modificación según ámbito de la tarea" ON public.r
 --      "pictograma_url": "...", "pictograma_origen": "arasaac"|"propio",
 --      "foto": {...}|null, "video": {...}|null, "audio": {...}|null }, ...]
 -- SECURITY INVOKER: las políticas RLS de arriba deciden si se puede.
+-- Una URL externa (pictograma o archivo que no está en el bucket) solo vale si es https:// y no
+-- lleva espacios ni comillas: así no se cuelan javascript:, data: ni http sin cifrar (revisión de Jaime).
+CREATE OR REPLACE FUNCTION public.es_url_externa_valida(p_url TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT p_url IS NULL
+        OR (length(p_url) <= 2048 AND p_url ~* '^https://[a-z0-9.-]+(:[0-9]+)?(/[^\s"''<>]*)?$');
+$$;
+
 CREATE OR REPLACE FUNCTION public.guardar_pasos(p_tarea UUID, p_pasos JSONB)
 RETURNS SETOF public.pasos_tarea
 LANGUAGE plpgsql
@@ -228,6 +275,11 @@ BEGIN
         v_orden := v_orden + 1;
         IF COALESCE(btrim(v_paso->>'titulo'), '') = '' THEN
             RAISE EXCEPTION 'El paso % no tiene título', v_orden USING ERRCODE = '23502';
+        END IF;
+
+        IF NOT public.es_url_externa_valida(v_paso->>'pictograma_url') THEN
+            RAISE EXCEPTION 'El pictograma del paso % no tiene una dirección https válida', v_orden
+                USING ERRCODE = '22023';
         END IF;
 
         v_id := NULLIF(v_paso->>'id', '')::UUID;
@@ -265,6 +317,11 @@ BEGIN
             CONTINUE WHEN NOT (v_paso ? v_formato);
             v_tipo := CASE v_formato WHEN 'foto' THEN 'imagen' ELSE v_formato END;
             v_rec := v_paso->v_formato;
+            IF v_rec IS NOT NULL AND jsonb_typeof(v_rec) = 'object'
+               AND NOT public.es_url_externa_valida(v_rec->>'url') THEN
+                RAISE EXCEPTION 'El archivo del paso % no tiene una dirección https válida', v_orden
+                    USING ERRCODE = '22023';
+            END IF;
             IF v_rec IS NULL OR jsonb_typeof(v_rec) = 'null' THEN
                 DELETE FROM public.recursos_multimedia WHERE paso_id = v_id AND tipo = v_tipo;
             ELSE
