@@ -26,7 +26,10 @@ const abrir = async (datos: EntradaAgenda[]) => {
   return { repo, tutor, user };
 };
 
-/** El alumno está haciendo «Lavarse las manos» (e2). */
+/**
+ * El alumno está haciendo «Lavarse las manos» (e2). Como tiene pasos, la tarea en curso es la
+ * pantalla paso a paso (07, HU-10).
+ */
 const conE2EnCurso = () =>
   agendaDemo(hoyISO()).map((e) =>
     e.id === "e2"
@@ -55,7 +58,7 @@ describe("Agenda del alumno (06): tarea que pasa sola a Pendiente (SCRUM-266)", 
 
   it("si se acaba el tiempo con la tarea abierta, sale la 10b y «Atrás» lleva a la agenda", async () => {
     const { tutor, user } = await abrir(conE2EnCurso());
-    await screen.findByTestId("pantalla-tarea-en-curso");
+    await screen.findByTestId("pantalla-07-pasos");
 
     // Lo que hace el servidor al acabar la franja (SCRUM-265).
     tutor.modificar("e2", { estado: "pendiente", pendiente_motivo: "tiempo_agotado" });
@@ -72,10 +75,13 @@ describe("Agenda del alumno (06): tarea que pasa sola a Pendiente (SCRUM-266)", 
 
   it("también si estaba en «¿Has terminado?»", async () => {
     const { tutor, user } = await abrir(conE2EnCurso());
-    await screen.findByTestId("pantalla-tarea-en-curso");
+    await screen.findByTestId("pantalla-07-pasos");
     // «Terminar» no hace caso a los toques justo al aparecer (pulsaciones sin querer).
     await act(() => new Promise((listo) => setTimeout(listo, BLOQUEO_AL_APARECER_MS + 50)));
-    await user.press(screen.getByRole("button", { name: "Terminar" }));
+    // HU-10: «Terminar tarea» está en el último paso de la 07.
+    for (const n of [2, 3, 4])
+      await user.press(screen.getByRole("button", { name: `Siguiente: paso ${n}` }));
+    await user.press(screen.getByRole("button", { name: "Terminar tarea" }));
     expect(screen.getByTestId("pantalla-confirmar-fin")).toBeTruthy();
 
     tutor.modificar("e2", { estado: "pendiente", pendiente_motivo: "tiempo_agotado" });
@@ -86,7 +92,7 @@ describe("Agenda del alumno (06): tarea que pasa sola a Pendiente (SCRUM-266)", 
 
   it("si el profesor la deja pendiente con la tarea abierta, la 10b dice por qué", async () => {
     const { tutor } = await abrir(conE2EnCurso());
-    await screen.findByTestId("pantalla-tarea-en-curso");
+    await screen.findByTestId("pantalla-07-pasos");
 
     tutor.modificar("e2", { estado: "pendiente", pendiente_motivo: "profesor" });
 
@@ -96,7 +102,7 @@ describe("Agenda del alumno (06): tarea que pasa sola a Pendiente (SCRUM-266)", 
 
   it("si el alumno vuelve atrás sin terminar, vuelve a la agenda sin 10b", async () => {
     const { user } = await abrir(conE2EnCurso());
-    await screen.findByTestId("pantalla-tarea-en-curso");
+    await screen.findByTestId("pantalla-07-pasos");
 
     await user.press(screen.getByTestId("btn-barra-atras"));
 
