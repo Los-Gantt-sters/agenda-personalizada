@@ -2,7 +2,7 @@
  * Aulas y alumnos de la pantalla de acceso del alumno (MOD HU-01 · SCRUM-249 · T-01.7).
  * Esa pantalla se ve antes de iniciar sesión, así que no lee las tablas (RLS solo deja a usuarios
  * con sesión): llama a dos funciones de la base de datos que devuelven lo justo para las tarjetas
- * (supabase/migrations/20261125000000_acceso_alumnos_sin_sesion.sql).
+ * (supabase/migrations/20261127000000_acceso_alumnos_sin_sesion.sql).
  * - Pantallas 01/01b: las aulas que configura el administrador en la 48b, en su orden.
  * - Pantallas 02/02b: nombre de pila, icono y color de los alumnos activos del aula (sin foto).
  *

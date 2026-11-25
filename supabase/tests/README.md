@@ -56,7 +56,7 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261123100000_auto_pendiente.sql \
          supabase/tests/secuencia_dia_test.sql \
          supabase/migrations/20261124000000_aulas_configurables.sql \
-         supabase/migrations/20261125000000_acceso_alumnos_sin_sesion.sql \
+         supabase/migrations/20261127000000_acceso_alumnos_sin_sesion.sql \
          supabase/tests/auto_pendiente_test.sql \
          supabase/tests/acceso_alumnos_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
@@ -76,7 +76,7 @@ Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`, `NOTICE: 
 
 ## Acceso del alumno sin sesión (SCRUM-249 · T-01.7, MOD HU-01)
 
-La pantalla de acceso del alumno (01 y 02) se ve **antes** de iniciar sesión, y las políticas RLS de `aulas` y `alumnos` solo dejan leer a usuarios con sesión. La migración `20261125000000_acceso_alumnos_sin_sesion.sql` crea dos funciones que puede llamar `anon` y que devuelven solo lo que pinta la pantalla:
+La pantalla de acceso del alumno (01 y 02) se ve **antes** de iniciar sesión, y las políticas RLS de `aulas` y `alumnos` solo dejan leer a usuarios con sesión. La migración `20261127000000_acceso_alumnos_sin_sesion.sql` crea dos funciones que puede llamar `anon` y que devuelven solo lo que pinta la pantalla:
 
 | Función | Devuelve | Pantalla |
 |---|---|---|
