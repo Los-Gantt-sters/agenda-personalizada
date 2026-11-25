@@ -28,6 +28,11 @@ export interface RepositorioPasos {
     tipo: TipoMultimedia,
     archivo: ArchivoPreparado,
   ): Promise<RecursoPaso>;
+  /**
+   * Borra del bucket archivos subidos que al final no se guardan (el tutor cambia la foto antes de
+   * «Guardar» o sale con «Atrás»), para no dejar archivos huérfanos con fotos de alumnos (RGPD).
+   */
+  borrarMultimedia(rutas: string[]): Promise<void>;
 }
 
 /** Nombre aleatorio para el archivo: no se puede adivinar y no lleva datos del alumno. */
@@ -170,4 +175,5 @@ export const repositorioPasosSupabase: RepositorioPasos = {
   obtenerPasos,
   guardarPasos,
   subirMultimedia,
+  borrarMultimedia,
 };

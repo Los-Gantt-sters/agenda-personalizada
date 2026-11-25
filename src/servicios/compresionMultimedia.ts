@@ -1,11 +1,13 @@
 // Compresión y validación de la foto, el vídeo y el audio de un paso antes de subirlos
 // (SCRUM-96 · T-10.3, HU-10, editor 28s).
 // - Foto: se reduce a 1280 px por el lado largo y se guarda como JPEG al 80 %. Una foto de móvil
-//   (4-8 MB) queda en unos 150-400 KB, que cargan rápido en la tableta del alumno.
+//   (4-8 MB) queda en unos 150-400 KB, que cargan rápido en la tableta del alumno. Al redibujarla
+//   se quitan los datos EXIF (ubicación GPS, cámara...): nunca se sube la foto original.
 // - Vídeo y audio: el navegador no puede recomprimirlos sin librerías pesadas, así que se limitan
 //   por tipo, tamaño y duración (vídeo corto, 07d). El bucket también tiene límite de tamaño y tipos
 //   (supabase/migrations/20261125100000_storage_multimedia_pasos.sql).
-// La compresión funciona en web, que es donde se usa el editor; en la app nativa se sube tal cual.
+// La compresión funciona en web, que es donde se usa el editor. En la app nativa, el vídeo y el
+// audio se suben tal cual y la foto no se puede subir (no se le podrían quitar los datos EXIF).
 import { Platform } from "react-native";
 
 export type TipoMultimedia = "foto" | "video" | "audio";
@@ -139,12 +141,14 @@ export interface ArchivoPreparado {
 }
 
 /**
- * Comprime la foto (solo en web). Si no se puede (formato raro, navegador antiguo, app nativa),
- * devuelve la original: la validación decide después si se puede subir.
+ * Comprime la foto y la vuelve a dibujar en un lienzo (solo en web). Al redibujarla se pierden los
+ * metadatos EXIF, entre ellos la ubicación GPS de la cámara (RGPD, revisión de Jaime): por eso la
+ * foto que se sube es SIEMPRE la redibujada, aunque pese algo más que la original. Si no se puede
+ * redibujar (formato raro, navegador antiguo, app nativa) devuelve null y la foto no se sube.
  */
-export async function comprimirFoto(original: Blob): Promise<Blob> {
-  if (Platform.OS !== "web" || typeof document === "undefined") return original;
-  if (original.size > MAX_BYTES_FOTO_ORIGINAL) return original;
+export async function comprimirFoto(original: Blob): Promise<Blob | null> {
+  if (Platform.OS !== "web" || typeof document === "undefined") return null;
+  if (original.size > MAX_BYTES_FOTO_ORIGINAL) return null;
   try {
     const imagen = await createImageBitmap(original);
     const { ancho, alto } = medidasReducidas(imagen.width, imagen.height);
@@ -152,19 +156,17 @@ export async function comprimirFoto(original: Blob): Promise<Blob> {
     lienzo.width = ancho;
     lienzo.height = alto;
     const ctx = lienzo.getContext("2d");
-    if (!ctx) return original;
+    if (!ctx) return null;
     // Fondo blanco: los PNG con transparencia no quedan negros al pasarlos a JPEG.
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, ancho, alto);
     ctx.drawImage(imagen, 0, 0, ancho, alto);
     imagen.close?.();
-    const comprimida = await new Promise<Blob | null>((resolver) =>
+    return await new Promise<Blob | null>((resolver) =>
       lienzo.toBlob(resolver, "image/jpeg", CALIDAD_FOTO),
     );
-    // Si por lo que sea pesa más que la original (foto ya pequeña), se queda la original.
-    return comprimida && comprimida.size < original.size ? comprimida : original;
   } catch {
-    return original;
+    return null;
   }
 }
 
@@ -208,6 +210,12 @@ export async function prepararMultimedia(
     };
   }
   const blob = tipo === "foto" ? await comprimirFoto(archivo) : archivo;
+  if (!blob) {
+    return {
+      ok: false,
+      error: "No se ha podido preparar la foto. Prueba con otra foto en JPG o PNG.",
+    };
+  }
   const tipoMime = mimeBase(blob.type || tipoOriginal);
   const duracionSegundos = tipo === "foto" ? null : await leerDuracion(blob, tipo);
   const error = validarMultimedia(tipo, { tipoMime, tamanoBytes: blob.size, duracionSegundos });

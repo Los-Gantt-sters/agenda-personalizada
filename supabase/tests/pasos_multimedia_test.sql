@@ -8,12 +8,17 @@ BEGIN;
 INSERT INTO auth.users (id, email) VALUES
     ('00000000-0000-0000-0000-00000000aa01', 'carmen@prueba.es'),
     ('00000000-0000-0000-0000-00000000aa02', 'otro.tutor@prueba.es'),
-    ('00000000-0000-0000-0000-00000000aa03', 'madre@prueba.es');
+    ('00000000-0000-0000-0000-00000000aa03', 'madre@prueba.es'),
+    -- Alumnos con el correo técnico del inicio de sesión visual (SCRUM-51)
+    ('00000000-0000-0000-0000-00000000aa04', 'alu-00000000-0000-0000-0000-000000000001@alumnos.agensible'),
+    ('00000000-0000-0000-0000-00000000aa05', 'alu-00000000-0000-0000-0000-000000000002@alumnos.agensible');
 
 INSERT INTO public.perfiles (id, email, nombre_completo, rol) VALUES
     ('00000000-0000-0000-0000-00000000aa01', 'carmen@prueba.es', 'Carmen Ruiz', 'tutor_docente'),
     ('00000000-0000-0000-0000-00000000aa02', 'otro.tutor@prueba.es', 'Otro Tutor', 'tutor_docente'),
-    ('00000000-0000-0000-0000-00000000aa03', 'madre@prueba.es', 'Madre de Alejandro', 'familiar');
+    ('00000000-0000-0000-0000-00000000aa03', 'madre@prueba.es', 'Madre de Alejandro', 'familiar'),
+    ('00000000-0000-0000-0000-00000000aa04', 'alu-00000000-0000-0000-0000-000000000001@alumnos.agensible', 'Alejandro', 'estudiante'),
+    ('00000000-0000-0000-0000-00000000aa05', 'alu-00000000-0000-0000-0000-000000000002@alumnos.agensible', 'Nora', 'estudiante');
 
 INSERT INTO public.centros (id, nombre, codigo)
 VALUES ('00000000-0000-0000-0000-0000000000c1', 'CEE Purísima', 'PRUEBA-10');
@@ -26,7 +31,9 @@ INSERT INTO public.aulas (id, centro_id, nombre, tutor_titular_id) VALUES
 
 INSERT INTO public.alumnos (id, centro_id, aula_id, codigo_expediente, nombre) VALUES
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000c1',
-     '00000000-0000-0000-0000-0000000000a1', 'EXP-H10A', 'Alejandro');
+     '00000000-0000-0000-0000-0000000000a1', 'EXP-H10A', 'Alejandro'),
+    ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-0000000000c1',
+     '00000000-0000-0000-0000-0000000000a2', 'EXP-H10B', 'Nora');
 
 INSERT INTO public.vinculos_alumno_supervisor (alumno_id, supervisor_id, tipo_vinculo) VALUES
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000aa03', 'familiar');
@@ -52,6 +59,8 @@ DECLARE
     carmen   CONSTANT TEXT := '00000000-0000-0000-0000-00000000aa01';
     otro     CONSTANT TEXT := '00000000-0000-0000-0000-00000000aa02';
     madre    CONSTANT TEXT := '00000000-0000-0000-0000-00000000aa03';
+    ale      CONSTANT TEXT := '00000000-0000-0000-0000-00000000aa04';
+    nora     CONSTANT TEXT := '00000000-0000-0000-0000-00000000aa05';
     titulos  TEXT[];
     ids      UUID[];
     r        RECORD;
@@ -166,8 +175,43 @@ BEGIN
     SELECT count(*) INTO n FROM public.pasos_tarea WHERE tarea_id = merendar;
     IF n <> 1 THEN RAISE EXCEPTION 'FALLA familia en tarea de casa: % pasos', n; END IF;
 
+    -- 11. RGPD: Alejandro ve los pasos de sus tareas (también la de casa, que es suya)...
+    PERFORM set_config('request.jwt.claim.sub', ale, true);
+    SELECT count(*) INTO n FROM public.pasos_tarea;
+    IF n <> 4 OR NOT public.puede_ver_tarea(merendar) THEN
+        RAISE EXCEPTION 'FALLA RGPD: Alejandro ve % pasos de sus tareas', n;
+    END IF;
+
+    -- 12. ...pero Nora, otra alumna, no ve ningún paso ni archivo de las tareas de Alejandro.
+    PERFORM set_config('request.jwt.claim.sub', nora, true);
+    SELECT count(*) INTO n FROM public.pasos_tarea;
+    IF n <> 0 THEN RAISE EXCEPTION 'FALLA RGPD: Nora ve % pasos de otro alumno', n; END IF;
+    SELECT count(*) INTO n FROM public.recursos_multimedia;
+    IF n <> 0 THEN RAISE EXCEPTION 'FALLA RGPD: Nora ve % archivos de otro alumno', n; END IF;
+    IF public.puede_ver_tarea(lavarse) OR public.puede_ver_tarea(merendar) THEN
+        RAISE EXCEPTION 'FALLA RGPD: Nora podría abrir en Storage los archivos de Alejandro';
+    END IF;
+
+    -- 13. guardar_pasos no acepta direcciones externas que no sean https (javascript:, http...).
+    PERFORM set_config('request.jwt.claim.sub', carmen, true);
+    BEGIN
+        PERFORM public.guardar_pasos(lavarse,
+            '[{"titulo": "Abre el grifo", "pictograma_url": "javascript:alert(1)"}]'::jsonb);
+        RAISE EXCEPTION 'FALLA URL: se ha aceptado javascript:';
+    EXCEPTION WHEN invalid_parameter_value THEN NULL;
+    END;
+    BEGIN
+        PERFORM public.guardar_pasos(lavarse,
+            '[{"titulo": "Abre el grifo", "video": {"url": "http://inseguro.es/v.mp4"}}]'::jsonb);
+        RAISE EXCEPTION 'FALLA URL: se ha aceptado http sin cifrar';
+    EXCEPTION WHEN invalid_parameter_value THEN NULL;
+    END;
+    IF NOT public.es_url_externa_valida('https://static.arasaac.org/pictograms/2384/2384_500.png') THEN
+        RAISE EXCEPTION 'FALLA URL: se ha rechazado un pictograma de ARASAAC';
+    END IF;
+
     RESET ROLE;
-    RAISE NOTICE 'pasos_multimedia: las 10 comprobaciones pasan';
+    RAISE NOTICE 'pasos_multimedia: las 13 comprobaciones pasan';
 END $$;
 
 ROLLBACK;
