@@ -28,7 +28,9 @@ const PANEL_DE: Partial<Record<UserRole, Href>> = {
 export default function PantallaProgreso() {
   const { estudiante } = useLocalSearchParams<{ estudiante?: string }>();
   const router = useRouter();
-  const rol = useSesionOpcional()?.sesion?.user.role;
+  const sesion = useSesionOpcional();
+  const usuario = sesion?.sesion?.user;
+  const rol = usuario?.role;
   const real = Boolean(estudiante && esIdDeAlumnoReal(estudiante));
 
   // En el navegador, la pestaña lleva el nombre de la pantalla, como en las demás.
@@ -46,6 +48,16 @@ export default function PantallaProgreso() {
         if (router.canGoBack?.()) router.back();
         else router.replace((rol && PANEL_DE[rol]) || "/");
       }}
+      // Arriba a la derecha: quién ha entrado y «Salir» (cierra la sesión y vuelve al acceso).
+      usuario={usuario ? usuario.fullName || usuario.email : undefined}
+      alCerrarSesion={
+        sesion?.sesion
+          ? async () => {
+              await sesion.cerrarSesion();
+              router.replace("/login");
+            }
+          : undefined
+      }
     />
   );
 }

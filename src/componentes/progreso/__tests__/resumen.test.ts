@@ -6,10 +6,10 @@ import {
   etiquetaAmbito,
   etiquetaEmocion,
   etiquetaNecesidad,
-  frasesResumen,
   paginar,
   porcentajeHechas,
   tareasSinHacer,
+  tarjetasResumen,
 } from "../resumen";
 import type { AvisoProgreso, TareaProgreso } from "../tipos";
 
@@ -93,7 +93,8 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     });
     expect(estadoVisible(TAREAS[4]).texto).toBe("En curso");
     expect(estadoVisible(TAREAS[5])).toMatchObject({ texto: "Bloqueada", icono: "candado" });
-    expect(estadoVisible(TAREAS[6])).toMatchObject({ texto: "Pendiente", tono: "neutro" });
+    // Pendiente va en amarillo, como en el boceto
+    expect(estadoVisible(TAREAS[6])).toMatchObject({ texto: "Pendiente", tono: "pendiente" });
   });
 
   it("etiquetas de emociones (las de la app y las de la base), necesidades y ámbitos", () => {
@@ -105,33 +106,77 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     expect(etiquetaAmbito("centro")).toBe("Clase");
   });
 
-  it("frases del resumen: Plan B, peticiones de ayuda y urgencias sin atender", () => {
+  it("tarjetas del resumen: días completos, Plan B, ayuda, sin terminar y urgencias", () => {
+    const urgencia = aviso("urgencia", { urgencia: true, atendido: false });
     const conAvisos = consolidarProgreso(
       TAREAS,
-      [aviso("bano"), aviso("urgencia", { urgencia: true, atendido: false })],
+      [aviso("bano"), urgencia],
       "2026-11-23",
       "2026-11-29",
     );
-    expect(frasesResumen(conAvisos)).toEqual([
-      "Plan B activado 1 vez: Huerto (Lun 23).",
-      "Ha pedido ayuda 2 veces: Baño (Mar 24), Urgencia (Mar 24).",
-      "Hay 1 urgencia sin marcar como atendida.",
+    // La hora de la urgencia se cuenta en la hora local
+    const d = new Date(urgencia.creado_en);
+    const hora = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    expect(tarjetasResumen(conAvisos)).toEqual([
+      { id: "dias", tono: "exito", titulo: "Días con todo hecho:", texto: "0 de 2." },
+      {
+        id: "plan-b",
+        tono: "neutro",
+        titulo: "Plan B activado 1 vez:",
+        texto: "Huerto (lunes 23).",
+      },
+      {
+        id: "ayuda",
+        tono: "primario",
+        titulo: "Ha pedido ayuda 2 veces:",
+        texto: "baño (1) y urgencia (1).",
+      },
+      {
+        id: "sin-terminar",
+        tono: "aviso",
+        titulo: "Sin terminar o bloqueadas:",
+        texto: "Tarea 4 (lunes 23) y Tarea 6 (bloqueada, martes 24).",
+      },
+      {
+        id: "urgencias",
+        tono: "peligro",
+        titulo: "Urgencia sin atender:",
+        texto: `martes 24 a las ${hora}.`,
+      },
     ]);
-    expect(frasesResumen(consolidarProgreso([tarea("1")], [], "2026-11-23", "2026-11-23"))).toEqual(
-      ["Sin Plan B ni peticiones de ayuda en este periodo."],
+  });
+
+  it("si no ha pasado nada, lo dice; en un día no hay tarjeta de días", () => {
+    expect(
+      tarjetasResumen(consolidarProgreso([tarea("1")], [], "2026-11-23", "2026-11-23")),
+    ).toEqual([
+      { id: "plan-b", tono: "neutro", titulo: "Plan B:", texto: "no se ha activado." },
+      { id: "ayuda", tono: "primario", titulo: "Ayuda:", texto: "no ha pedido ayuda." },
+    ]);
+  });
+
+  it("nombra los días con todo hecho si son pocos", () => {
+    const semana = consolidarProgreso(
+      [tarea("1"), tarea("2", { fecha: "2026-11-24", estado: "pendiente" })],
+      [],
+      "2026-11-23",
+      "2026-11-29",
     );
+    expect(tarjetasResumen(semana)[0].texto).toBe("1 de 2 (lunes 23).");
   });
 
   it("si hay muchos Plan B o avisos, nombra unos pocos y dice cuántos más", () => {
+    // En un solo día basta con la hora
     const muchos = consolidarProgreso(
       ["a", "b", "c", "d", "e"].map((id) => tarea(id, { plan_b: true, titulo: id.toUpperCase() })),
-      [],
+      ["bano", "bano", "agua", "descanso", "ayuda"].map((n, i) => aviso(n, { id: `v${i}` })),
       "2026-11-23",
       "2026-11-23",
     );
-    expect(frasesResumen(muchos)[0]).toBe(
-      "Plan B activado 5 veces: A (Lun 23), B (Lun 23), C (Lun 23) y 2 más.",
-    );
+    const [planB, ayuda] = tarjetasResumen(muchos);
+    expect(planB.titulo).toBe("Plan B activado 5 veces:");
+    expect(planB.texto).toBe("A (09:00), B (09:00) y 3 más.");
+    expect(ayuda.texto).toBe("baño (2), agua (1), descanso (1) y 1 más.");
   });
 
   it("paginar reparte en páginas y no se sale de la última", () => {

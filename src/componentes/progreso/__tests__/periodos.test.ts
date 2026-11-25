@@ -3,9 +3,13 @@ import {
   esPeriodoActual,
   esPeriodoFuturo,
   moverPeriodo,
+  nombreMes,
+  periodoDelMes,
   periodoQueContiene,
+  semanasDelMes,
   textoDia,
   textoDiaCorto,
+  textoDiaSinMes,
   textoPeriodo,
 } from "../periodos";
 
@@ -83,18 +87,52 @@ describe("periodos de la pantalla 43 (HU-25)", () => {
     const mes = periodoQueContiene("mes", HOY);
     expect(textoDia("2026-11-26")).toBe("Jueves 26 de noviembre");
     expect(textoDiaCorto("2026-11-23")).toBe("Lun 23");
-    expect(textoPeriodo(periodoQueContiene("dia", HOY), HOY)).toBe("Hoy, jueves 26 de noviembre");
-    expect(textoPeriodo(moverPeriodo(periodoQueContiene("dia", HOY), -1), HOY)).toBe(
-      "Miércoles 25 de noviembre",
+    expect(textoDiaSinMes("2026-11-23")).toBe("lunes 23");
+    // Con el año, porque desde el calendario se puede ir a años anteriores
+    expect(textoPeriodo(periodoQueContiene("dia", HOY), HOY)).toBe(
+      "Hoy, jueves 26 de noviembre de 2026",
     );
-    expect(textoPeriodo(semana, HOY)).toBe("Esta semana: del 23 al 29 de noviembre");
+    expect(textoPeriodo(moverPeriodo(periodoQueContiene("dia", HOY), -1), HOY)).toBe(
+      "Miércoles 25 de noviembre de 2026",
+    );
+    expect(textoPeriodo(semana, HOY)).toBe("Esta semana: del 23 al 29 de noviembre de 2026");
     expect(textoPeriodo(moverPeriodo(semana, -1), HOY)).toBe(
-      "Semana anterior: del 16 al 22 de noviembre",
+      "Semana anterior: del 16 al 22 de noviembre de 2026",
     );
     expect(textoPeriodo(moverPeriodo(semana, 1), HOY)).toBe(
-      "Del 30 de noviembre al 6 de diciembre",
+      "Del 30 de noviembre al 6 de diciembre de 2026",
+    );
+    expect(textoPeriodo(periodoQueContiene("semana", "2025-12-31"), HOY)).toBe(
+      "Del 29 de diciembre de 2025 al 4 de enero de 2026",
     );
     expect(textoPeriodo(mes, HOY)).toBe("Este mes: noviembre de 2026");
     expect(textoPeriodo(moverPeriodo(mes, -1), HOY)).toBe("Octubre de 2026");
+  });
+
+  it("calendario: nombre del mes, el periodo de un mes y sus semanas de lunes a domingo", () => {
+    expect(nombreMes(8)).toBe("Septiembre");
+    expect(periodoDelMes(2025, 8)).toEqual({
+      tipo: "mes",
+      desde: "2025-09-01",
+      hasta: "2025-09-30",
+    });
+    // Noviembre de 2026 empieza en domingo: 6 filas, de la del 26 de octubre a la del 30
+    const noviembre = semanasDelMes(2026, 10);
+    expect(noviembre).toHaveLength(6);
+    expect(noviembre[0]).toEqual([
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+    ]);
+    expect(noviembre[5][0]).toBe("2026-11-30");
+    // Febrero de 2027 empieza en lunes y tiene 28 días: 4 filas justas
+    const febrero = semanasDelMes(2027, 1);
+    expect(febrero).toHaveLength(4);
+    expect(febrero[0][0]).toBe("2027-02-01");
+    expect(febrero[3][6]).toBe("2027-02-28");
   });
 });

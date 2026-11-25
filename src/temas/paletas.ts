@@ -30,6 +30,16 @@ export interface Paleta {
   peligro: string;
   /** Aviso o tiempo que se acaba. */
   aviso: string;
+  /** Fondo suave de lo que ha ido bien (etiqueta «Hecha»): debajo va `exito` o `texto`. */
+  exitoSuave: string;
+  /** Fondo suave de aviso (etiqueta «Sin terminar»): debajo va `aviso` o `texto`. */
+  avisoSuave: string;
+  /** Fondo suave de peligro (etiqueta «Bloqueada», urgencias): debajo va `peligro` o `texto`. */
+  peligroSuave: string;
+  /** Amarillo de lo que está por hacer (etiqueta «Pendiente»). Solo borde o relleno, nunca texto. */
+  resalte: string;
+  /** Fondo suave del amarillo de por hacer: debajo va `aviso` o `texto`. */
+  resalteSuave: string;
 }
 
 export interface InfoTema {
@@ -67,6 +77,11 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       exito: "#2D6A3E",
       peligro: "#B3261E",
       aviso: "#7A5600",
+      exitoSuave: "#E5F1E8",
+      avisoSuave: "#FBEEDA",
+      peligroSuave: "#FBE8E6",
+      resalte: "#EAB308",
+      resalteSuave: "#FEF7CD",
     },
   },
   oscuro: {
@@ -87,6 +102,11 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       exito: "#74D69F",
       peligro: "#FF8A8A",
       aviso: "#F0C445",
+      exitoSuave: "#1E3A2C",
+      avisoSuave: "#3D2A14",
+      peligroSuave: "#3F2329",
+      resalte: "#F0C445",
+      resalteSuave: "#34321A",
     },
   },
   pastel: {
@@ -107,6 +127,11 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       exito: "#2B6B3F",
       peligro: "#A83A32",
       aviso: "#7A5A00",
+      exitoSuave: "#E2F1E6",
+      avisoSuave: "#F8EDD6",
+      peligroSuave: "#F8E6E3",
+      resalte: "#E0AE12",
+      resalteSuave: "#FBF6CF",
     },
   },
   altoContrasteClaro: {
@@ -114,6 +139,7 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
     etiqueta: "Alto contraste claro",
     esOscuro: false,
     esAltoContraste: true,
+    // Las etiquetas de estado van sin fondo de color (máximo contraste): las distingue el borde.
     paleta: {
       fondo: "#FFFFFF",
       superficie: "#FFFFFF",
@@ -127,6 +153,11 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       exito: "#005A1E",
       peligro: "#B00000",
       aviso: "#6B4B00",
+      exitoSuave: "#FFFFFF",
+      avisoSuave: "#FFFFFF",
+      peligroSuave: "#FFFFFF",
+      resalte: "#6B4B00",
+      resalteSuave: "#FFFFFF",
     },
   },
   altoContrasteOscuro: {
@@ -147,6 +178,11 @@ export const TEMAS: Record<NombreTema, InfoTema> = {
       exito: "#7CFF8A",
       peligro: "#FF6B6B",
       aviso: "#FFD400",
+      exitoSuave: "#0B0B0B",
+      avisoSuave: "#0B0B0B",
+      peligroSuave: "#0B0B0B",
+      resalte: "#FFD400",
+      resalteSuave: "#0B0B0B",
     },
   },
 };

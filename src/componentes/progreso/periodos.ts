@@ -102,26 +102,38 @@ export function textoDia(fecha: string): string {
   return mayuscula(`${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`);
 }
 
+/** «jueves 26»: para las frases del resumen, dentro de un periodo que ya dice el mes. */
+export function textoDiaSinMes(fecha: string): string {
+  const d = deISO(fecha);
+  return `${DIAS[d.getDay()]} ${d.getDate()}`;
+}
+
 /** «Jue 26»: para la tabla, donde hay poco sitio. */
 export function textoDiaCorto(fecha: string): string {
   const d = deISO(fecha);
   return mayuscula(`${DIAS_CORTOS[d.getDay()]} ${d.getDate()}`);
 }
 
-/** Nombre del periodo en Lectura Fácil: «Hoy, jueves 26 de noviembre», «Esta semana: del 23 al 29 de noviembre»… */
+/**
+ * Nombre del periodo en Lectura Fácil, con el año porque se puede ir a años anteriores:
+ * «Hoy, jueves 26 de noviembre de 2026», «Esta semana: del 23 al 29 de noviembre de 2026»…
+ */
 export function textoPeriodo(periodo: Periodo, hoy: Date = new Date()): string {
   const actual = esPeriodoActual(periodo, hoy);
   if (periodo.tipo === "dia") {
-    const dia = textoDia(periodo.desde);
+    const dia = `${textoDia(periodo.desde)} de ${deISO(periodo.desde).getFullYear()}`;
     return actual ? `Hoy, ${dia.charAt(0).toLowerCase()}${dia.slice(1)}` : dia;
   }
   if (periodo.tipo === "semana") {
     const a = deISO(periodo.desde);
     const b = deISO(periodo.hasta);
+    const fin = `${b.getDate()} de ${MESES[b.getMonth()]} de ${b.getFullYear()}`;
     const rango =
       a.getMonth() === b.getMonth()
-        ? `del ${a.getDate()} al ${b.getDate()} de ${MESES[b.getMonth()]}`
-        : `del ${a.getDate()} de ${MESES[a.getMonth()]} al ${b.getDate()} de ${MESES[b.getMonth()]}`;
+        ? `del ${a.getDate()} al ${fin}`
+        : a.getFullYear() === b.getFullYear()
+          ? `del ${a.getDate()} de ${MESES[a.getMonth()]} al ${fin}`
+          : `del ${a.getDate()} de ${MESES[a.getMonth()]} de ${a.getFullYear()} al ${fin}`;
     if (actual) return `Esta semana: ${rango}`;
     if (esPeriodoActual(moverPeriodo(periodo, 1), hoy)) return `Semana anterior: ${rango}`;
     return mayuscula(rango);
@@ -129,4 +141,29 @@ export function textoPeriodo(periodo: Periodo, hoy: Date = new Date()): string {
   const d = deISO(periodo.desde);
   const mes = `${MESES[d.getMonth()]} de ${d.getFullYear()}`;
   return actual ? `Este mes: ${mes}` : mayuscula(mes);
+}
+
+/** «Noviembre»: nombre del mes (0 = enero) para el calendario. */
+export function nombreMes(mes: number): string {
+  return mayuscula(MESES[mes]);
+}
+
+/** El periodo de un mes concreto (0 = enero). */
+export function periodoDelMes(anio: number, mes: number): Periodo {
+  return periodoQueContiene("mes", new Date(anio, mes, 1, 12));
+}
+
+/**
+ * Filas del calendario de un mes: cada una es una semana de lunes a domingo (AAAA-MM-DD), desde la
+ * que contiene el día 1 hasta la que contiene el último. Son 4, 5 o 6 filas.
+ */
+export function semanasDelMes(anio: number, mes: number): string[][] {
+  const { desde, hasta } = periodoDelMes(anio, mes);
+  const filas: string[][] = [];
+  for (let lunes = periodoQueContiene("semana", desde).desde; lunes <= hasta;) {
+    const fila = Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
+    filas.push(fila);
+    lunes = sumarDias(lunes, 7);
+  }
+  return filas;
 }

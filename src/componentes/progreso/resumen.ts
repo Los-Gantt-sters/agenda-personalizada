@@ -1,11 +1,14 @@
 // Textos e indicadores de la pantalla 43 (HU-25) a partir del progreso que da Supabase.
 // Todo es lógica sin pantalla, para poder probarla sola.
 import { EMOCIONES } from "../ejecucion-tarea/emociones";
-import { aISO, textoDiaCorto } from "./periodos";
-import type { AmbitoTarea, AvisoProgreso, ProgresoAlumno, TareaProgreso } from "./tipos";
+import { aISO, textoDiaSinMes } from "./periodos";
+import type { AmbitoTarea, ProgresoAlumno, TareaProgreso } from "./tipos";
 
-/** Tono del estado en la tabla: decide el color (siempre acompañado de icono y texto). */
-export type TonoEstado = "exito" | "aviso" | "peligro" | "primario" | "neutro";
+/**
+ * Tono del estado en la tabla: decide los colores de la etiqueta (siempre con su texto, nunca solo
+ * color). «pendiente» es el amarillo de lo que está por hacer.
+ */
+export type TonoEstado = "exito" | "aviso" | "peligro" | "primario" | "pendiente";
 
 export interface EstadoVisible {
   texto: string;
@@ -56,7 +59,7 @@ export function estadoVisible(tarea: TareaProgreso): EstadoVisible {
     default:
       return tarea.pendiente_motivo === "tiempo_agotado"
         ? { texto: "Sin terminar", tono: "aviso", icono: "alerta" }
-        : { texto: "Pendiente", tono: "neutro", icono: "reloj" };
+        : { texto: "Pendiente", tono: "pendiente", icono: "reloj" };
   }
 }
 
@@ -97,47 +100,139 @@ export function emocionMasFrecuente(
 
 const vecesTexto = (n: number) => (n === 1 ? "1 vez" : `${n} veces`);
 
-function listaAvisos(avisos: readonly AvisoProgreso[]): string {
-  return (
-    avisos
-      // creado_en viene en UTC: el día se cuenta en la hora local de la tableta.
-      .map(
-        (a) => `${etiquetaNecesidad(a.necesidad)} (${textoDiaCorto(aISO(new Date(a.creado_en)))})`,
-      )
-      .join(", ")
-  );
+/** «a», «a y b», «a, b y c». */
+function unirConY(partes: readonly string[]): string {
+  if (partes.length <= 1) return partes.join("");
+  return `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
+}
+
+/** Nombra hasta `max` elementos y dice cuántos más hay. */
+function algunos(partes: readonly string[], max: number): string {
+  const resto = partes.length - max;
+  return resto > 0 ? `${partes.slice(0, max).join(", ")} y ${resto} más` : unirConY(partes);
+}
+
+const horaLocal = (d: Date) =>
+  `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+/** Tono de una tarjeta del resumen: decide sus colores. */
+export type TonoTarjeta = "exito" | "neutro" | "primario" | "aviso" | "peligro";
+
+export interface TarjetaResumen {
+  id: "dias" | "plan-b" | "ayuda" | "sin-terminar" | "urgencias";
+  tono: TonoTarjeta;
+  /** Lo primero, en negrita: «Plan B activado 1 vez:». */
+  titulo: string;
+  /** El detalle: «Huerto (lunes 23).». */
+  texto: string;
 }
 
 /**
- * Frases del cuadro «Resumen del periodo»: Plan B activados, peticiones de ayuda y urgencias sin
- * atender. Si no ha pasado nada de eso, una sola frase que lo dice.
+ * Tarjetas del bloque «Resumen del periodo», de arriba abajo: días con todo hecho (si el periodo
+ * tiene más de un día), Plan B, peticiones de ayuda y, solo si los hay, tareas sin terminar o
+ * bloqueadas y urgencias sin atender. Como mucho 5, para que quepan sin scroll.
  */
-export function frasesResumen(p: ProgresoAlumno, maxDetalle = 3): string[] {
-  const frases: string[] = [];
+export function tarjetasResumen(p: ProgresoAlumno, maxDetalle = 2): TarjetaResumen[] {
+  const unDia = p.desde === p.hasta;
+  // En un día basta con la hora; en una semana o un mes, el día.
+  const cuandoTarea = (t: TareaProgreso) =>
+    unDia ? (t.hora ?? "sin hora") : textoDiaSinMes(t.fecha);
+  const tarjetas: TarjetaResumen[] = [];
+
+  if (!unDia && p.dias.length) {
+    const completos = p.dias.filter((d) => d.total > 0 && d.hechas === d.total);
+    const cuales =
+      completos.length && completos.length <= maxDetalle
+        ? ` (${unirConY(completos.map((d) => textoDiaSinMes(d.fecha)))})`
+        : "";
+    tarjetas.push({
+      id: "dias",
+      tono: "exito",
+      titulo: "Días con todo hecho:",
+      texto: `${completos.length} de ${p.dias.length}${cuales}.`,
+    });
+  }
+
   const conPlanB = p.tareas.filter((t) => t.plan_b);
-  if (conPlanB.length) {
-    const lista = conPlanB
-      .slice(0, maxDetalle)
-      .map((t) => `${t.titulo} (${textoDiaCorto(t.fecha)})`)
-      .join(", ");
-    const resto = conPlanB.length > maxDetalle ? ` y ${conPlanB.length - maxDetalle} más` : "";
-    frases.push(`Plan B activado ${vecesTexto(conPlanB.length)}: ${lista}${resto}.`);
-  }
+  tarjetas.push(
+    conPlanB.length
+      ? {
+          id: "plan-b",
+          tono: "neutro",
+          titulo: `Plan B activado ${vecesTexto(conPlanB.length)}:`,
+          texto: `${algunos(
+            conPlanB.map((t) => `${t.titulo} (${cuandoTarea(t)})`),
+            maxDetalle,
+          )}.`,
+        }
+      : { id: "plan-b", tono: "neutro", titulo: "Plan B:", texto: "no se ha activado." },
+  );
+
   if (p.avisos.length) {
-    const resto = p.avisos.length > maxDetalle ? ` y ${p.avisos.length - maxDetalle} más` : "";
-    frases.push(
-      `Ha pedido ayuda ${vecesTexto(p.avisos.length)}: ${listaAvisos(p.avisos.slice(0, maxDetalle))}${resto}.`,
-    );
-    const sinAtender = p.avisos.filter((a) => a.urgencia && !a.atendido).length;
-    if (sinAtender)
-      frases.push(
-        sinAtender === 1
-          ? "Hay 1 urgencia sin marcar como atendida."
-          : `Hay ${sinAtender} urgencias sin marcar como atendidas.`,
-      );
+    const porNecesidad = new Map<string, number>();
+    for (const a of p.avisos)
+      porNecesidad.set(a.necesidad, (porNecesidad.get(a.necesidad) ?? 0) + 1);
+    const grupos = [...porNecesidad.entries()]
+      .sort((x, y) => y[1] - x[1])
+      .map(([necesidad, n]) => `${etiquetaNecesidad(necesidad).toLowerCase()} (${n})`);
+    tarjetas.push({
+      id: "ayuda",
+      tono: "primario",
+      titulo: `Ha pedido ayuda ${vecesTexto(p.avisos.length)}:`,
+      texto: `${algunos(grupos, 3)}.`,
+    });
+  } else {
+    tarjetas.push({
+      id: "ayuda",
+      tono: "primario",
+      titulo: "Ayuda:",
+      texto: "no ha pedido ayuda.",
+    });
   }
-  if (!frases.length) frases.push("Sin Plan B ni peticiones de ayuda en este periodo.");
-  return frases;
+
+  const sinTerminar = p.tareas.filter(
+    (t) => t.estado === "pendiente" && t.pendiente_motivo === "tiempo_agotado",
+  );
+  const bloqueadas = p.tareas.filter((t) => t.estado === "bloqueada");
+  if (sinTerminar.length || bloqueadas.length) {
+    const titulo =
+      sinTerminar.length && bloqueadas.length
+        ? "Sin terminar o bloqueadas:"
+        : sinTerminar.length
+          ? "Sin terminar a tiempo:"
+          : "Bloqueadas:";
+    const ambas = Boolean(sinTerminar.length && bloqueadas.length);
+    const partes = [
+      ...sinTerminar.map((t) => `${t.titulo} (${cuandoTarea(t)})`),
+      ...bloqueadas.map((t) => `${t.titulo} (${ambas ? "bloqueada, " : ""}${cuandoTarea(t)})`),
+    ];
+    tarjetas.push({
+      id: "sin-terminar",
+      tono: "aviso",
+      titulo,
+      texto: `${algunos(partes, maxDetalle)}.`,
+    });
+  }
+
+  const urgencias = p.avisos.filter((a) => a.urgencia && !a.atendido);
+  if (urgencias.length) {
+    // creado_en viene en UTC: el día y la hora se cuentan en la hora local de la tableta.
+    const cuando = urgencias.map((a) => {
+      const d = new Date(a.creado_en);
+      return unDia ? `a las ${horaLocal(d)}` : `${textoDiaSinMes(aISO(d))} a las ${horaLocal(d)}`;
+    });
+    tarjetas.push({
+      id: "urgencias",
+      tono: "peligro",
+      titulo:
+        urgencias.length === 1
+          ? "Urgencia sin atender:"
+          : `${urgencias.length} urgencias sin atender:`,
+      texto: `${algunos(cuando, maxDetalle)}.`,
+    });
+  }
+
+  return tarjetas;
 }
 
 /** Reparte una lista en páginas de `porPagina` elementos (al menos uno por página). */
