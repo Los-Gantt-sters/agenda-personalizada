@@ -1,6 +1,6 @@
 /**
  * Recuento del comedor y parte del día para Cocina (HU-12 · SCRUM-102 · T-12.1).
- * Llama a las funciones de supabase/migrations/20261125100000_recuento_comedor.sql:
+ * Llama a las funciones de supabase/migrations/20261127100000_recuento_comedor.sql:
  * - Pantalla 11 (alumno encargado): clases con sus compañeros y confirmar quién falta en cada una.
  * - Pantalla 54 (Cocina): menús por tipo y total de comensales restando a los que faltan hoy,
  *   aulas confirmadas, la última clase confirmada y las alergias de los que comen.
