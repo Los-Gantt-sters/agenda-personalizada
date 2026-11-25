@@ -57,7 +57,7 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/tests/secuencia_dia_test.sql \
          supabase/migrations/20261124000000_aulas_configurables.sql \
          supabase/migrations/20261124100000_menus_y_alergias.sql \
-         supabase/migrations/20261125100000_recuento_comedor.sql \
+         supabase/migrations/20261127100000_recuento_comedor.sql \
          supabase/tests/auto_pendiente_test.sql \
          supabase/tests/recuento_comedor_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
@@ -77,7 +77,7 @@ Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`, `NOTICE: 
 
 ## Recuento del comedor y parte del día (SCRUM-102 · T-12.1, HU-12)
 
-Cada mañana un alumno encargado pasa por las clases y apunta **quién falta** (pantalla 11); Cocina ve al momento cuántos menús de cada tipo preparar (pantalla 54). Migración `20261125100000_recuento_comedor.sql`:
+Cada mañana un alumno encargado pasa por las clases y apunta **quién falta** (pantalla 11); Cocina ve al momento cuántos menús de cada tipo preparar (pantalla 54). Migración `20261127100000_recuento_comedor.sql`:
 
 - **Rol `cocina`** en `perfiles`: la cocina entra con su propia cuenta.
 - **Marca `encargado_comedor`** en `perfiles`: solo los alumnos marcados (más tutores y admin) hacen el recuento; si cualquier alumno pudiera, podría falsear el parte de cocina. De momento se marca desde la base de datos. Las funciones comprueban además que la cuenta esté **activa**.
