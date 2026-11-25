@@ -48,7 +48,7 @@ describe("Pantalla 08b «Pronto cambia la actividad» (SCRUM-264: T-08.6)", () =
     vibrar.mockRestore();
   });
 
-  /** Agenda con «Lavarse las manos» en curso, abierta como la ve el alumno. */
+  /** Agenda con «Lavarse las manos» en curso, abierta como la ve el alumno (paso a paso, 07). */
   async function abrirConTareaEnCurso() {
     const hoy = agendaDemoAviso(hoyISO()).map((e) =>
       e.id === "e2"
@@ -101,19 +101,19 @@ describe("Pantalla 08b «Pronto cambia la actividad» (SCRUM-264: T-08.6)", () =
 
   it("«Vale» devuelve al alumno a la tarea, en el mismo paso", async () => {
     const { hoy, repo, user } = await abrirConTareaEnCurso();
-    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
-    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 2" }));
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 3" }));
 
     await hastaElAviso(hoy);
     expect(screen.getByTestId("pantalla-aviso")).toBeTruthy();
-    expect(screen.queryByTestId("pantalla-tarea-en-curso")).toBeNull();
+    expect(screen.queryByTestId("pantalla-07-pasos")).toBeNull();
 
     await act(async () => jest.advanceTimersByTime(BLOQUEO_AL_APARECER_MS));
     await user.press(screen.getByTestId("aviso-vale"));
 
     expect(screen.queryByTestId("pantalla-aviso")).toBeNull();
-    expect(screen.getByTestId("pantalla-tarea-en-curso")).toBeTruthy();
-    expect(screen.getByLabelText("Paso 3 de 4: Frota las manos.")).toBeTruthy();
+    expect(screen.getByTestId("pantalla-07-pasos")).toBeTruthy();
+    expect(screen.getByLabelText("Paso 3 de 4: Frota las manos")).toBeTruthy();
     const servidor = await repo.obtenerSecuenciaDia(hoy[0].estudiante_id, hoy[0].fecha);
     expect(servidor.find((e) => e.id === "e2")?.estado).toBe("en_curso");
   });
@@ -125,7 +125,7 @@ describe("Pantalla 08b «Pronto cambia la actividad» (SCRUM-264: T-08.6)", () =
 
     await user.press(screen.getByTestId("btn-barra-atras"));
 
-    expect(screen.getByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    expect(screen.getByTestId("pantalla-07-pasos")).toBeTruthy();
     const servidor = await repo.obtenerSecuenciaDia(hoy[0].estudiante_id, hoy[0].fecha);
     expect(servidor.find((e) => e.id === "e2")?.estado).toBe("en_curso");
   });
@@ -133,7 +133,10 @@ describe("Pantalla 08b «Pronto cambia la actividad» (SCRUM-264: T-08.6)", () =
   it("no interrumpe «¿Has terminado?»: sale al volver a la tarea", async () => {
     const { hoy, user } = await abrirConTareaEnCurso();
     await act(async () => jest.advanceTimersByTime(BLOQUEO_AL_APARECER_MS));
-    await user.press(screen.getByRole("button", { name: "Terminar" }));
+    // HU-10: «Terminar tarea» está en el último paso de la 07.
+    for (const n of [2, 3, 4])
+      await user.press(screen.getByRole("button", { name: `Siguiente: paso ${n}` }));
+    await user.press(screen.getByRole("button", { name: "Terminar tarea" }));
     expect(screen.getByTestId("pantalla-confirmar-fin")).toBeTruthy();
 
     await hastaElAviso(hoy);
@@ -153,7 +156,7 @@ describe("Pantalla 08b «Pronto cambia la actividad» (SCRUM-264: T-08.6)", () =
     await act(async () => jest.advanceTimersByTime(hastaInicio));
 
     expect(screen.queryByTestId("pantalla-aviso")).toBeNull();
-    expect(screen.getByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    expect(screen.getByTestId("pantalla-07-pasos")).toBeTruthy();
   });
 
   it("se quita si el tutor bloquea la tarea que venía", async () => {

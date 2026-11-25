@@ -34,8 +34,12 @@ describe("SCRUM-92 · FlujoTareasPersonales (Flujo integrado HU-07)", () => {
     expect(screen.getByText("Pictograma actual: Toallitas húmedas")).toBeTruthy();
     await fireEvent.press(screen.getByLabelText("Pasos"));
 
+    // 4b. HU-10: Pantalla 28s (pasos y multimedia) -> «Guardar»
+    expect(await screen.findByTestId("pantalla-28s-editor-pasos")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Guardar" }));
+
     // 5. Pantalla 28ok (Confirmación) -> «Aceptar» vuelve a 31
-    expect(screen.getByTestId("pantalla-28ok-confirmacion")).toBeTruthy();
+    expect(await screen.findByTestId("pantalla-28ok-confirmacion")).toBeTruthy();
     expect(screen.getByText("Higiene con toallitas")).toBeTruthy();
     await fireEvent.press(screen.getByLabelText("Aceptar"));
 
@@ -93,8 +97,11 @@ describe("SCRUM-92 · FlujoTareasPersonales (Flujo integrado HU-07)", () => {
       "Lavarse las manos (Alejandro)",
     );
     await fireEvent.press(screen.getByLabelText("Pasos"));
+    // HU-10: los pasos se configuran en 28s antes de la confirmación.
+    await screen.findByTestId("pantalla-28s-editor-pasos");
+    await fireEvent.press(screen.getByRole("button", { name: "Guardar" }));
 
-    expect(screen.getByTestId("pantalla-28ok-confirmacion")).toBeTruthy();
+    expect(await screen.findByTestId("pantalla-28ok-confirmacion")).toBeTruthy();
     expect(
       screen.getByText(
         "Los cambios de la tarea se han guardado únicamente para el alumno Alejandro Pérez.",
@@ -111,5 +118,41 @@ describe("SCRUM-92 · FlujoTareasPersonales (Flujo integrado HU-07)", () => {
         }),
       }),
     );
+  });
+});
+
+describe("HU-10 (SCRUM-95): editor de pasos 28s dentro del flujo 28 -> 28s -> 28ok", () => {
+  it("abre 28s con tantos pasos como se eligieron en 28, «Atrás» vuelve a 28 y «Guardar» a 28ok", async () => {
+    await render(<FlujoTareasPersonales rol="tutor" pantallaInicial="28" />);
+    expect(screen.getByTestId("texto-contador-pasos-28")).toHaveTextContent("5 pasos");
+    await fireEvent.press(screen.getByLabelText("Disminuir número de pasos"));
+    await fireEvent.press(screen.getByLabelText("Pasos"));
+
+    expect(await screen.findByTestId("pantalla-28s-editor-pasos")).toBeTruthy();
+    expect(screen.getByText("Pasos de la tarea (4)")).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId("btn-barra-atras"));
+    expect(screen.getByTestId("pantalla-28-editor-tarea")).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText("Pasos"));
+    await screen.findByTestId("pantalla-28s-editor-pasos");
+    await fireEvent.press(screen.getByTestId("btn-28s-anadir"));
+    await fireEvent.changeText(screen.getByTestId("campo-titulo-paso"), "Cierra el grifo");
+    await fireEvent.press(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByTestId("pantalla-28ok-confirmacion")).toBeTruthy();
+  });
+
+  it("«Elegir pictograma» en 28s abre el buscador 28p de la HU-07 (ARASAAC + Mi biblioteca)", async () => {
+    await render(<FlujoTareasPersonales rol="tutor" pantallaInicial="28" />);
+    await fireEvent.press(screen.getByLabelText("Pasos"));
+    await screen.findByTestId("pantalla-28s-editor-pasos");
+
+    await fireEvent.press(screen.getByTestId("btn-28s-elegir-picto"));
+    expect(screen.getByTestId("pantalla-28p-buscador-pictogramas")).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("tarjeta-picto-28p-p-mio-toallitas"));
+    await fireEvent.press(screen.getByLabelText("Seleccionar"));
+
+    expect(screen.getByTestId("pantalla-28s-editor-pasos")).toBeTruthy();
   });
 });

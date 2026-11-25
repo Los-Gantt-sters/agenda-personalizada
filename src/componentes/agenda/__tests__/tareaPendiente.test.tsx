@@ -109,7 +109,8 @@ describe("Pantalla 10b «Retomar tarea» (SCRUM-264: T-08.6)", () => {
     await user.press(await screen.findByTestId("mini-e2"));
 
     await user.press(screen.getByTestId("retomar-tarea"));
-    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    // HU-10: «Lavarse las manos» tiene pasos, así que se retoma en la 07.
+    expect(await screen.findByTestId("pantalla-07-pasos")).toBeTruthy();
 
     await user.press(screen.getByTestId("btn-barra-atras"));
     const tarjeta = await screen.findByTestId("mini-e2");
@@ -127,9 +128,9 @@ describe("Pantalla 10b «Retomar tarea» (SCRUM-264: T-08.6)", () => {
         : e,
     );
     const { tutor, user } = await abrir(enCurso);
-    await screen.findByTestId("pantalla-tarea-en-curso");
-    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
-    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
+    await screen.findByTestId("pantalla-07-pasos");
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 2" }));
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 3" }));
 
     // Se le acaba el tiempo con la tarea a medias: sale su 10b (SCRUM-266).
     tutor.modificar("e2", { estado: "pendiente", pendiente_motivo: "tiempo_agotado" });
@@ -140,7 +141,7 @@ describe("Pantalla 10b «Retomar tarea» (SCRUM-264: T-08.6)", () => {
 
     await user.press(screen.getByTestId("retomar-tarea"));
 
-    expect(await screen.findByLabelText("Paso 3 de 4: Frota las manos.")).toBeTruthy();
+    expect(await screen.findByLabelText("Paso 3 de 4: Frota las manos")).toBeTruthy();
   });
 
   it("una familia la ve, pero no la puede retomar", async () => {

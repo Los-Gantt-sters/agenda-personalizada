@@ -3,6 +3,8 @@
  * - Pantalla 31: Biblioteca de tareas unificada (Tutor / Familia aislados por rol).
  * - Pantalla 28: Crear o editar tarea (Datos generales + número de pasos, sin pestañas superiores ni Plan B).
  * - Pantalla 28p: Buscador general de pictogramas (ARASAAC + Mi biblioteca).
+ * - Pantalla 28s (HU-10, SCRUM-95): pasos y multimedia de la tarea. «Pasos» en 28 lleva aquí;
+ *   «Atrás» vuelve a 28 y «Guardar» guarda los pasos y lleva a 28ok.
  * - Pantalla 28ok: Confirmación «¡Tarea editada correctamente!» (vuelve a 31 o a 39/40 si se editó solo para un alumno).
  * - Pantalla 28b: Asignar tarea a clase y alumnos (todos marcados por defecto).
  * - Pantalla 28c: Programar horario único (08:00–15:00 Tutor vs 15:00–08:00 Familia).
@@ -20,14 +22,46 @@ import { BuscadorPictogramas28p } from "./BuscadorPictogramas28p";
 import { ConfirmacionTarea28ok } from "./ConfirmacionTarea28ok";
 import {
   CATALOGO_BIBLIOTECA_31,
+  PASOS_EDITOR_28_DEMO,
   type PictogramaBuscador28p,
   type RolBibliotecaAdulto,
   type TareaBiblioteca31,
 } from "./datosTareasPersonales";
 import { EditorTarea28, type DatosGeneralesTarea28 } from "./EditorTarea28";
+import { EditorPasos28s } from "../pasos/EditorPasos28s";
+import { crearRepositorioPasosMemoria } from "../pasos/repositorioPasosMemoria";
+import type { PasoTarea } from "../agenda/tipos";
+import type { RepositorioPasos } from "../../servicios/pasosService";
 import { ProgramarHorario28c, type DatosGuardadoHorario28c } from "./ProgramarHorario28c";
 
-export type PantallaFlujoTareas = "31" | "28" | "28p" | "28ok" | "28b" | "28c";
+export type PantallaFlujoTareas = "31" | "28" | "28p" | "28s" | "28ok" | "28b" | "28c";
+
+/** Clave de la tarea para los pasos de 28s (las nuevas aún no tienen id). */
+const TAREA_NUEVA = "nueva";
+
+/**
+ * Pasos con los que se abre 28s la primera vez: los de la vista previa de 28, tantos como diga
+ * «¿Cuántos pasos tiene la tarea?» (y vacíos si faltan).
+ */
+export function pasosInicialesDe28(
+  tarea: Pick<TareaBiblioteca31, "pasos"> | undefined,
+  pasosCount: number,
+): PasoTarea[] {
+  const base = tarea?.pasos ?? PASOS_EDITOR_28_DEMO;
+  return Array.from({ length: pasosCount }, (_, i) => {
+    const p = base[i];
+    return p
+      ? {
+          orden: i + 1,
+          titulo: p.titulo.replace(/^Paso \d+:\s*/, ""),
+          texto: "",
+          pictograma_id: p.pictogramaId,
+          pictograma_url: p.pictogramaUrl,
+          pictograma_origen: "arasaac" as const,
+        }
+      : { orden: i + 1, titulo: "", texto: "" };
+  });
+}
 
 export interface FlujoTareasPersonalesProps {
   /** Rol activo: `"tutor"` (08:00–15:00) o `"familia"` (15:00–08:00). */
@@ -59,6 +93,11 @@ export interface FlujoTareasPersonalesProps {
   alHorarioGuardado?: (horario: DatosGuardadoHorario28c) => void;
   /** Acción para cerrar sesión. */
   alCerrarSesion?: () => void;
+  /**
+   * Dónde se guardan los pasos de 28s: Supabase (`repositorioPasosSupabase`) o, por defecto,
+   * en memoria (demo y pruebas).
+   */
+  repoPasos?: RepositorioPasos;
 }
 
 /**
@@ -78,8 +117,13 @@ export function FlujoTareasPersonales({
   alVolverAgendaAlumno,
   alHorarioGuardado,
   alCerrarSesion,
+  repoPasos,
 }: FlujoTareasPersonalesProps) {
   const [pantalla, setPantalla] = useState<PantallaFlujoTareas>(pantallaInicial);
+  const repoMemoria = useMemo(() => crearRepositorioPasosMemoria(), []);
+  const repo = repoPasos ?? repoMemoria;
+  // Pasos ya guardados en esta sesión, por tarea, para volver a abrir 28s con ellos.
+  const [pasosPorTarea, setPasosPorTarea] = useState<Record<string, PasoTarea[]>>({});
   const [catalogo, setCatalogo] = useState<TareaBiblioteca31[]>(catalogoInicial);
   const [alumnoEditado, setAlumnoEditado] = useState<string | null>(alumnoEditadoInicial);
 
@@ -160,8 +204,17 @@ export function FlujoTareasPersonales({
     setPantalla("28");
   };
 
+  // «Pasos» en 28: guarda el borrador y abre 28s.
   const manejarContinuarPasos28 = (datos: DatosGeneralesTarea28) => {
     setBorrador28(datos);
+    setPantalla("28s");
+  };
+
+  // «Guardar» en 28s: guarda la tarea con el número de pasos final y va a 28ok.
+  const manejarPasosGuardados28s = (pasos: PasoTarea[]) => {
+    const datos = { ...borrador28, pasosCount: Math.max(1, pasos.length) };
+    setBorrador28(datos);
+    setPasosPorTarea((prev) => ({ ...prev, [tareaActivaId ?? TAREA_NUEVA]: pasos }));
     const resultado = aplicarGuardadoTarea28(
       catalogo,
       rol,
@@ -211,6 +264,40 @@ export function FlujoTareasPersonales({
           setPantalla("31");
         }}
         alCerrarSesion={alCerrarSesion}
+      />
+    );
+  }
+
+  if (pantalla === "28s") {
+    const clave = tareaActivaId ?? TAREA_NUEVA;
+    const tarea = catalogo.find((t) => t.id === tareaActivaId);
+    return (
+      <EditorPasos28s
+        key={clave}
+        tareaId={clave}
+        repo={repo}
+        pasosIniciales={pasosPorTarea[clave] ?? pasosInicialesDe28(tarea, borrador28.pasosCount)}
+        nombreAdulto={nombreUsuario}
+        alSalir={alCerrarSesion}
+        alAtras={() => setPantalla("28")}
+        onGuardado={manejarPasosGuardados28s}
+        // 28p de la HU-07: ARASAAC y «Mi biblioteca».
+        BuscadorPictograma={({ alElegir, alAtras }) => (
+          <BuscadorPictogramas28p
+            rol={rol}
+            nombreUsuario={nombreUsuario}
+            alSeleccionarPictograma={(picto) => {
+              if (!picto) return alAtras();
+              alElegir({
+                id: picto.pictogramaId,
+                url: picto.pictogramaUrl,
+                origen: picto.fuente === "mio" ? "propio" : "arasaac",
+              });
+            }}
+            alAtras={alAtras}
+            alCerrarSesion={alCerrarSesion}
+          />
+        )}
       />
     );
   }

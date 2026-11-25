@@ -7,11 +7,40 @@ export type EstadoEntrada = "pendiente" | "en_curso" | "hecha" | "cancelada" | "
 /** T-08.6: por qué una tarea se quedó a medias y se puede retomar (pantalla 10b). */
 export type MotivoPendiente = "tiempo_agotado" | "profesor";
 
+/**
+ * HU-10: foto, vídeo o audio de un paso. Los archivos subidos se guardan por `ruta` en el bucket
+ * privado multimedia-pasos y la app los ve con una URL firmada que caduca (`url`).
+ */
+export interface RecursoPaso {
+  /** Ruta en el bucket multimedia-pasos (<tarea>/<foto|video|audio>/<archivo>). */
+  ruta?: string | null;
+  /** URL para verlo: la firmada de Storage o una externa. */
+  url?: string | null;
+  tipo_mime?: string | null;
+  tamano_bytes?: number | null;
+  duracion_segundos?: number | null;
+  /** Texto alternativo (lectores de pantalla). */
+  descripcion?: string | null;
+}
+
+/** HU-10 (07): los 5 botones de debajo del paso. */
+export type FormatoPaso = "pictograma" | "texto" | "foto" | "video" | "audio";
+
 export interface PasoTarea {
+  /** Id en pasos_tarea (no lo tienen los pasos nuevos del editor 28s hasta que se guardan). */
+  id?: string | null;
   orden: number;
-  /** Texto en Lectura Fácil. */
+  /** HU-10: título corto del paso («Abre el grifo»). Si falta, se usa el texto. */
+  titulo?: string | null;
+  /** Texto en Lectura Fácil (07b). */
   texto: string;
   pictograma_url?: string | null;
+  pictograma_id?: number | null;
+  pictograma_origen?: "arasaac" | "propio" | null;
+  /** HU-10: foto real (07c), vídeo (07d) y audio grabado del paso. */
+  foto?: RecursoPaso | null;
+  video?: RecursoPaso | null;
+  audio?: RecursoPaso | null;
 }
 
 export interface Tarea {
@@ -26,6 +55,8 @@ export interface Tarea {
   audio_url?: string | null;
   video_url?: string | null;
   pasos?: PasoTarea[] | null;
+  /** HU-10: formatos que el profesor deja elegir al alumno en 07. Si falta, los 5. */
+  formatos_permitidos?: FormatoPaso[] | null;
 }
 
 export interface EntradaAgenda {

@@ -44,6 +44,8 @@ export interface PantallaProps {
   etiquetaAdelante?: string;
   /** Texto visible de «Adelante» cuando avanzar es una acción concreta («Entrar»). */
   textoAdelante?: string;
+  /** HU-10: «Adelante» en verde («Terminar tarea» en el último paso). */
+  adelanteVerde?: boolean;
   /** Sonido suave al pulsar Atrás y Adelante (pantallas del alumno, T-01.3). */
   conSonido?: boolean;
   /** Sin botón «Ayuda» (pantallas de entrar). El hueco se queda para no mover las flechas. */
@@ -86,6 +88,7 @@ export function Pantalla({
   etiquetaAtras = "Atrás",
   etiquetaAdelante,
   textoAdelante = "Adelante",
+  adelanteVerde = false,
   conSonido = false,
   sinAyuda = false,
   sinAccesibilidad = false,
@@ -116,6 +119,7 @@ export function Pantalla({
           etiquetaAtras={etiquetaAtras}
           etiquetaAdelante={etiquetaAdelante}
           textoAdelante={textoAdelante}
+          adelanteVerde={adelanteVerde}
           conSonido={conSonido}
           testID={testID}
           barraIzquierda={

@@ -3,6 +3,7 @@
 // imagen no carga (sin conexión).
 // HU-08: todas las tareas piden pulsar «Empezar» antes de «Terminar» (lo normal, RF6.8).
 // HU-16: agendaDemoAviso mueve las horas para probar el aviso de 5 minutos sin esperar.
+// HU-10: «Lavarse las manos» tiene pasos: «Empezar» abre la 07 y «Mostrar pasos», la 07f.
 import type { EntradaAgenda, MotivoPendiente, Tarea } from "./tipos";
 import { urlImagenPictograma } from "../../arasaac/urls";
 
@@ -39,11 +40,32 @@ export function agendaDemo(fecha: string): EntradaAgenda[] {
       45,
       T("t2", "Lavarse las manos", "🧼", 8975, {
         descripcion: "Antes del desayuno nos lavamos las manos.",
+        // HU-10: cada paso con título corto y texto en Lectura Fácil (07 y 07b).
         pasos: [
-          { orden: 1, texto: "Abre el grifo.", pictograma_url: arasaac(2414) },
-          { orden: 2, texto: "Pon jabón en las manos.", pictograma_url: arasaac(2964) },
-          { orden: 3, texto: "Frota las manos.", pictograma_url: arasaac(8251) },
-          { orden: 4, texto: "Aclara y seca las manos.", pictograma_url: arasaac(2566) },
+          {
+            orden: 1,
+            titulo: "Abre el grifo",
+            texto: "Gira el grifo despacio para que salga agua templada.",
+            pictograma_url: arasaac(2414),
+          },
+          {
+            orden: 2,
+            titulo: "Echa jabón",
+            texto: "Pon una gota de jabón en la palma de tu mano.",
+            pictograma_url: arasaac(2964),
+          },
+          {
+            orden: 3,
+            titulo: "Frota las manos",
+            texto: "Frota las palmas y entre los dedos durante 20 segundos.",
+            pictograma_url: arasaac(8251),
+          },
+          {
+            orden: 4,
+            titulo: "Aclara y sécate",
+            texto: "Quita la espuma con agua y sécate bien las dos manos con la toalla.",
+            pictograma_url: arasaac(2566),
+          },
         ],
       }),
       "pendiente",
