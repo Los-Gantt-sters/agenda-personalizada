@@ -186,6 +186,11 @@ export default function ConsolaVinculos() {
             etiqueta="Ir a menús, dietas y alergias"
             alPulsar={() => router.push("/admin/menus")}
           />
+          <Boton
+            texto="Códigos QR de la visita"
+            etiqueta="Ir a crear e imprimir los códigos QR de la visita"
+            alPulsar={() => router.push("/admin/codigos-qr")}
+          />
           <Texto style={estilos.avisoProvisional}>
             Acceso provisional: se quitará cuando esté el panel de administración (pantalla 48).
           </Texto>
