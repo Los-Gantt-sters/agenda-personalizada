@@ -14,9 +14,101 @@ import { reproducirSonido } from "./sonidos";
 
 export type ListenerAlertasSos = (alertas: AlertaSosTutor[]) => void;
 
+export interface ContextoActivoAlumnoSos {
+  alumnoId: string;
+  nombreAlumno: string;
+  salaActual: string;
+  tareaActiva: string;
+  actualizadoEnIso?: string;
+}
+
+const CONTEXTOS_POR_DEFECTO: Record<string, ContextoActivoAlumnoSos> = {
+  ale: {
+    alumnoId: "ale",
+    nombreAlumno: "Alejandro",
+    salaActual: "Clase Triángulo",
+    tareaActiva: "Lavarse las manos",
+  },
+  mar: {
+    alumnoId: "mar",
+    nombreAlumno: "Marcos",
+    salaActual: "Clase Triángulo",
+    tareaActiva: "Asamblea",
+  },
+  luc: {
+    alumnoId: "luc",
+    nombreAlumno: "Lucas",
+    salaActual: "Clase Cuadrado",
+    tareaActiva: "Lavarse las manos",
+  },
+};
+
+let contextosAlumnos = new Map<string, ContextoActivoAlumnoSos>(
+  Object.entries(CONTEXTOS_POR_DEFECTO),
+);
 let alertasEnMemoria: AlertaSosTutor[] = [...ALERTAS_SOS_INICIALES_47];
 const suscriptores = new Set<ListenerAlertasSos>();
 let temporizadorAlarma: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Registra la última sala/aula y la tarea activa que está realizando un alumno,
+ * para adjuntarlas automáticamente si pulsa el botón de Ayuda o Urgencia (SCRUM-129 · T-19.3).
+ * @param contexto Datos de sala actual y tarea activa del alumno
+ */
+export function registrarContextoActivoAlumno(contexto: ContextoActivoAlumnoSos): void {
+  contextosAlumnos.set(contexto.alumnoId, {
+    ...contexto,
+    actualizadoEnIso: contexto.actualizadoEnIso ?? new Date().toISOString(),
+  });
+}
+
+/**
+ * Obtiene el último contexto registrado (sala actual y tarea activa) de un alumno.
+ * @param alumnoId Identificador del alumno
+ * @returns Contexto activo del alumno con sala y tarea en curso
+ */
+export function obtenerContextoActivoAlumno(alumnoId: string): ContextoActivoAlumnoSos {
+  return (
+    contextosAlumnos.get(alumnoId) ?? {
+      alumnoId,
+      nombreAlumno: "Alejandro",
+      salaActual: "Clase Triángulo",
+      tareaActiva: "Lavarse las manos",
+    }
+  );
+}
+
+/**
+ * Emite una alerta SOS push adjuntando automáticamente la última sala registrada
+ * y la tarea activa del alumno en ese instante (SCRUM-129 · T-19.3).
+ * @param alumnoId Identificador del alumno que solicita auxilio
+ * @param claveNecesidad Necesidad o urgencia pulsada
+ * @param opciones Opciones adicionales (`id`, `tiempoTexto`, `intervaloAlarmaMs`)
+ * @returns La alerta SOS generada con la sala y tarea activa del alumno
+ */
+export function emitirAlertaSosConContextoActivo(
+  alumnoId: string,
+  claveNecesidad: ClaveNecesidad,
+  opciones?: {
+    id?: string;
+    tiempoTexto?: string;
+    intervaloAlarmaMs?: number;
+  },
+): AlertaSosTutor {
+  const ctx = obtenerContextoActivoAlumno(alumnoId);
+  return emitirAlertaSosPush(
+    {
+      id: opciones?.id,
+      alumnoId: ctx.alumnoId,
+      nombreAlumno: ctx.nombreAlumno,
+      claveNecesidad,
+      tareaActiva: ctx.tareaActiva,
+      salaActual: ctx.salaActual,
+      tiempoTexto: opciones?.tiempoTexto,
+    },
+    opciones?.intervaloAlarmaMs,
+  );
+}
 
 function notificarSuscriptores(): void {
   const copia = [...alertasEnMemoria];
@@ -149,6 +241,9 @@ export function reiniciarAlertasSosDemo(
   iniciales: AlertaSosTutor[] = ALERTAS_SOS_INICIALES_47,
 ): void {
   detenerAlarmaAcusticaSos();
+  contextosAlumnos = new Map<string, ContextoActivoAlumnoSos>(
+    Object.entries(CONTEXTOS_POR_DEFECTO),
+  );
   alertasEnMemoria = [...iniciales];
   notificarSuscriptores();
 }
