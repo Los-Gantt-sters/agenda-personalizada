@@ -3,6 +3,8 @@ import { describe, expect, it } from "@jest/globals";
 import {
   CAJAS_LETRA,
   TAREAS_VISIBLES,
+  ORDEN_TAREAS_VISIBLES,
+  moverTareasVisibles,
   FORMAS_BOTON,
   FUENTES,
   MODOS_CANAL,
@@ -71,6 +73,14 @@ describe("mayúsculas y tareas que se ven (mejoras de la profesora)", () => {
     expect(TAREAS_VISIBLES.una.maximo).toBe(1);
     expect(TAREAS_VISIBLES.tres.maximo).toBe(3);
     expect(TAREAS_VISIBLES.todas.maximo).toBeGreaterThan(20);
+    // SCRUM-251 (boceto 24): de 1 a 5 y después «Todas».
+    expect(ORDEN_TAREAS_VISIBLES.map((t) => TAREAS_VISIBLES[t].maximo).slice(0, 5)).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
+    expect(moverTareasVisibles("tres", 1)).toBe("cuatro");
+    expect(moverTareasVisibles("cinco", 1)).toBe("todas");
+    expect(moverTareasVisibles("todas", 1)).toBe("todas");
+    expect(moverTareasVisibles("una", -1)).toBe("una");
   });
 
   it("normalizarPreferencias conserva caja y tareas válidas y sanea las demás", () => {
