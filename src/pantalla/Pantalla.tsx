@@ -1,14 +1,14 @@
 // Envoltorio común de todas las pantallas (mejoras de la profesora, noviembre de 2026):
 // - Cabecera arriba con el nombre de la pantalla: el alumno sabe siempre dónde está.
 // - Barra abajo, siempre igual y en el mismo sitio: «Ayuda» a la izquierda, «Atrás» y «Adelante»
-//   en el centro y «Accesibilidad» a la derecha. Así no hay que buscar los botones en cada pantalla
+//   en el centro y «Preferencias» a la derecha. Así no hay que buscar los botones en cada pantalla
 //   y quien tiene dificultades motoras los encuentra siempre a la misma distancia.
 // - En medio, el contenido: cabe en una sola pantalla, sin scroll.
-// - Sin ventanas emergentes: «Accesibilidad» abre una pantalla completa encima de esta (esta no se
-//   quita, así que al volver todo sigue igual). «Ayuda» la pinta ProveedorNecesidades, también como
-//   pantalla completa encima de todo.
-// - En las pantallas de administración no hay ni «Ayuda» ni «Accesibilidad» (sinAyuda y
-//   sinAccesibilidad): son para el alumnado. Los huecos se quedan vacíos.
+// - SCRUM-230: «Ayuda» y «Preferencias» SOLO salen con un alumno con sesión iniciada (nunca en
+//   01-05 ni con tutor, familia, administración o cocina; ver useBotonesAlumno). «Ayuda» la pinta
+//   ProveedorNecesidades como pantalla completa encima de todo.
+// - sinAyuda y sinAccesibilidad quitan además esos botones en pantallas concretas (las de entrar y
+//   el propio menú 16). Los huecos se quedan vacíos.
 // - En las pantallas de entrar (clase, foto y contraseña) no hay «Ayuda» (sinAyuda): el hueco se
 //   queda vacío para que las flechas sigan en el centro.
 // - En el navegador, la pestaña lleva el nombre de la pantalla («Mi agenda · Agensible»), no el de
@@ -22,6 +22,7 @@ import { useNecesidadesOpcional } from "../necesidades/ProveedorNecesidades";
 import { PantallaVistaAccesible } from "../preferencias/PantallaVistaAccesible";
 import { usePreferenciasOpcional } from "../preferencias/PreferenciasProvider";
 import { ALTO_BOTON_BARRA, ANCHO_BOTON_LADO, BotonBarra, MarcoPantalla } from "./MarcoPantalla";
+import { useBotonesAlumno } from "./useBotonesAlumno";
 
 export { ALTO_BOTON_BARRA } from "./MarcoPantalla";
 
@@ -48,7 +49,7 @@ export interface PantallaProps {
   conSonido?: boolean;
   /** Sin botón «Ayuda» (pantallas de entrar). El hueco se queda para no mover las flechas. */
   sinAyuda?: boolean;
-  /** Sin botón «Accesibilidad» (pantallas de administración). El hueco se queda para no mover las flechas. */
+  /** Sin botón «Preferencias» (p. ej. en el propio menú 16). El hueco se queda para no mover las flechas. */
   sinAccesibilidad?: boolean;
   children: ReactNode;
   testID?: string;
@@ -95,6 +96,7 @@ export function Pantalla({
   const router = useRouter();
   const necesidades = useNecesidadesOpcional();
   const prefs = usePreferenciasOpcional();
+  const { conAyuda, conPreferencias } = useBotonesAlumno();
   const [vistaAbierta, setVistaAbierta] = useState(false);
   const canal = prefs?.preferencias.canal ?? "ambos";
   const alMedir = useTituloPestana(titulo);
@@ -105,7 +107,7 @@ export function Pantalla({
 
   return (
     <View style={{ flex: 1 }} onLayout={alMedir}>
-      {/* Con la pantalla de Accesibilidad encima, la de debajo no se lee con el lector de pantalla. */}
+      {/* Con la pantalla de Preferencias encima, la de debajo no se lee con el lector de pantalla. */}
       <View style={{ flex: 1 }} aria-hidden={vistaAbierta}>
         <MarcoPantalla
           titulo={titulo}
@@ -119,7 +121,7 @@ export function Pantalla({
           conSonido={conSonido}
           testID={testID}
           barraIzquierda={
-            necesidades && !sinAyuda ? (
+            necesidades && conAyuda && !sinAyuda ? (
               <BotonNecesidades
                 onPress={necesidades.abrirModalNecesidades}
                 variante={necesidades.varianteBoton}
@@ -131,16 +133,16 @@ export function Pantalla({
             ) : null
           }
           barraDerecha={
-            prefs && !sinAccesibilidad ? (
+            prefs && conPreferencias && !sinAccesibilidad ? (
               <BotonBarra
                 icono="accesibilidad"
-                texto="Accesibilidad"
-                etiqueta="Accesibilidad: cómo se ve la pantalla"
+                texto="Preferencias"
+                etiqueta="Preferencias: cómo se ve la app"
                 canal={canal}
                 alPulsar={() => setVistaAbierta(true)}
                 ancho={ANCHO_BOTON_LADO}
                 textoPequeno
-                testID="btn-barra-accesibilidad"
+                testID="btn-barra-preferencias"
               />
             ) : null
           }
