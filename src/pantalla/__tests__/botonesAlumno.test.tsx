@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { Text } from "react-native";
 
 import { Pantalla } from "..";
+import { activarAlumnoDemo } from "../useBotonesAlumno";
 import { obtenerPermisoPreferencias } from "../../servicios/permisoPreferencias";
 import type { AuthSession, UserRole } from "../../tipos/auth";
 
@@ -84,6 +85,27 @@ describe("SCRUM-230: Ayuda y Preferencias solo con alumno con sesión iniciada",
     await pintar();
     await waitFor(() => expect(permiso).toHaveBeenCalled());
     expect(screen.getByTestId("btn-necesidades")).toBeTruthy();
+    expect(screen.queryByTestId("btn-barra-preferencias")).toBeNull();
+  });
+});
+
+describe("SCRUM-230: modo demo (/agenda?alumnoDemo=1)", () => {
+  afterEach(() => {
+    activarAlumnoDemo(false);
+    mockSesion = null;
+  });
+
+  it("sin sesión, el alumno de demostración ve «Ayuda» y «Preferencias»", async () => {
+    activarAlumnoDemo();
+    await pintar();
+    expect(screen.getByTestId("btn-necesidades")).toBeTruthy();
+    expect(screen.getByTestId("btn-barra-preferencias")).toBeTruthy();
+  });
+
+  it("no cambia nada si ha entrado un adulto", async () => {
+    activarAlumnoDemo();
+    mockSesion = sesionDe("tutor_docente", "tutor@colegio.es");
+    await pintar();
     expect(screen.queryByTestId("btn-barra-preferencias")).toBeNull();
   });
 });
