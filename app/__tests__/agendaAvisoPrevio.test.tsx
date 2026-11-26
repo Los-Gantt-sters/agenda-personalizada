@@ -1,6 +1,7 @@
 // SCRUM-240 (pantalla 25): con «Sin aviso previo» no sale el aviso de 5 minutos (08b).
-// Va en su propio archivo: al final de agenda.test.tsx le llegaban actualizaciones de las animaciones
-// de las pruebas anteriores fuera de act() y en el CI no salía la 08b a tiempo (SCRUM-236).
+// Los dos unmount() van con await: en Testing Library 14 devuelven una promesa y, sin esperarla, el
+// desmontaje se solapaba con el segundo render («overlapping act() calls»). En el CI a veces no salía
+// la 08b y Jest no terminaba hasta que vencía el temporizador del aviso (SCRUM-236).
 import { render, screen } from "@testing-library/react-native";
 
 import PantallaAgenda from "../agenda";
@@ -42,7 +43,7 @@ describe("Pantalla agenda del día: preferencia «Aviso previo» (pantalla 25)",
       // Con avisoPrevio="no" se ve la agenda normal y NO sale la pantalla 08b de aviso anticipado
       expect(await screen.findByTestId("bloque-ahora", {}, { timeout: 10_000 })).toBeTruthy();
       expect(screen.queryByTestId("pantalla-aviso")).toBeNull();
-      unmount();
+      await unmount();
 
       // En cambio, con avisoPrevio="si" (por defecto) a la misma hora (09:25) sí sale el aviso 08b
       const segundo = await render(
@@ -53,7 +54,7 @@ describe("Pantalla agenda del día: preferencia «Aviso previo» (pantalla 25)",
         </TemaProvider>,
       );
       expect(await screen.findByTestId("pantalla-aviso", {}, { timeout: 10_000 })).toBeTruthy();
-      segundo.unmount();
+      await segundo.unmount();
     } finally {
       jest.useRealTimers();
     }
