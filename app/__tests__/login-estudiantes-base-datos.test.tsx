@@ -118,6 +118,25 @@ describe("Acceso del alumno con aulas y alumnos de la base de datos (SCRUM-249)"
     expect(mockAulas).toHaveBeenCalledTimes(2);
   });
 
+  it("sin aulas en el curso activo dice «Todavía no hay clases» en vez de quedarse en blanco", async () => {
+    // Curso recién empezado: el administrador aún no ha creado sus aulas
+    const user = userEvent.setup();
+    mockAulas.mockResolvedValueOnce(ok([]));
+    await render(<LoginEstudiantesScreen />);
+
+    expect(await screen.findByText("Todavía no hay clases")).toBeTruthy();
+    expect(screen.getByTestId("aviso-sin-clases")).toBeTruthy();
+    // No se pide tocar nada que no está, y los adultos siguen pudiendo entrar a crearlas
+    expect(screen.queryByText("Toca la forma de tu clase")).toBeNull();
+    expect(screen.getByTestId("btn-acceso-supervisores")).toBeTruthy();
+    // Ni clases de prueba en su lugar
+    expect(screen.queryByTestId("tarjeta-clase-tri")).toBeNull();
+
+    // Cuando el administrador las crea, «Volver a probar» las trae sin recargar
+    await user.press(screen.getByTestId("btn-volver-a-probar"));
+    expect(await screen.findByText("Clase Círculo")).toBeTruthy();
+  });
+
   it("si los alumnos no llegan, avisa y se pueden pedir otra vez (el error no se guarda)", async () => {
     const user = userEvent.setup();
     mockAlumnos.mockResolvedValueOnce({ estado: "error" });

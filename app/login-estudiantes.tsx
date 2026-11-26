@@ -139,6 +139,8 @@ export default function LoginEstudiantesScreen({
   const aulaPedida = useRef<string | null>(null);
 
   const clases = aulasBD?.estado === "ok" ? aulasBD.datos : Object.values(CLASES);
+  // Con la base de datos y sin aulas en el curso activo (p. ej. el curso acaba de empezar)
+  const sinClases = aulasBD?.estado === "ok" && aulasBD.datos.length === 0;
   const esDeBaseDatos = (c: Clase) => c.nombreVisible !== undefined;
   const cargaAlumnos =
     clase && esDeBaseDatos(clase) && alumnosBD?.aulaId === clase.id ? alumnosBD : null;
@@ -386,7 +388,8 @@ export default function LoginEstudiantesScreen({
       sinAyuda
     >
       <View style={e.paso}>
-        <Instruccion texto="Toca la forma de tu clase" pagina={paginaClases} />
+        {/* Sin clases no hay nada que tocar: no se pide */}
+        {!sinClases && <Instruccion texto="Toca la forma de tu clase" pagina={paginaClases} />}
 
         {aulasBD?.estado === "cargando" ? (
           <AvisoCarga tipo="cargando" />
@@ -394,6 +397,13 @@ export default function LoginEstudiantesScreen({
           <AvisoCarga
             tipo="error"
             texto="No se han podido cargar las clases."
+            alVolverAProbar={volverAPedirAulas}
+          />
+        ) : sinClases ? (
+          // Curso recién empezado sin aulas todavía (la 01 solo enseña las del curso activo)
+          <AvisoCarga
+            tipo="vacio"
+            texto="Todavía no hay clases"
             alVolverAProbar={volverAPedirAulas}
           />
         ) : (
@@ -460,15 +470,16 @@ function Instruccion({ texto, pagina }: { texto: string; pagina: number }) {
 }
 
 /**
- * Mientras llegan las clases o los alumnos de la base de datos, o si no han llegado (SCRUM-249).
- * El error se explica con icono y texto, y se puede volver a probar con un botón grande.
+ * Mientras llegan las clases o los alumnos de la base de datos, si no han llegado o si no hay
+ * ninguna (SCRUM-249). El error y el «no hay» se explican con dibujo o icono y texto, y se puede
+ * volver a probar con un botón grande.
  */
 function AvisoCarga({
   tipo,
   texto,
   alVolverAProbar,
 }: {
-  tipo: "cargando" | "error";
+  tipo: "cargando" | "error" | "vacio";
   texto?: string;
   alVolverAProbar?: () => void;
 }) {
@@ -484,12 +495,29 @@ function AvisoCarga({
       </View>
     );
   }
+  const vacio = tipo === "vacio";
   return (
-    <View style={e.aviso} testID="aviso-error-carga" accessibilityRole="alert">
-      <View style={e.filaAviso}>
-        <Icono nombre="alerta" color={colores.peligro} tam={32} grosor={2.8} />
-        <Texto style={[e.textoAviso, { color: colores.peligro }]}>{texto}</Texto>
-      </View>
+    <View
+      style={e.aviso}
+      testID={vacio ? "aviso-sin-clases" : "aviso-error-carga"}
+      // «No hay» no es un error: se anuncia sin interrumpir
+      {...(vacio
+        ? { accessibilityLiveRegion: "polite" as const }
+        : { accessibilityRole: "alert" as const })}
+    >
+      {vacio ? (
+        <>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <PictogramaInterfaz nombre="colegio" etiqueta="colegio" tam={72} />
+          </View>
+          <Texto style={e.textoAviso}>{texto}</Texto>
+        </>
+      ) : (
+        <View style={e.filaAviso}>
+          <Icono nombre="alerta" color={colores.peligro} tam={32} grosor={2.8} />
+          <Texto style={[e.textoAviso, { color: colores.peligro }]}>{texto}</Texto>
+        </View>
+      )}
       <TouchableOpacity
         style={e.botonVolverAProbar}
         accessibilityRole="button"
