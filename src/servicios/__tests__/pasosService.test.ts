@@ -4,6 +4,7 @@ import {
   SEGUNDOS_URL_FIRMADA,
   firmarMultimediaPasos,
   guardarPasos,
+  limpiarMultimediaHuerfana,
   obtenerPasos,
   pasoParaGuardar,
   rutaMultimedia,
@@ -13,10 +14,14 @@ import { supabase } from "../../lib/supabaseClient";
 import type { PasoTarea } from "../../componentes/agenda/tipos";
 
 jest.mock("../../lib/supabaseClient", () => ({
-  supabase: { rpc: jest.fn(), storage: { from: jest.fn() } },
+  supabase: { rpc: jest.fn(), from: jest.fn(), storage: { from: jest.fn() } },
 }));
 
-const sb = supabase as unknown as { rpc: jest.Mock; storage: { from: jest.Mock } };
+const sb = supabase as unknown as {
+  rpc: jest.Mock;
+  from: jest.Mock;
+  storage: { from: jest.Mock };
+};
 const TAREA = "00000000-0000-0000-0000-0000000000e1";
 
 function bucketFalso() {
@@ -72,11 +77,32 @@ describe("pasosService (SCRUM-96: T-10.3 almacenamiento seguro)", () => {
     expect(sb.storage.from).not.toHaveBeenCalled();
   });
 
-  it("si no se puede firmar, quita ese recurso en vez de romper la tarea", async () => {
+  it("si no se puede firmar, deja el recurso sin URL (no se enseña) pero conserva su ruta", async () => {
     const b = bucketFalso();
     b.createSignedUrls.mockResolvedValueOnce({ data: null, error: new Error("sin red") } as never);
     const [p] = await firmarMultimediaPasos([paso({ audio: { ruta: `${TAREA}/audio/a.m4a` } })]);
-    expect(p.audio).toBeNull();
+    expect(p.audio).toEqual({ ruta: `${TAREA}/audio/a.m4a`, url: null });
+  });
+
+  it("revisión de Jaime: si falló la firma y el tutor solo cambia el título, no se pierde la foto", async () => {
+    const b = bucketFalso();
+    const foto = `${TAREA}/foto/a.jpg`;
+    // El editor se abre con la wifi del cole caída: la foto llega sin URL
+    b.createSignedUrls.mockResolvedValueOnce({ data: null, error: new Error("sin red") } as never);
+    sb.rpc.mockResolvedValueOnce({ data: [paso({ foto: { ruta: foto } })], error: null });
+    const [abierto] = await obtenerPasos(TAREA);
+
+    sb.rpc
+      .mockResolvedValueOnce({ data: [paso({ foto: { ruta: foto } })], error: null }) // antes
+      .mockResolvedValueOnce({ data: [], error: null }) // guardar_pasos
+      .mockResolvedValueOnce({ data: [paso({ foto: { ruta: foto } })], error: null }); // después
+    await guardarPasos(TAREA, [{ ...abierto, titulo: "Abre el grifo despacio" }]);
+
+    expect(sb.rpc).toHaveBeenNthCalledWith(3, "guardar_pasos", {
+      p_tarea: TAREA,
+      p_pasos: [expect.objectContaining({ foto: expect.objectContaining({ ruta: foto }) })],
+    });
+    expect(b.remove).not.toHaveBeenCalled();
   });
 
   it("no guarda en la base de datos las URLs firmadas (caducan), solo la ruta", () => {
@@ -159,5 +185,36 @@ describe("pasosService (SCRUM-96: T-10.3 almacenamiento seguro)", () => {
     });
     expect(r).toMatchObject({ tipo_mime: "image/jpeg", tamano_bytes: 1 });
     expect(r.url).toBe(`https://firmada/${r.ruta}`);
+  });
+
+  describe("limpiarMultimediaHuerfana (revisión de Jaime: archivos de tareas borradas)", () => {
+    it("borra del bucket lo que la base de datos ha apuntado y lo quita de la lista", async () => {
+      const b = bucketFalso();
+      const rutas = [`${TAREA}/foto/a.jpg`, `${TAREA}/video/b.mp4`];
+      sb.rpc.mockResolvedValueOnce({ data: rutas, error: null });
+      const quitar = { in: jest.fn(async () => ({ error: null })) };
+      sb.from.mockReturnValue({ delete: jest.fn(() => quitar) });
+
+      await expect(limpiarMultimediaHuerfana()).resolves.toBe(2);
+      expect(sb.rpc).toHaveBeenCalledWith("multimedia_huerfana");
+      expect(b.remove).toHaveBeenCalledWith(rutas);
+      expect(sb.from).toHaveBeenCalledWith("multimedia_por_borrar");
+      expect(quitar.in).toHaveBeenCalledWith("ruta", rutas);
+    });
+
+    it("si no se pueden borrar del bucket, las deja apuntadas para la próxima vez", async () => {
+      const b = bucketFalso();
+      b.remove.mockResolvedValueOnce({ data: null, error: new Error("sin red") } as never);
+      sb.rpc.mockResolvedValueOnce({ data: [`${TAREA}/foto/a.jpg`], error: null });
+      await expect(limpiarMultimediaHuerfana()).resolves.toBe(0);
+      expect(sb.from).not.toHaveBeenCalled();
+    });
+
+    it("quien no es de administración no recibe nada y no borra nada", async () => {
+      const b = bucketFalso();
+      sb.rpc.mockResolvedValueOnce({ data: [], error: null });
+      await expect(limpiarMultimediaHuerfana()).resolves.toBe(0);
+      expect(b.remove).not.toHaveBeenCalled();
+    });
   });
 });

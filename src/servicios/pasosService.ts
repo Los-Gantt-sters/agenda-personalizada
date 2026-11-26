@@ -1,6 +1,6 @@
 // Pasos de una tarea con su multimedia (SCRUM-96 · T-10.3, HU-10).
 // - Lee y guarda los pasos con las funciones de la base de datos de T-10.1 (pasos_de_tarea y
-//   guardar_pasos, en supabase/migrations/20261125000000_pasos_multimedia.sql).
+//   guardar_pasos, en supabase/migrations/20261128200000_pasos_multimedia.sql).
 // - Sube la foto, el vídeo y el audio de cada paso al bucket PRIVADO multimedia-pasos, ya
 //   comprimidos y validados (compresionMultimedia.ts), y los enseña con URLs firmadas que caducan.
 // - Al guardar, borra del bucket los archivos que el tutor ha cambiado o quitado, para no dejar
@@ -60,7 +60,8 @@ export function rutasDePasos(pasos: PasoTarea[]): Set<string> {
 
 /**
  * Pone URL firmada a la foto, el vídeo y el audio de los pasos que vienen del bucket. Si no se
- * puede firmar (sin red, sin permiso), el paso se queda sin ese recurso: 07 enseña los demás.
+ * puede firmar (sin red, sin permiso), el recurso se queda con su ruta y `url: null`: 07 no lo
+ * enseña, pero si el tutor guarda los pasos así, el archivo sigue guardado y no se borra.
  */
 export async function firmarMultimediaPasos(pasos: PasoTarea[]): Promise<PasoTarea[]> {
   const rutas = [...rutasDePasos(pasos)];
@@ -79,7 +80,7 @@ export async function firmarMultimediaPasos(pasos: PasoTarea[]): Promise<PasoTar
     const copia: PasoTarea = { ...p };
     for (const f of FORMATOS_MULTIMEDIA) {
       const r = p[f];
-      if (r?.ruta) copia[f] = firmadas.has(r.ruta) ? { ...r, url: firmadas.get(r.ruta) } : null;
+      if (r?.ruta) copia[f] = { ...r, url: firmadas.get(r.ruta) ?? null };
     }
     return copia;
   });
@@ -125,6 +126,29 @@ export async function borrarMultimedia(rutas: string[]): Promise<void> {
     await supabase.storage.from(BUCKET_MULTIMEDIA_PASOS).remove(rutas);
   } catch {
     // Se puede limpiar más tarde
+  }
+}
+
+/**
+ * Borra del bucket los archivos de tareas o alumnos que ya no existen (revisión de Jaime). La base de
+ * datos los apunta en multimedia_por_borrar al borrar la tarea, pero solo la app puede borrarlos de
+ * Storage. Lo hace la sesión de administración al abrir su panel; para cualquier otro no hace nada.
+ * Devuelve cuántos archivos ha borrado.
+ */
+export async function limpiarMultimediaHuerfana(): Promise<number> {
+  try {
+    const { data, error } = await supabase.rpc("multimedia_huerfana");
+    const rutas = (data ?? []) as string[];
+    if (error || rutas.length === 0) return 0;
+    const { error: errorBorrar } = await supabase.storage
+      .from(BUCKET_MULTIMEDIA_PASOS)
+      .remove(rutas);
+    if (errorBorrar) return 0;
+    await supabase.from("multimedia_por_borrar").delete().in("ruta", rutas);
+    return rutas.length;
+  } catch {
+    // Se vuelve a intentar la próxima vez que entre administración
+    return 0;
   }
 }
 

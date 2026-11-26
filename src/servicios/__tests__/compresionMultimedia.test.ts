@@ -81,13 +81,25 @@ describe("compresionMultimedia (SCRUM-96: T-10.3 compresión y validación)", ()
   });
 
   describe("prepararMultimedia", () => {
-    it("deja pasar un audio válido (fuera del navegador no se mide la duración)", async () => {
+    it("deja pasar un audio válido cuando se sabe lo que dura", async () => {
       const blob = new Blob(["a".repeat(2000)], { type: "audio/mpeg" });
-      const r = await prepararMultimedia("audio", blob);
+      const r = await prepararMultimedia("audio", blob, 12);
       expect(r).toEqual({
         ok: true,
-        archivo: { blob, tipoMime: "audio/mpeg", tamanoBytes: 2000, duracionSegundos: null },
+        archivo: { blob, tipoMime: "audio/mpeg", tamanoBytes: 2000, duracionSegundos: 12 },
       });
+    });
+
+    it("revisión de Jaime: si no se puede saber lo que dura un vídeo, no se acepta", async () => {
+      const blob = new Blob(["v".repeat(2000)], { type: "video/mp4" });
+      const r = await prepararMultimedia("video", blob);
+      expect(r).toEqual({ ok: false, error: expect.stringMatching(/duración del vídeo/) });
+    });
+
+    it("un vídeo largo no se acepta aunque se sepa la duración por el selector", async () => {
+      const blob = new Blob(["v".repeat(2000)], { type: "video/mp4" });
+      const r = await prepararMultimedia("video", blob, 600);
+      expect(r).toEqual({ ok: false, error: expect.stringMatching(/demasiado largo/) });
     });
 
     it("nunca sube la foto original (con su EXIF/GPS): si no se puede redibujar, da error", async () => {

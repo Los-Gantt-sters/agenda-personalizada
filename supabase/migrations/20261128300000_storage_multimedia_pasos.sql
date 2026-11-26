@@ -109,3 +109,89 @@ DROP TRIGGER IF EXISTS recursos_multimedia_ruta_de_su_tarea ON public.recursos_m
 CREATE TRIGGER recursos_multimedia_ruta_de_su_tarea
     BEFORE INSERT OR UPDATE ON public.recursos_multimedia
     FOR EACH ROW EXECUTE FUNCTION public.recursos_multimedia_ruta_de_su_tarea();
+
+-- ------------------------------------------------------------------------------
+-- Archivos que se quedan sin dueño (revisión de Jaime). Al borrar una tarea o un alumno, sus pasos
+-- y sus recursos_multimedia se borran en cascada, pero los archivos siguen en el bucket. Supabase no
+-- deja borrar archivos de Storage desde SQL, así que se apuntan en multimedia_por_borrar y los
+-- borra la app con la sesión de administración (limpiarMultimediaHuerfana, pasosService.ts).
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.multimedia_por_borrar (
+    ruta TEXT PRIMARY KEY,
+    anotada_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.multimedia_por_borrar IS
+    'SCRUM-96 (HU-10): archivos del bucket multimedia-pasos que ya no usa ningún paso y hay que borrar.';
+
+ALTER TABLE public.multimedia_por_borrar ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Multimedia por borrar: solo administración" ON public.multimedia_por_borrar;
+CREATE POLICY "Multimedia por borrar: solo administración" ON public.multimedia_por_borrar
+    FOR ALL TO authenticated
+    USING (public.is_admin())
+    WITH CHECK (public.is_admin());
+
+-- Se comprueba al final de la transacción: guardar_pasos borra y vuelve a crear el recurso de los
+-- archivos que el tutor conserva, y esos no se tienen que apuntar.
+CREATE OR REPLACE FUNCTION public.anotar_multimedia_por_borrar()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF OLD.ruta_storage IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM public.recursos_multimedia WHERE ruta_storage = OLD.ruta_storage
+    ) THEN
+        INSERT INTO public.multimedia_por_borrar (ruta) VALUES (OLD.ruta_storage)
+        ON CONFLICT (ruta) DO NOTHING;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS anotar_multimedia_por_borrar ON public.recursos_multimedia;
+CREATE CONSTRAINT TRIGGER anotar_multimedia_por_borrar
+    AFTER DELETE ON public.recursos_multimedia
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW EXECUTE FUNCTION public.anotar_multimedia_por_borrar();
+
+-- Si se vuelve a usar un archivo apuntado (p. ej. se deshace un cambio), deja de estar por borrar.
+CREATE OR REPLACE FUNCTION public.multimedia_huerfana()
+RETURNS SETOF TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT m.ruta
+    FROM public.multimedia_por_borrar m
+    WHERE public.is_admin()
+      AND NOT EXISTS (SELECT 1 FROM public.recursos_multimedia r WHERE r.ruta_storage = m.ruta)
+    ORDER BY m.anotada_en;
+$$;
+
+COMMENT ON FUNCTION public.multimedia_huerfana() IS
+    'SCRUM-96 (HU-10): rutas del bucket que ya no usa ningún paso. Solo para administración.';
+
+REVOKE ALL ON FUNCTION public.multimedia_huerfana() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.multimedia_huerfana() TO authenticated;
+
+-- Administración puede borrar del bucket los archivos huérfanos (su tarea ya no existe, así que
+-- puede_editar_tarea dice que no).
+DO $$
+BEGIN
+    IF to_regclass('storage.objects') IS NULL THEN
+        RETURN;
+    END IF;
+    DROP POLICY IF EXISTS "Multimedia pasos: administración borra los huérfanos" ON storage.objects;
+    CREATE POLICY "Multimedia pasos: administración borra los huérfanos" ON storage.objects
+        FOR DELETE TO authenticated
+        USING (
+            bucket_id = 'multimedia-pasos'
+            AND public.is_admin()
+            AND NOT EXISTS (
+                SELECT 1 FROM public.recursos_multimedia r WHERE r.ruta_storage = name
+            )
+        );
+END $$;

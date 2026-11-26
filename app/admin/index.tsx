@@ -31,6 +31,7 @@ import {
   type DatosPanel,
   type UsuarioPanel,
 } from "../../src/servicios/usuariosPanelService";
+import { limpiarMultimediaHuerfana } from "../../src/servicios/pasosService";
 import type { Paleta } from "../../src/temas";
 import { Icono, Texto, useApariencia, useEstilos, type NombreIcono } from "../../src/ui";
 
@@ -180,6 +181,8 @@ export default function PanelAdministracion() {
   useEffect(() => {
     let montada = true;
     listarUsuariosPanel().then((r) => montada && aplicar(r));
+    // HU-10: de paso, borra del almacenamiento las fotos y vídeos de tareas que ya no existen.
+    void limpiarMultimediaHuerfana();
     return () => {
       montada = false;
     };
