@@ -207,6 +207,7 @@ erDiagram
         integer orden
         varchar estado "pendiente, en_curso, completada, bloqueada, cancelada"
         varchar pendiente_motivo "tiempo_agotado, profesor"
+        boolean requiere_inicio_fin "pide Empezar (true por defecto)"
         boolean plan_b_activado
     }
 
