@@ -349,10 +349,11 @@ const crearEstilos = (c: Paleta) =>
       gap: 8,
       paddingVertical: 6,
       paddingHorizontal: 14,
-      borderRadius: 8,
-      backgroundColor: c.superficie,
-      borderWidth: FORMA.borde,
-      borderColor: c.aviso,
+      // Píldora amarilla suave del boceto (fondo #FEF9C3 en el tema claro, radio 20).
+      borderRadius: 20,
+      backgroundColor: c.resalteSuave,
+      borderWidth: 1,
+      borderColor: c.resalte,
     },
     textoAvisoAutoPendiente: {
       flexShrink: 1,
