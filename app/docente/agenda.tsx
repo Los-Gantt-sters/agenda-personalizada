@@ -47,6 +47,13 @@ export default function DocenteAgendaScreen() {
             alPulsar: () => router.push("/preferencias"),
           },
           {
+            icono: "candado",
+            titulo: "Permisos del alumno (26d)",
+            descripcion: "Formatos multimedia por paso, entrada 06b/06 y botón Preferencias.",
+            etiquetaAccesible: "Configurar permisos simplificados del alumno",
+            alPulsar: () => router.push("/docente/permisos-alumno"),
+          },
+          {
             icono: "imagen",
             titulo: "Buscar pictogramas",
             descripcion: "Pictogramas de ARASAAC para las tareas.",

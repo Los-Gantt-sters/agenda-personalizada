@@ -258,10 +258,11 @@ export function puedeAccederAgendaSemanal06b(
 export async function obtenerPermisosAlumno26d(
   alumnoId: string,
   nombreAlumno?: string,
+  opciones?: { forzarRemoto?: boolean },
 ): Promise<PermisosAlumno26d> {
   const idLimpio = alumnoId.trim() || "ale";
   const enMemoria = almacenPermisosMemoria.get(idLimpio);
-  if (enMemoria) {
+  if (enMemoria && !opciones?.forzarRemoto) {
     return {
       ...enMemoria,
       formatosPermitidos: [...enMemoria.formatosPermitidos],
@@ -364,23 +365,25 @@ export async function guardarPermisosAlumno26d(
     actualizadoEn: new Date().toISOString(),
   };
 
-  almacenPermisosMemoria.set(idLimpio, actualizado);
+  const resultado = await supabase.from("permisos_alumno_26d").upsert(
+    {
+      alumno_id: actualizado.alumnoId,
+      nombre_alumno: actualizado.nombreAlumno,
+      formatos_permitidos: actualizado.formatosPermitidos,
+      entrada_tras_login: actualizado.entradaTrasLogin,
+      mostrar_boton_preferencias_16: actualizado.mostrarBotonPreferencias16,
+      actualizado_en: actualizado.actualizadoEn,
+    },
+    { onConflict: "alumno_id" },
+  );
 
-  try {
-    await supabase.from("permisos_alumno_26d").upsert(
-      {
-        alumno_id: actualizado.alumnoId,
-        nombre_alumno: actualizado.nombreAlumno,
-        formatos_permitidos: actualizado.formatosPermitidos,
-        entrada_tras_login: actualizado.entradaTrasLogin,
-        mostrar_boton_preferencias_16: actualizado.mostrarBotonPreferencias16,
-        actualizado_en: actualizado.actualizadoEn,
-      },
-      { onConflict: "alumno_id" },
+  if (resultado?.error) {
+    throw new Error(
+      `No se pudieron guardar los permisos del alumno en Supabase: ${resultado.error.message}`,
     );
-  } catch {
-    // Conserva la actualización en memoria si la sesión es local/offline
   }
+
+  almacenPermisosMemoria.set(idLimpio, actualizado);
 
   return {
     ...actualizado,
