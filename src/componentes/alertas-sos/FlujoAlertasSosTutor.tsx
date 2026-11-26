@@ -15,11 +15,12 @@ import {
 } from "../../servicios/alertasSosService";
 import type { Paleta } from "../../temas";
 import { Icono, Texto, useApariencia, useEstilos } from "../../ui";
+import { PantallaBibliotecaPictogramas51 } from "../biblioteca-pictogramas";
 import { AgendaAdultoAlumno } from "../tutor-familia/AgendaAdultoAlumno";
 import type { AlertaSosTutor } from "./datosAlertasSos";
 import { PantallaAlertasSos47 } from "./PantallaAlertasSos47";
 
-export type VistaFlujoSosTutor = "33" | "47" | "39";
+export type VistaFlujoSosTutor = "33" | "47" | "39" | "51";
 export type DestinoPanelTutorSos = "35" | "31" | "51" | "47" | "47c";
 
 export interface FlujoAlertasSosTutorProps {
@@ -88,6 +89,18 @@ export function FlujoAlertasSosTutor({
     );
   }
 
+  if (vista === "51") {
+    return (
+      <PantallaBibliotecaPictogramas51
+        rol="tutor"
+        nombreUsuario={nombreTutor}
+        usarBaseDeDatos
+        alAtras={() => setVista("33")}
+        alCerrarSesion={alCerrarSesion}
+      />
+    );
+  }
+
   if (vista === "39") {
     return (
       <AgendaAdultoAlumno
@@ -146,7 +159,13 @@ export function FlujoAlertasSosTutor({
           <Pressable
             testID="tarjeta-tutor-33-biblioteca-pictogramas"
             accessibilityRole="button"
-            onPress={() => alNavegarPanelTutor?.("51")}
+            onPress={() => {
+              if (alNavegarPanelTutor) {
+                alNavegarPanelTutor("51");
+                return;
+              }
+              setVista("51");
+            }}
             style={estilos.tarjeta33}
           >
             <Icono nombre="imagen" tam={32} color={colores.primario} />

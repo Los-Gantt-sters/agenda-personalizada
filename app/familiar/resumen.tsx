@@ -44,6 +44,13 @@ export default function FamiliarResumenScreen() {
             etiquetaAccesible: "Explorar catálogo de pictogramas ARASAAC",
             alPulsar: () => router.push("/demo-pictogramas"),
           },
+          {
+            icono: "imagen",
+            titulo: "Mi biblioteca de pictogramas",
+            descripcion: "Sube tus propios pictogramas de casa pulsando «+».",
+            etiquetaAccesible: "Abrir mi biblioteca de pictogramas propios",
+            alPulsar: () => router.push("/biblioteca-pictogramas"),
+          },
         ]}
       />
     </>

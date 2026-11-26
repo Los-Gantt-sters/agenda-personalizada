@@ -54,6 +54,13 @@ export default function DocenteAgendaScreen() {
             alPulsar: () => router.push("/demo-pictogramas"),
           },
           {
+            icono: "imagen",
+            titulo: "Mi biblioteca de pictogramas",
+            descripcion: "Sube tus propios pictogramas pulsando «+» para el buscador.",
+            etiquetaAccesible: "Abrir mi biblioteca de pictogramas propios",
+            alPulsar: () => router.push("/biblioteca-pictogramas"),
+          },
+          {
             icono: "cronometro",
             titulo: "Reloj visual",
             descripcion: "El tiempo que queda, como un disco que se va vaciando.",
