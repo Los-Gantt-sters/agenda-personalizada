@@ -261,5 +261,7 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     await user.press(screen.getByRole("button", { name: "Volver a lo de siempre" }));
     expect(screen.getByRole("button", { name: "Fondo y colores: Claro" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Forma de los botones: Redondeados" })).toBeTruthy();
+    // También la «Pantalla al entrar» vuelve a «Hoy» en Supabase (revisión de Jaime).
+    expect(guardarVistaAgendaDeSesion).toHaveBeenCalledWith("diaria");
   });
 });

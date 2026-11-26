@@ -46,6 +46,7 @@ import {
   VER_RELOJ,
   VISTAS_AGENDA,
   type PreferenciasApariencia,
+  PREFERENCIAS_POR_DEFECTO,
 } from "./opciones";
 
 type Apartado =
@@ -207,7 +208,11 @@ export function PanelPreferencias() {
           <BotonAccesible
             variante="suave"
             etiqueta="Volver a lo de siempre"
-            onPress={restablecer}
+            onPress={() => {
+              restablecer();
+              // «Volver a lo de siempre» también vuelve a «Hoy» en Supabase (revisión de Jaime).
+              void guardarVistaAgendaDeSesion(PREFERENCIAS_POR_DEFECTO.vistaAgenda);
+            }}
             style={e.botonRestablecer}
           />
         </View>

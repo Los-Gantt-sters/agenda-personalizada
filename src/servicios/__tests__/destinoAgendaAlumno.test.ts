@@ -10,10 +10,14 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 
 jest.mock("../../lib/supabaseClient", () => ({
-  supabase: { from: jest.fn(), auth: { getSession: jest.fn() } },
+  supabase: { from: jest.fn(), rpc: jest.fn(), auth: { getSession: jest.fn() } },
 }));
 
-const sb = supabase as unknown as { from: jest.Mock; auth: { getSession: jest.Mock } };
+const sb = supabase as unknown as {
+  from: jest.Mock;
+  rpc: jest.Mock;
+  auth: { getSession: jest.Mock };
+};
 
 /** Sesión de Supabase con este correo (o sin sesión si es null). */
 function conSesion(correo: string | null) {
@@ -120,43 +124,42 @@ describe("destinoAgendaAlumno (SCRUM-227: llevar al alumno a su agenda tras el l
   });
 
   describe("guardarVistaAgenda (SCRUM-125: Preferencias 24 / Permisos 26d)", () => {
-    function consultaGuardar(resultado: { error: unknown } | Error) {
-      const eq = jest.fn(() =>
+    function guardar(resultado: { data: unknown; error: unknown } | Error) {
+      sb.rpc.mockImplementation(() =>
         resultado instanceof Error ? Promise.reject(resultado) : Promise.resolve(resultado),
       );
-      const update = jest.fn(() => ({ eq }));
-      sb.from.mockReturnValue({ update });
-      return { update, eq };
     }
 
-    it("guarda la vista en preferencias_alumnos.vista_agenda del alumno", async () => {
-      const q = consultaGuardar({ error: null });
+    it("guarda la vista con la función guardar_vista_agenda", async () => {
+      guardar({ data: true, error: null });
       await expect(guardarVistaAgenda(ID_REAL, "semanal")).resolves.toBe(true);
-      expect(sb.from).toHaveBeenCalledWith("preferencias_alumnos");
-      expect(q.update).toHaveBeenCalledWith({ vista_agenda: "semanal" });
-      expect(q.eq).toHaveBeenCalledWith("alumno_id", ID_REAL);
+      expect(sb.rpc).toHaveBeenCalledWith("guardar_vista_agenda", {
+        p_alumno: ID_REAL,
+        p_vista: "semanal",
+      });
+      expect(sb.from).not.toHaveBeenCalled();
+    });
+
+    it("revisión de Jaime: si no se ha guardado ninguna fila (sin permiso), devuelve false", async () => {
+      guardar({ data: false, error: null });
+      await expect(guardarVistaAgenda(ID_REAL, "semanal")).resolves.toBe(false);
     });
 
     it("avisa con false si Supabase da error o no hay conexión", async () => {
-      consultaGuardar({ error: { message: "sin permiso" } });
+      guardar({ data: null, error: { message: "sin permiso" } });
       await expect(guardarVistaAgenda(ID_REAL, "diaria")).resolves.toBe(false);
-      consultaGuardar(new Error("sin red"));
+      guardar(new Error("sin red"));
       await expect(guardarVistaAgenda(ID_REAL, "diaria")).resolves.toBe(false);
     });
 
     it("no intenta guardar para un alumno de ejemplo", async () => {
       await expect(guardarVistaAgenda("ale", "semanal")).resolves.toBe(false);
-      expect(sb.from).not.toHaveBeenCalled();
+      expect(sb.rpc).not.toHaveBeenCalled();
     });
   });
 
   describe("guardarVistaAgendaDeSesion (MOD HU-17: Preferencias 24 con la sesión del alumno)", () => {
-    function consultaGuardar() {
-      const eq = jest.fn(() => Promise.resolve({ error: null }));
-      const update = jest.fn(() => ({ eq }));
-      sb.from.mockReturnValue({ update });
-      return { update, eq };
-    }
+    const consultaGuardar = () => sb.rpc.mockResolvedValue({ data: true, error: null } as never);
 
     it("saca el alumno del correo técnico del inicio de sesión visual", async () => {
       conSesion(`alu-${ID_REAL}@alumnos.agensible`);
@@ -165,10 +168,12 @@ describe("destinoAgendaAlumno (SCRUM-227: llevar al alumno a su agenda tras el l
 
     it("guarda la vista del alumno que tiene la sesión iniciada", async () => {
       conSesion(`alu-${ID_REAL}@alumnos.agensible`);
-      const q = consultaGuardar();
+      consultaGuardar();
       await expect(guardarVistaAgendaDeSesion("semanal")).resolves.toBe(true);
-      expect(q.update).toHaveBeenCalledWith({ vista_agenda: "semanal" });
-      expect(q.eq).toHaveBeenCalledWith("alumno_id", ID_REAL);
+      expect(sb.rpc).toHaveBeenCalledWith("guardar_vista_agenda", {
+        p_alumno: ID_REAL,
+        p_vista: "semanal",
+      });
     });
 
     it("no guarda nada si quien cambia las preferencias es un adulto o no hay sesión", async () => {
@@ -176,7 +181,7 @@ describe("destinoAgendaAlumno (SCRUM-227: llevar al alumno a su agenda tras el l
       await expect(guardarVistaAgendaDeSesion("semanal")).resolves.toBe(false);
       conSesion(null);
       await expect(guardarVistaAgendaDeSesion("diaria")).resolves.toBe(false);
-      expect(sb.from).not.toHaveBeenCalled();
+      expect(sb.rpc).not.toHaveBeenCalled();
     });
 
     it("no falla si no se puede leer la sesión", async () => {

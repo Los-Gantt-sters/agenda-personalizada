@@ -49,16 +49,18 @@ export async function obtenerVistaAgenda(alumnoId: string): Promise<VistaAgenda>
  * MOD HU-17 (SCRUM-125): guarda la pantalla al entrar del alumno, «Hoy» (06) o «Semana» (06b), en
  * preferencias_alumnos.vista_agenda. La usa Preferencias (24) a través de guardarVistaAgendaDeSesion;
  * Permisos del alumno (26d) la usará cuando exista esa pantalla.
+ * El alumno solo puede leer sus preferencias: se guarda con la función guardar_vista_agenda
+ * (20261128400000), que le deja cambiar solo este campo y dice si de verdad se ha guardado.
  * Devuelve false si no se ha podido guardar (alumno de ejemplo, sin conexión o sin permiso).
  */
 export async function guardarVistaAgenda(alumnoId: string, vista: VistaAgenda): Promise<boolean> {
   if (!esIdDeAlumnoReal(alumnoId)) return false;
   try {
-    const { error } = await supabase
-      .from("preferencias_alumnos")
-      .update({ vista_agenda: vista })
-      .eq("alumno_id", alumnoId);
-    return !error;
+    const { data, error } = await supabase.rpc("guardar_vista_agenda", {
+      p_alumno: alumnoId,
+      p_vista: vista,
+    });
+    return !error && data === true;
   } catch {
     return false;
   }
