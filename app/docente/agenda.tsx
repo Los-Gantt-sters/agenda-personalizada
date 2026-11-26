@@ -54,6 +54,20 @@ export default function DocenteAgendaScreen() {
             alPulsar: () => router.push("/docente/permisos-alumno"),
           },
           {
+            icono: "repetir",
+            titulo: "Plan B del día",
+            descripcion: "Vincula una tarea Plan B a una tarea de la clase y actívala.",
+            etiquetaAccesible: "Abrir Plan B del día de la clase",
+            alPulsar: () => router.push("/docente/plan-b"),
+          },
+          {
+            icono: "repetir",
+            titulo: "Plan B de un alumno",
+            descripcion: "Elige al alumno y cambia su Plan B de hoy.",
+            etiquetaAccesible: "Abrir Plan B de un alumno",
+            alPulsar: () => router.push("/docente/plan-b?alumno=elegir"),
+          },
+          {
             icono: "imagen",
             titulo: "Buscar pictogramas",
             descripcion: "Pictogramas de ARASAAC para las tareas.",

@@ -37,7 +37,8 @@ export type NombreIcono =
   | "grafica"
   | "abajo"
   | "arriba"
-  | "siguiente";
+  | "siguiente"
+  | "repetir";
 
 const TRAZOS: Record<NombreIcono, React.ReactNode> = {
   llave: (
@@ -180,6 +181,7 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
   abajo: <Path d="M6 9l6 6 6-6" />,
   arriba: <Path d="M6 15l6-6 6 6" />,
   siguiente: <Path d="M9 5l7 7-7 7" />,
+  repetir: <Path d="M20 11a8 8 0 10-2.3 6.3M20 4v7h-7" />,
 };
 
 export interface IconoProps {
