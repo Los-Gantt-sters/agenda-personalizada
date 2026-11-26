@@ -1,44 +1,45 @@
--- Migración: tabla de permisos simplificados del alumno (Pantalla 26d / 07e)
+-- Migración: ampliar public.preferencias_alumnos con los formatos multimedia permitidos (Pantalla 26d / 07e)
+-- y eliminar la tabla temporal permisos_alumno_26d.
+-- Reutiliza las columnas existentes `vista_agenda` ('semanal' = 06b / 'diaria' = 06)
+-- y `nivel_permisos_preferencias` ('total'/'parcial' = visible / 'ninguno' = oculto)
+-- usadas por SCRUM-125 y SCRUM-246, restringiendo la escritura al tutor del alumno o admin.
 -- HU-23 / SCRUM-141 / SCRUM-142
 
-CREATE TABLE IF NOT EXISTS public.permisos_alumno_26d (
-  alumno_id TEXT PRIMARY KEY,
-  nombre_alumno TEXT NOT NULL DEFAULT 'Alejandro',
-  formatos_permitidos TEXT[] NOT NULL DEFAULT ARRAY['pictograma', 'texto', 'foto', 'video', 'audio']::TEXT[],
-  entrada_tras_login TEXT NOT NULL DEFAULT '06b'
-    CHECK (entrada_tras_login IN ('06b', '06')),
-  mostrar_boton_preferencias_16 BOOLEAN NOT NULL DEFAULT TRUE,
-  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT permisos_alumno_26d_formatos_no_vacios
-    CHECK (cardinality(formatos_permitidos) >= 1)
-);
+DROP TABLE IF EXISTS public.permisos_alumno_26d CASCADE;
 
-COMMENT ON TABLE public.permisos_alumno_26d IS
-  'Permisos simplificados por alumno configurados por el tutor en la Pantalla 26d (formatos multimedia permitidos, entrada tras login 06b/06 y botón Preferencias 16).';
+ALTER TABLE public.preferencias_alumnos
+  ADD COLUMN IF NOT EXISTS formatos_multimedia_permitidos TEXT[]
+    NOT NULL
+    DEFAULT ARRAY['pictograma', 'texto', 'foto', 'video', 'audio']::TEXT[];
 
-ALTER TABLE public.permisos_alumno_26d ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'preferencias_alumnos_formatos_no_vacios'
+      AND conrelid = 'public.preferencias_alumnos'::regclass
+  ) THEN
+    ALTER TABLE public.preferencias_alumnos
+      ADD CONSTRAINT preferencias_alumnos_formatos_no_vacios
+      CHECK (cardinality(formatos_multimedia_permitidos) >= 1);
+  END IF;
+END $$;
 
-DROP POLICY IF EXISTS "permisos_alumno_26d_lectura_publica" ON public.permisos_alumno_26d;
-CREATE POLICY "permisos_alumno_26d_lectura_publica"
-  ON public.permisos_alumno_26d
-  FOR SELECT
-  TO anon, authenticated
-  USING (TRUE);
+COMMENT ON COLUMN public.preferencias_alumnos.formatos_multimedia_permitidos IS
+  'Formatos multimedia habilitados debajo de cada paso en 07/07e configurados desde la Pantalla 26d.';
 
-DROP POLICY IF EXISTS "permisos_alumno_26d_escritura_autenticados" ON public.permisos_alumno_26d;
-CREATE POLICY "permisos_alumno_26d_escritura_autenticados"
-  ON public.permisos_alumno_26d
-  FOR INSERT
+-- Asegurar que solo el tutor docente vinculado al alumno o un administrador puedan modificar preferencias_alumnos
+DROP POLICY IF EXISTS "Preferencias: Gestión por tutores vinculados o admin" ON public.preferencias_alumnos;
+CREATE POLICY "Preferencias: Gestión por tutores vinculados o admin"
+  ON public.preferencias_alumnos
+  FOR ALL
   TO authenticated
-  WITH CHECK (TRUE);
-
-DROP POLICY IF EXISTS "permisos_alumno_26d_actualizacion_autenticados" ON public.permisos_alumno_26d;
-CREATE POLICY "permisos_alumno_26d_actualizacion_autenticados"
-  ON public.permisos_alumno_26d
-  FOR UPDATE
-  TO authenticated
-  USING (TRUE)
-  WITH CHECK (TRUE);
-
-GRANT SELECT ON public.permisos_alumno_26d TO anon, authenticated;
-GRANT INSERT, UPDATE ON public.permisos_alumno_26d TO authenticated;
+  USING (
+    public.is_admin()
+    OR public.is_tutor_docente_of_student(alumno_id)
+  )
+  WITH CHECK (
+    public.is_admin()
+    OR public.is_tutor_docente_of_student(alumno_id)
+  );

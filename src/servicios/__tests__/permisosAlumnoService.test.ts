@@ -92,17 +92,16 @@ describe("permisosAlumnoService (HU-23 · SCRUM-142 · 26d / 07e)", () => {
     expect(CATALOGO_FORMATOS_MULTIMEDIA).toHaveLength(5);
   });
 
-  it("obtiene permisos desde Supabase cuando existen y los almacena en caché", async () => {
+  it("obtiene permisos desde Supabase (preferencias_alumnos) cuando existen y los almacena en caché", async () => {
     mockFrom.mockReturnValue({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
           single: jest.fn().mockResolvedValue({
             data: {
               alumno_id: "luc",
-              nombre_alumno: "Lucas",
-              formatos_permitidos: ["pictograma", "video"],
-              entrada_tras_login: "06",
-              mostrar_boton_preferencias_16: false,
+              formatos_multimedia_permitidos: ["pictograma", "video"],
+              vista_agenda: "diaria",
+              nivel_permisos_preferencias: "ninguno",
               actualizado_en: "2026-11-26T09:00:00.000Z",
             },
             error: null,
