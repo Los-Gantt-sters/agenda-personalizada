@@ -3,6 +3,8 @@
 // Los pasos y los archivos se quedan en memoria (las fotos, vídeos y audios subidos se ven con una
 // URL local del navegador); al recargar se vuelve a empezar. Con Supabase el editor usaría
 // repositorioPasosSupabase (src/servicios/pasosService.ts) y el bucket privado multimedia-pasos.
+// Solo existe en desarrollo (__DEV__): en la app publicada /demo-pasos lleva al inicio.
+import { Redirect } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import {
@@ -22,6 +24,11 @@ const TAREA_DEMO = "00000000-0000-0000-0000-0000000000e2";
 type Vista = "editor" | "guardado" | "pasos" | "todos";
 
 export default function DemoPasos() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <DemoPasosDesarrollo />;
+}
+
+function DemoPasosDesarrollo() {
   const e = useEstilos(crearEstilos);
   const { colores } = useApariencia();
   const base = useMemo(() => agendaDemo(hoyISO()).find((x) => x.id === "e2")!, []);
