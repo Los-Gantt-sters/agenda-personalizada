@@ -214,6 +214,7 @@ export default function LoginEstudiantesScreen({
             key={clase.id}
             estudiantes={alumnosDeClase}
             alSeleccionarEstudiante={elegirAlumno}
+            paginaInicial={paginaAlumnos}
             alCambiarPagina={setPaginaAlumnos}
           />
         </View>
