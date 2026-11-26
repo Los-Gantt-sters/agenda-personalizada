@@ -42,16 +42,19 @@ export interface BotonNecesidadesProps {
   enBarra?: { ancho: number; alto: number };
 }
 
+/** Lo que pide el alumno en la 14: una de sus ayudas o «Urgencia» (MOD HU-18). */
+export type SolicitudAyuda = AyudaElegida | "urgencia";
+
 export interface PantallaNecesidadesProps {
   visible: boolean;
-  alSeleccionarNecesidad: (clave: ClaveNecesidad) => void;
+  /** Ayudas que ve este alumno (de 1 a 3, las elige el adulto en la 26). */
+  ayudas: readonly AyudaElegida[];
+  alSolicitar: (solicitud: SolicitudAyuda) => void;
   alCerrar: () => void;
-  necesidadEnviada?: ClaveNecesidad | null;
-  alConfirmarAvisoEnviado?: () => void;
+  /** Lo recién enviado: la pantalla pasa a «Aviso enviado» (14b). */
+  solicitudEnviada?: SolicitudAyuda | null;
+  /** Ya no se enseña (la 14b solo dice «Solicitud enviada»); se acepta por compatibilidad. */
   nombreTutora?: string;
   variante?: VarianteColorNecesidades;
   canal?: ModoCanalNecesidades;
-  mostrarImagenArasaac?: boolean;
-  /** Necesidades que ve este alumno (las elige el tutor en Preferencias). Sin indicar, todas. */
-  necesidades?: readonly ClaveNecesidadBasica[];
 }

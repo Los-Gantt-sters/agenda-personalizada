@@ -1,9 +1,10 @@
 // Estado de «Ayuda» para toda la app (SCRUM-87). El botón está en la barra de abajo de cada
 // pantalla (src/pantalla) y la pantalla «¿Qué necesitas?» se pinta aquí, encima de todo, sin quitar
 // la pantalla de debajo (mejora de la profesora, noviembre de 2026: nada de ventanas emergentes).
-// Qué necesidades salen lo elige el tutor en Preferencias.
+// Qué ayudas salen (de 1 a 3) lo elige el adulto en Preferencias, pantalla 26 (MOD HU-18).
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { View, StyleSheet } from "react-native";
+import { AYUDAS_POR_DEFECTO, claveBasicaDeAyuda } from "../preferencias/ayudas";
 import { usePreferenciasOpcional } from "../preferencias/PreferenciasProvider";
 import { BotonNecesidades } from "./BotonNecesidades";
 import { PantallaNecesidades } from "./PantallaNecesidades";
@@ -12,6 +13,7 @@ import {
   VarianteColorNecesidades,
   ModoCanalNecesidades,
   ClaveNecesidad,
+  SolicitudAyuda,
 } from "./tipos";
 
 interface NecesidadesContextType {
@@ -30,6 +32,10 @@ interface NecesidadesContextType {
   solicitarNecesidad: (clave: ClaveNecesidad) => void;
   /** Necesidad recién enviada (la pantalla enseña «Aviso enviado»). */
   necesidadEnviada: ClaveNecesidad | null;
+  /** Pide una ayuda de la 14 o «Urgencia» (MOD HU-18). */
+  solicitarAyuda: (solicitud: SolicitudAyuda) => void;
+  /** Lo recién pedido en la 14 (la pantalla enseña la 14b). */
+  solicitudEnviada: SolicitudAyuda | null;
   nombreTutora: string;
 }
 
@@ -42,7 +48,10 @@ export interface ProveedorNecesidadesProps {
   varianteInicial?: VarianteColorNecesidades;
   canalInicial?: ModoCanalNecesidades;
   onPulsarNecesidades?: () => void;
+  /** Se llama con «urgencia» y con baño, agua o descanso (lo de siempre, para las alertas). */
   onSolicitarNecesidad?: (clave: ClaveNecesidad) => void;
+  /** Se llama con cualquier cosa que se pida en la 14, con la ayuda completa (MOD HU-18). */
+  onSolicitarAyuda?: (solicitud: SolicitudAyuda) => void;
   nombreTutora?: string;
 }
 
@@ -54,6 +63,7 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
   canalInicial = "ambos",
   onPulsarNecesidades,
   onSolicitarNecesidad,
+  onSolicitarAyuda,
   nombreTutora = "Carmen",
 }) => {
   const [mostrarBotonNecesidades, setMostrarBotonNecesidades] =
@@ -66,11 +76,13 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
   const [ultimaNecesidadSolicitada, setUltimaNecesidadSolicitada] = useState<ClaveNecesidad | null>(
     null,
   );
-  // Necesidades que ha elegido el tutor (sin proveedor de preferencias, todas).
-  const necesidades = usePreferenciasOpcional()?.preferencias.necesidades;
+  const [solicitudEnviada, setSolicitudEnviada] = useState<SolicitudAyuda | null>(null);
+  // Ayudas que ha elegido el adulto en la 26 (sin proveedor de preferencias, las de por defecto).
+  const ayudas = usePreferenciasOpcional()?.preferencias.ayudas ?? AYUDAS_POR_DEFECTO;
 
   const abrirModalNecesidades = () => {
     setNecesidadEnviada(null);
+    setSolicitudEnviada(null);
     setModalAbierto(true);
     if (onPulsarNecesidades) {
       onPulsarNecesidades();
@@ -80,6 +92,7 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
   const cerrarModalNecesidades = () => {
     setModalAbierto(false);
     setNecesidadEnviada(null);
+    setSolicitudEnviada(null);
   };
 
   const solicitarNecesidad = (clave: ClaveNecesidad) => {
@@ -88,6 +101,14 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
     if (onSolicitarNecesidad) {
       onSolicitarNecesidad(clave);
     }
+  };
+
+  const solicitarAyuda = (solicitud: SolicitudAyuda) => {
+    setSolicitudEnviada(solicitud);
+    onSolicitarAyuda?.(solicitud);
+    // Las alertas de siempre solo entienden «urgencia» y las tres básicas.
+    const clave = solicitud === "urgencia" ? "urgencia" : claveBasicaDeAyuda(solicitud);
+    if (clave) solicitarNecesidad(clave);
   };
 
   return (
@@ -107,6 +128,8 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
         ultimaNecesidadSolicitada,
         solicitarNecesidad,
         necesidadEnviada,
+        solicitarAyuda,
+        solicitudEnviada,
         nombreTutora,
       }}
     >
@@ -127,11 +150,10 @@ export const ProveedorNecesidades: React.FC<ProveedorNecesidadesProps> = ({
 
         <PantallaNecesidades
           visible={modalAbierto}
-          necesidades={necesidades}
-          alSeleccionarNecesidad={solicitarNecesidad}
+          ayudas={ayudas}
+          alSolicitar={solicitarAyuda}
           alCerrar={cerrarModalNecesidades}
-          necesidadEnviada={necesidadEnviada}
-          alConfirmarAvisoEnviado={cerrarModalNecesidades}
+          solicitudEnviada={solicitudEnviada}
           nombreTutora={nombreTutora}
           variante={varianteBoton}
           canal={canalVisual}
