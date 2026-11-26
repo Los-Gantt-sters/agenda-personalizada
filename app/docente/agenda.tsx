@@ -55,17 +55,10 @@ export default function DocenteAgendaScreen() {
           },
           {
             icono: "repetir",
-            titulo: "Plan B del día",
-            descripcion: "Vincula una tarea Plan B a una tarea de la clase y actívala.",
-            etiquetaAccesible: "Abrir Plan B del día de la clase",
+            titulo: "Plan B",
+            descripcion: "El del día de la clase o el de un alumno.",
+            etiquetaAccesible: "Abrir Plan B del día o de un alumno",
             alPulsar: () => router.push("/docente/plan-b"),
-          },
-          {
-            icono: "repetir",
-            titulo: "Plan B de un alumno",
-            descripcion: "Elige al alumno y cambia su Plan B de hoy.",
-            etiquetaAccesible: "Abrir Plan B de un alumno",
-            alPulsar: () => router.push("/docente/plan-b?alumno=elegir"),
           },
           {
             icono: "imagen",

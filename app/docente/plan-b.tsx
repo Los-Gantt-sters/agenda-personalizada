@@ -1,7 +1,8 @@
 /**
  * Ruta `/docente/plan-b` — Plan B (HU-22 · SCRUM-137).
  *
- * - Sin parámetros (desde el panel del tutor): 47c, Plan B del día de toda su clase.
+ * - Sin parámetros (desde el panel del tutor): se elige «Plan B del día» o «Plan B de un alumno».
+ * - Con `?alcance=dia`: 47c, Plan B del día de toda su clase.
  * - Con `?alumnoId=<uuid>` (p. ej. desde la ficha 37): 47b de ese alumno.
  * - Con `?alumno=elegir`: primero se elige el alumno y luego se abre su 47b.
  */
@@ -11,7 +12,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { hoyISO } from "../../src/componentes/agenda/useAgendaDia";
 import { ElegirAlumno26d, type AlumnoElegible26d } from "../../src/componentes/permisos-alumno";
-import { PantallaPlanB } from "../../src/componentes/plan-b";
+import { ElegirPlanB, PantallaPlanB } from "../../src/componentes/plan-b";
 import { MarcoPantalla } from "../../src/pantalla/MarcoPantalla";
 import { obtenerAlumnos } from "../../src/servicios/alumnosService";
 import { repositorioPlanBSupabase } from "../../src/servicios/planBService";
@@ -23,9 +24,15 @@ const ERROR_CARGA = "No se han podido cargar tus alumnos. Inténtalo otra vez.";
 export default function DocentePlanBScreen() {
   const router = useRouter();
   const { sesion, cerrarSesion } = useSesion();
-  const params = useLocalSearchParams<{ alumnoId?: string; nombre?: string; alumno?: string }>();
+  const params = useLocalSearchParams<{
+    alumnoId?: string;
+    nombre?: string;
+    alumno?: string;
+    alcance?: string;
+  }>();
   const alumnoIdParam = typeof params.alumnoId === "string" ? params.alumnoId.trim() : "";
   const eligiendoAlumno = params.alumno === "elegir" && !alumnoIdParam;
+  const delDia = params.alcance === "dia" && !alumnoIdParam;
 
   // Alumnos del tutor: la base de datos no deja leer los de otros.
   const [alumnos, setAlumnos] = useState<AlumnoElegible26d[] | null>(null);
@@ -66,6 +73,20 @@ export default function DocentePlanBScreen() {
     if (router.canGoBack?.()) router.back();
     else router.replace("/docente/agenda");
   };
+
+  if (!delDia && !eligiendoAlumno && !alumnoIdParam) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Plan B" }} />
+        <ElegirPlanB
+          alElegirDia={() => router.push("/docente/plan-b?alcance=dia")}
+          alElegirAlumno={() => router.push("/docente/plan-b?alumno=elegir")}
+          alAtras={volverAlPanel}
+          alCerrarSesion={salir}
+        />
+      </>
+    );
+  }
 
   if (eligiendoAlumno && !elegido) {
     return (
