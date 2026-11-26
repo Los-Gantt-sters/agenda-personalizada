@@ -23,6 +23,15 @@ function LectorDePrueba({ alLeer }: LectorQRProps) {
 const INICIO = new Date(Date.now() - 5 * 60_000).toISOString();
 
 describe("Pantalla 13b · Visita · Escanear código QR", () => {
+  // Sin lista de sitios permitidos no se abre ningún QR: aquí el centro permite el suyo
+  const sitiosAntes = process.env.EXPO_PUBLIC_QR_SITIOS_PERMITIDOS;
+  beforeAll(() => {
+    process.env.EXPO_PUBLIC_QR_SITIOS_PERMITIDOS = "centro.es";
+  });
+  afterAll(() => {
+    process.env.EXPO_PUBLIC_QR_SITIOS_PERMITIDOS = sitiosAntes;
+  });
+
   beforeEach(() => {
     montajes.n = 0;
   });

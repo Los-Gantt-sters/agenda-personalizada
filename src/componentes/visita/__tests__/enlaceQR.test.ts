@@ -10,7 +10,7 @@ import {
 
 describe("validarEnlaceQR", () => {
   it("acepta enlaces https y devuelve el sitio sin www", () => {
-    expect(validarEnlaceQR("  https://www.centro.es/biblioteca?sala=2 ", [])).toEqual({
+    expect(validarEnlaceQR("  https://www.centro.es/biblioteca?sala=2 ", ["centro.es"])).toEqual({
       valido: true,
       url: "https://www.centro.es/biblioteca?sala=2",
       sitio: "centro.es",
@@ -30,6 +30,17 @@ describe("validarEnlaceQR", () => {
     [`https://centro.es/${"a".repeat(LONGITUD_MAXIMA_QR)}`, "largo"],
   ])("no deja abrir «%s» (%s)", (texto, motivo) => {
     expect(validarEnlaceQR(texto as string | null, [])).toEqual({ valido: false, motivo });
+  });
+
+  it("sin lista de sitios permitidos no deja abrir ninguno, aunque sea https", () => {
+    expect(validarEnlaceQR("https://centro.es/biblioteca", [])).toEqual({
+      valido: false,
+      motivo: "sitio",
+    });
+    expect(validarEnlaceQR("https://centro.es/biblioteca", sitiosPermitidos(""))).toEqual({
+      valido: false,
+      motivo: "sitio",
+    });
   });
 
   it("con lista de sitios permitidos, solo esos y sus subdominios", () => {

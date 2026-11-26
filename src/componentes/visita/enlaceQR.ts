@@ -3,9 +3,10 @@
 // cualquier sitio (hay menores). Por eso, antes de ofrecer abrir nada:
 //   - Solo enlaces https (nada de javascript:, data:, file:, intent:, http en claro...).
 //   - Sin usuario ni contraseña en el enlace, y como mucho 2048 caracteres.
-//   - Si está configurada la lista de sitios permitidos (EXPO_PUBLIC_QR_SITIOS_PERMITIDOS, separados
-//     por comas), solo esos sitios y sus subdominios. Cuando exista el registro de enlaces por sala
-//     (SCRUM-270), se abrirán solo los registrados.
+//   - Solo los sitios de la lista de permitidos (EXPO_PUBLIC_QR_SITIOS_PERMITIDOS, separados por
+//     comas) y sus subdominios. Si la lista está vacía o sin configurar, NO se abre ninguno: un QR
+//     pegado encima del de una puerta no puede llevar a un menor a cualquier web. Cuando exista el
+//     registro de enlaces por sala (SCRUM-270), se abrirán solo los registrados.
 // La ventana se abre al TOCAR un botón, no al leer el código: los navegadores bloquean las ventanas
 // que no salen de un toque, y así el alumno ve a qué sitio va antes de entrar.
 import { Linking, Platform } from "react-native";
@@ -19,7 +20,7 @@ export type EnlaceQR =
       motivo: "vacio" | "largo" | "no-es-enlace" | "protocolo" | "credenciales" | "sitio";
     };
 
-/** Sitios permitidos de la configuración (en minúsculas y sin «www.»). Vacía = cualquiera https. */
+/** Sitios permitidos de la configuración (en minúsculas y sin «www.»). Vacía = no se abre ninguno. */
 export function sitiosPermitidos(
   valor: string | undefined = process.env.EXPO_PUBLIC_QR_SITIOS_PERMITIDOS,
 ): string[] {
@@ -36,7 +37,8 @@ export function sitiosPermitidos(
 
 /** El sitio es uno de los permitidos o un subdominio suyo (biblioteca.centro.es con centro.es). */
 function sitioPermitido(host: string, permitidos: string[]): boolean {
-  if (permitidos.length === 0) return true;
+  // Sin lista no hay sitios de confianza: mejor no abrir nada que abrir cualquiera
+  if (permitidos.length === 0) return false;
   return permitidos.some((p) => host === p || host.endsWith(`.${p}`));
 }
 
