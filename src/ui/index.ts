@@ -3,6 +3,7 @@
 export { FORMA, colorSobre, useApariencia, useEstilos } from "./apariencia";
 export type { Apariencia } from "./apariencia";
 export { Texto } from "./Texto";
+export { LetraFija } from "./LetraFija";
 export { Icono } from "./Icono";
 export type { IconoProps, NombreIcono } from "./Icono";
 export { LogoColegio } from "./LogoColegio";
