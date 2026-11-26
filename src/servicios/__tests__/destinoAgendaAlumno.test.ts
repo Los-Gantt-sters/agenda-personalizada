@@ -1,6 +1,7 @@
 import {
   destinoTrasLoginAlumno,
   esIdDeAlumnoReal,
+  guardarVistaAgenda,
   obtenerVistaAgenda,
   rutaAgendaAlumno,
 } from "../destinoAgendaAlumno";
@@ -106,6 +107,37 @@ describe("destinoAgendaAlumno (SCRUM-227: llevar al alumno a su agenda tras el l
 
     it("con un alumno de ejemplo mantiene la demo de la agenda", async () => {
       await expect(destinoTrasLoginAlumno("mir")).resolves.toBe("/agenda");
+    });
+  });
+
+  describe("guardarVistaAgenda (SCRUM-125: Preferencias 24 / Permisos 26d)", () => {
+    function consultaGuardar(resultado: { error: unknown } | Error) {
+      const eq = jest.fn(() =>
+        resultado instanceof Error ? Promise.reject(resultado) : Promise.resolve(resultado),
+      );
+      const update = jest.fn(() => ({ eq }));
+      sb.from.mockReturnValue({ update });
+      return { update, eq };
+    }
+
+    it("guarda la vista en preferencias_alumnos.vista_agenda del alumno", async () => {
+      const q = consultaGuardar({ error: null });
+      await expect(guardarVistaAgenda(ID_REAL, "semanal")).resolves.toBe(true);
+      expect(sb.from).toHaveBeenCalledWith("preferencias_alumnos");
+      expect(q.update).toHaveBeenCalledWith({ vista_agenda: "semanal" });
+      expect(q.eq).toHaveBeenCalledWith("alumno_id", ID_REAL);
+    });
+
+    it("avisa con false si Supabase da error o no hay conexión", async () => {
+      consultaGuardar({ error: { message: "sin permiso" } });
+      await expect(guardarVistaAgenda(ID_REAL, "diaria")).resolves.toBe(false);
+      consultaGuardar(new Error("sin red"));
+      await expect(guardarVistaAgenda(ID_REAL, "diaria")).resolves.toBe(false);
+    });
+
+    it("no intenta guardar para un alumno de ejemplo", async () => {
+      await expect(guardarVistaAgenda("ale", "semanal")).resolves.toBe(false);
+      expect(sb.from).not.toHaveBeenCalled();
     });
   });
 });
