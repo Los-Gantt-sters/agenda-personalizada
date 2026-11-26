@@ -2,14 +2,17 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   CAJAS_LETRA,
-  TAREAS_VISIBLES,
   FORMAS_BOTON,
   FUENTES,
   MODOS_CANAL,
   ORDEN_MODOS_CANAL,
+  ORDEN_TAREAS_VISIBLES,
   PREFERENCIAS_POR_DEFECTO,
   TAMANOS_BOTON,
   TAMANOS_LETRA,
+  TAREAS_VISIBLES,
+  VISTAS_AGENDA,
+  moverTareasVisibles,
   normalizarPreferencias,
 } from "./opciones";
 
@@ -56,34 +59,60 @@ describe("opciones del prototipo (FONTS, FS, BS, SHAPES y CANAL)", () => {
       tamanoBoton: "L",
       forma: "round",
       canal: "ambos",
+      formatoTarea: "pictograma",
+      locucion: "automatica",
       caja: "normal",
       tareasVisibles: "tres",
+      vistaAgenda: "diaria",
       reloj: "si",
+      avisoPrevio: "si",
       necesidades: ["bano", "agua", "descanso"],
+      ayudas: ["bano", "agua", "descanso"],
+      modoBarrido: "desactivado",
+      intervaloBarridoMs: 1600,
     });
   });
 });
 
-describe("mayúsculas y tareas que se ven (mejoras de la profesora)", () => {
-  it("ofrece minúsculas o MAYÚSCULAS y 1, hasta 3 o todas las tareas", () => {
+describe("mayúsculas y tareas que se ven (mejoras de la profesora y SCRUM-251)", () => {
+  it("ofrece minúsculas o MAYÚSCULAS y de 1 a 5 tareas y después «Todas»", () => {
     expect(CAJAS_LETRA.normal.etiqueta).toBe("Minúsculas");
     expect(CAJAS_LETRA.mayusculas.etiqueta).toBe("MAYÚSCULAS");
     expect(TAREAS_VISIBLES.una.maximo).toBe(1);
     expect(TAREAS_VISIBLES.tres.maximo).toBe(3);
     expect(TAREAS_VISIBLES.todas.maximo).toBeGreaterThan(20);
+    expect(ORDEN_TAREAS_VISIBLES.map((t) => TAREAS_VISIBLES[t].maximo).slice(0, 5)).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
+    expect(moverTareasVisibles("tres", 1)).toBe("cuatro");
+    expect(moverTareasVisibles("cinco", 1)).toBe("todas");
+    expect(moverTareasVisibles("todas", 1)).toBe("todas");
+    expect(moverTareasVisibles("una", -1)).toBe("una");
   });
 
-  it("normalizarPreferencias conserva caja y tareas válidas y sanea las demás", () => {
-    expect(normalizarPreferencias({ caja: "mayusculas", tareasVisibles: "todas" })).toMatchObject({
+  it("normalizarPreferencias conserva caja, tareas y vistaAgenda válidas y sanea las demás", () => {
+    expect(
+      normalizarPreferencias({
+        caja: "mayusculas",
+        tareasVisibles: "todas",
+        vistaAgenda: "semanal",
+      }),
+    ).toMatchObject({
       caja: "mayusculas",
       tareasVisibles: "todas",
+      vistaAgenda: "semanal",
     });
-    expect(normalizarPreferencias({ caja: "cursiva", tareasVisibles: 7 })).toMatchObject({
+    expect(
+      normalizarPreferencias({ caja: "cursiva", tareasVisibles: 7, vistaAgenda: "mensual" }),
+    ).toMatchObject({
       caja: "normal",
       tareasVisibles: "tres",
+      vistaAgenda: "diaria",
       reloj: "si",
       necesidades: ["bano", "agua", "descanso"],
     });
+    expect(VISTAS_AGENDA.diaria.etiqueta).toBe("Ir directo a Hoy");
+    expect(VISTAS_AGENDA.semanal.etiqueta).toBe("Semana completa");
   });
 });
 
@@ -102,6 +131,10 @@ describe("normalizarPreferencias", () => {
         tamanoBoton: "XL",
         forma: "toString",
         canal: "soloPictograma",
+        locucion: "manual",
+        avisoPrevio: "no",
+        modoBarrido: "automatico",
+        intervaloBarridoMs: 2400,
       }),
     ).toEqual({
       tema: "pastel",
@@ -110,22 +143,36 @@ describe("normalizarPreferencias", () => {
       tamanoBoton: "XL",
       forma: "round",
       canal: "soloPictograma",
+      formatoTarea: "soloPictograma",
+      locucion: "manual",
       caja: "normal",
       tareasVisibles: "tres",
+      vistaAgenda: "diaria",
       reloj: "si",
+      avisoPrevio: "no",
       necesidades: ["bano", "agua", "descanso"],
+      ayudas: ["bano", "agua", "descanso"],
+      modoBarrido: "automatico",
+      intervaloBarridoMs: 2400,
     });
   });
 });
 
-describe("reloj y necesidades de Ayuda (segunda ronda de la profesora)", () => {
-  it("el reloj se ve por defecto y solo admite sí o no", () => {
+describe("reloj, aviso previo 5m y necesidades de Ayuda (pantallas 25 y 26)", () => {
+  it("el reloj y el aviso previo se ven por defecto y solo admiten sí o no", () => {
     expect(PREFERENCIAS_POR_DEFECTO.reloj).toBe("si");
-    expect(normalizarPreferencias({ reloj: "no" }).reloj).toBe("no");
-    expect(normalizarPreferencias({ reloj: "a veces" }).reloj).toBe("si");
+    expect(PREFERENCIAS_POR_DEFECTO.avisoPrevio).toBe("si");
+    expect(normalizarPreferencias({ reloj: "no", avisoPrevio: "no" })).toMatchObject({
+      reloj: "no",
+      avisoPrevio: "no",
+    });
+    expect(normalizarPreferencias({ reloj: "a veces", avisoPrevio: "quizas" })).toMatchObject({
+      reloj: "si",
+      avisoPrevio: "si",
+    });
   });
 
-  it("las necesidades se quedan con las válidas, sin repetir y en orden; vacías, todas", () => {
+  it("las necesidades y ayudas se quedan con las válidas, sin repetir y máximo 3; vacías, todas", () => {
     expect(
       normalizarPreferencias({ necesidades: ["descanso", "bano", "bano"] }).necesidades,
     ).toEqual(["bano", "descanso"]);
@@ -140,5 +187,8 @@ describe("reloj y necesidades de Ayuda (segunda ronda de la profesora)", () => {
       "descanso",
     ]);
     expect(normalizarPreferencias({ necesidades: "agua" }).necesidades).toHaveLength(3);
+    expect(normalizarPreferencias({ ayudas: ["casa", "libro", "futbol", "ayuda"] }).ayudas).toEqual(
+      ["casa", "libro", "futbol"],
+    );
   });
 });
