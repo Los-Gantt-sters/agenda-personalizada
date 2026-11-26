@@ -17,6 +17,9 @@ export const PICTOGRAMAS_INTERFAZ = {
   mochila: { id: 2475, respaldo: "🎒" },
   profesora: { id: 2456, respaldo: "👩‍🏫" },
   agenda: { id: 5898, respaldo: "📒" },
+  // Visita (pantalla 13b, HU-15): la tarjeta del código y el botón «Escanear de nuevo»
+  qr: { id: 38514, respaldo: "🔳" },
+  leerQr: { id: 39018, respaldo: "📷" },
   // Emociones (misma serie de caras redondas de ARASAAC): «¿Cómo te has sentido?»
   contento: { id: 35547, respaldo: "😀" },
   tranquilo: { id: 31310, respaldo: "😌" },
