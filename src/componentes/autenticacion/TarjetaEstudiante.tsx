@@ -1,3 +1,6 @@
+// Tarjeta de un alumno en la pantalla 02 (HU-01). Desde la MOD HU-01 (SCRUM-247) es horizontal, como
+// en el prototipo: su foto o su dibujo a la izquierda y su nombre a la derecha. Así caben 9 en una
+// pantalla de tableta sin scroll y siguen midiendo al menos 120 px de alto (RNF1.1).
 import React from "react";
 import { TouchableOpacity, Text, View, StyleSheet, Image, Platform } from "react-native";
 import type { Paleta } from "../../temas";
@@ -9,14 +12,15 @@ export interface TarjetaEstudianteProps {
   estudiante: Estudiante;
   alSeleccionar: (estudiante: Estudiante) => void;
   seleccionado?: boolean;
-  tamanioMinimo?: number; // Por defecto 140px, garantizando >= 120px (RNF1.1)
+  /** Alto mínimo de la tarjeta; nunca baja de 120 px (RNF1.1). */
+  tamanioMinimo?: number;
 }
 
 export const TarjetaEstudiante: React.FC<TarjetaEstudianteProps> = ({
   estudiante,
   alSeleccionar,
   seleccionado = false,
-  tamanioMinimo = 140,
+  tamanioMinimo = 120,
 }) => {
   const dimensionFinal = Math.max(tamanioMinimo, 120);
   const { colores } = useApariencia();
@@ -77,17 +81,17 @@ export const TarjetaEstudiante: React.FC<TarjetaEstudianteProps> = ({
 const crearEstilos = (c: Paleta) =>
   StyleSheet.create({
     tarjeta: {
-      // RNF1.1: Al menos 120x120 px
-      minWidth: 140,
-      minHeight: 140,
+      // RNF1.1: al menos 120 px de alto; el ancho lo da la celda de la cuadrícula
+      width: "100%",
+      minHeight: 120,
+      flexDirection: "row",
       paddingVertical: 12,
-      paddingHorizontal: 10,
+      paddingHorizontal: 16,
       borderRadius: 14,
       borderWidth: 2,
       alignItems: "center",
-      justifyContent: "center",
-      gap: 10,
-      margin: 8,
+      justifyContent: "flex-start",
+      gap: 16,
       ...Platform.select({
         web: { cursor: "pointer", userSelect: "none" },
         default: {},
@@ -116,9 +120,9 @@ const crearEstilos = (c: Paleta) =>
     },
     nombreLecturaFacil: {
       // Tipografía clara para Lectura Fácil (RNF1.1)
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: "700",
       color: c.texto,
-      textAlign: "center",
+      flexShrink: 1,
     },
   });

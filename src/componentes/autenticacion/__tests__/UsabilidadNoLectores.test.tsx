@@ -182,7 +182,8 @@ describe("SCRUM-53 · Usabilidad cognitiva con perfiles no lectores (HU-01)", ()
           alSeleccionarEstudiante={jest.fn()}
         />,
       );
-      const cuadricula = estiloDe(screen.getByTestId("cuadricula-estudiantes")) as Record<
+      // Desde la MOD HU-01 (SCRUM-247) las fotos van en páginas de 9: la que baja de fila es la página
+      const cuadricula = estiloDe(screen.getByTestId("cuadricula-estudiantes-pagina-1")) as Record<
         string,
         unknown
       >;
