@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
 import PanelAdministracion from "../admin/index";
+import { limpiarMultimediaHuerfana } from "../../src/servicios/pasosService";
 import { listarUsuariosPanel, type DatosPanel } from "../../src/servicios/usuariosPanelService";
 
 const mockPush = jest.fn();
@@ -11,6 +12,11 @@ jest.mock("expo-router", () => ({
 jest.mock("../../src/servicios/usuariosPanelService", () => ({
   ...jest.requireActual("../../src/servicios/usuariosPanelService"),
   listarUsuariosPanel: jest.fn(),
+}));
+
+// HU-10: al abrir el panel se borran las fotos y vídeos de tareas que ya no existen.
+jest.mock("../../src/servicios/pasosService", () => ({
+  limpiarMultimediaHuerfana: jest.fn(async () => 0),
 }));
 
 const mockListar = listarUsuariosPanel as jest.Mock;
@@ -64,6 +70,12 @@ describe("PanelAdministracion - pantalla 48", () => {
     expect(screen.getByText("Clase Triángulo · Tutor: Carmen Ruiz · Familia García")).toBeTruthy();
     expect(screen.getByText("Menú Normal")).toBeTruthy();
     expect(screen.getByText("Todos (3)")).toBeTruthy();
+  });
+
+  it("al abrirse borra del almacenamiento los archivos de tareas borradas (HU-10)", async () => {
+    await render(<PanelAdministracion />);
+    await screen.findByText("Alejandro Pérez");
+    expect(limpiarMultimediaHuerfana).toHaveBeenCalledTimes(1);
   });
 
   it("«Aulas y Clases» y «Menús y Alergias» abren sus pantallas", async () => {

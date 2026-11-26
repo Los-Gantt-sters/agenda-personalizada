@@ -5,7 +5,7 @@
 //   se quitan los datos EXIF (ubicación GPS, cámara...): nunca se sube la foto original.
 // - Vídeo y audio: el navegador no puede recomprimirlos sin librerías pesadas, así que se limitan
 //   por tipo, tamaño y duración (vídeo corto, 07d). El bucket también tiene límite de tamaño y tipos
-//   (supabase/migrations/20261125100000_storage_multimedia_pasos.sql).
+//   (supabase/migrations/20261128300000_storage_multimedia_pasos.sql).
 // La compresión funciona en web, que es donde se usa el editor. En la app nativa, el vídeo y el
 // audio se suben tal cual y la foto no se puede subir (no se le podrían quitar los datos EXIF).
 import { Platform } from "react-native";
@@ -201,6 +201,8 @@ export function leerDuracion(archivo: Blob, tipo: "video" | "audio"): Promise<nu
 export async function prepararMultimedia(
   tipo: TipoMultimedia,
   archivo: Blob,
+  /** Duración que ya da quien elige el archivo (p. ej. el selector de la tableta), si la sabe. */
+  duracionConocida?: number | null,
 ): Promise<{ ok: true; archivo: ArchivoPreparado } | { ok: false; error: string }> {
   const tipoOriginal = mimeBase(archivo.type || "");
   if (!LIMITES[tipo].tiposMime.includes(tipoOriginal)) {
@@ -217,7 +219,16 @@ export async function prepararMultimedia(
     };
   }
   const tipoMime = mimeBase(blob.type || tipoOriginal);
-  const duracionSegundos = tipo === "foto" ? null : await leerDuracion(blob, tipo);
+  const duracionSegundos =
+    tipo === "foto" ? null : (duracionConocida ?? (await leerDuracion(blob, tipo)));
+  // Sin duración no se puede comprobar el límite: mejor no aceptarlo que dejar pasar uno largo.
+  if (tipo !== "foto" && duracionSegundos == null) {
+    const nombre = tipo === "video" ? "del vídeo" : "del audio";
+    return {
+      ok: false,
+      error: `No se ha podido saber la duración ${nombre}. Prueba con otro archivo en MP4 o MP3.`,
+    };
+  }
   const error = validarMultimedia(tipo, { tipoMime, tamanoBytes: blob.size, duracionSegundos });
   if (error) return { ok: false, error };
   return { ok: true, archivo: { blob, tipoMime, tamanoBytes: blob.size, duracionSegundos } };
