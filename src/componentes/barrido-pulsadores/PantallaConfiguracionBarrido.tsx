@@ -6,6 +6,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { MarcoPantalla } from "../../pantalla/MarcoPantalla";
+import { usePreferenciasOpcional } from "../../preferencias/PreferenciasProvider";
 import { Icono } from "../../ui/Icono";
 import { ElementoBarrido } from "./ElementoBarrido";
 import { useMotorBarrido } from "./MotorBarridoProvider";
@@ -40,6 +41,23 @@ export function PantallaConfiguracionBarrido({
     avanzarFoco,
     accionarPulsadorUnico,
   } = useMotorBarrido();
+  const prefs = usePreferenciasOpcional();
+
+  const seleccionarModo = (modo: ModoBarridoPulsador) => {
+    cambiarModo(modo);
+    prefs?.cambiar({ modoBarrido: modo });
+  };
+
+  const cambiarVelocidad = (direccion: "inc" | "dec") => {
+    const idx = VELOCIDADES_BARRIDO_MS.indexOf(configuracion.intervaloMs);
+    const idxBase = idx === -1 ? 1 : idx;
+    const nuevoIdx =
+      direccion === "inc"
+        ? Math.min(VELOCIDADES_BARRIDO_MS.length - 1, idxBase + 1)
+        : Math.max(0, idxBase - 1);
+    ajustarVelocidadStepper(direccion);
+    prefs?.cambiar({ intervaloBarridoMs: VELOCIDADES_BARRIDO_MS[nuevoIdx] });
+  };
 
   const segundosTexto = `${(configuracion.intervaloMs / 1000).toFixed(1).replace(".", ",")} segundos`;
   const idxVelocidad = VELOCIDADES_BARRIDO_MS.indexOf(configuracion.intervaloMs);
@@ -110,7 +128,7 @@ export function PantallaConfiguracionBarrido({
                       accessibilityRole="radio"
                       accessibilityLabel={ETIQUETAS_MODO_BARRIDO[modo].titulo}
                       accessibilityState={{ checked: activo, selected: activo }}
-                      onPress={() => cambiarModo(modo)}
+                      onPress={() => seleccionarModo(modo)}
                       style={[estilos.opcion, activo && estilos.opcionActiva]}
                     >
                       {activo ? (
@@ -140,7 +158,7 @@ export function PantallaConfiguracionBarrido({
                   accessibilityLabel="Disminuir tiempo de barrido"
                   accessibilityState={{ disabled: enMinimo }}
                   disabled={enMinimo}
-                  onPress={() => ajustarVelocidadStepper("dec")}
+                  onPress={() => cambiarVelocidad("dec")}
                   style={[estilos.botonStepperNeutro, enMinimo && estilos.botonApagado]}
                 >
                   <Text style={estilos.textoStepperNeutro}>−</Text>
@@ -156,7 +174,7 @@ export function PantallaConfiguracionBarrido({
                   accessibilityLabel="Aumentar tiempo de barrido"
                   accessibilityState={{ disabled: enMaximo }}
                   disabled={enMaximo}
-                  onPress={() => ajustarVelocidadStepper("inc")}
+                  onPress={() => cambiarVelocidad("inc")}
                   style={[estilos.botonStepperPrimario, enMaximo && estilos.botonApagado]}
                 >
                   <Text style={estilos.textoStepperPrimario}>+</Text>

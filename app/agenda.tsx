@@ -88,7 +88,7 @@ export default function PantallaAgenda() {
   const verReloj = (prefs?.preferencias.reloj ?? "si") === "si";
   const avisoPrevioHabilitado = (prefs?.preferencias.avisoPrevio ?? "si") === "si";
   const preferenciasAvisoEfectivas = useMemo<PreferenciasAviso>(
-    () => (!avisoPrevioHabilitado ? { ...preferenciasAviso, minutosAntes: 0 } : preferenciasAviso),
+    () => (!avisoPrevioHabilitado ? { ...preferenciasAviso, activado: false } : preferenciasAviso),
     [avisoPrevioHabilitado, preferenciasAviso],
   );
 
