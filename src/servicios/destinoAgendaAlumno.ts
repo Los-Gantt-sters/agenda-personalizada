@@ -1,9 +1,8 @@
 // SCRUM-227 (deuda técnica HU-01 → HU-06): a dónde se lleva al alumno tras el inicio de sesión visual.
 //
 // Tras entrar, el alumno debe ver SU agenda con sus datos reales de Supabase: la semanal (06b) o la
-// diaria (06) según la preferencia `vista_agenda` que configura el tutor. Mientras la pantalla 06b
-// no exista (la hace SCRUM-232/250), la ruta lleva `vista=semanal` y la agenda diaria la ignora;
-// cuando esté lista bastará con leer ese parámetro, sin tocar el inicio de sesión.
+// diaria (06) según la preferencia `vista_agenda` que configura el tutor. La ruta lleva
+// `vista=semanal` y app/agenda.tsx abre entonces la semana (06b, MOD HU-17).
 import { supabase } from "../lib/supabaseClient";
 
 export type VistaAgenda = "diaria" | "semanal";
@@ -41,6 +40,24 @@ export async function obtenerVistaAgenda(alumnoId: string): Promise<VistaAgenda>
   } catch {
     // Sin conexión u otro fallo: el alumno no debe quedarse sin agenda
     return VISTA_POR_DEFECTO;
+  }
+}
+
+/**
+ * MOD HU-17 (SCRUM-125): guarda la pantalla al entrar del alumno, «Hoy» (06) o «Semana» (06b), en
+ * preferencias_alumnos.vista_agenda. La usan Preferencias (24) y Permisos del alumno (26d).
+ * Devuelve false si no se ha podido guardar (alumno de ejemplo, sin conexión o sin permiso).
+ */
+export async function guardarVistaAgenda(alumnoId: string, vista: VistaAgenda): Promise<boolean> {
+  if (!esIdDeAlumnoReal(alumnoId)) return false;
+  try {
+    const { error } = await supabase
+      .from("preferencias_alumnos")
+      .update({ vista_agenda: vista })
+      .eq("alumno_id", alumnoId);
+    return !error;
+  } catch {
+    return false;
   }
 }
 

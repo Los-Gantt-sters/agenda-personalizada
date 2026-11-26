@@ -61,6 +61,7 @@ describe("opciones del prototipo (FONTS, FS, BS, SHAPES y CANAL)", () => {
       caja: "normal",
       tareasVisibles: "tres",
       reloj: "si",
+      vistaAgenda: "diaria",
       necesidades: ["bano", "agua", "descanso"],
     });
   });
@@ -92,6 +93,7 @@ describe("mayúsculas y tareas que se ven (mejoras de la profesora)", () => {
       caja: "normal",
       tareasVisibles: "tres",
       reloj: "si",
+      vistaAgenda: "diaria",
       necesidades: ["bano", "agua", "descanso"],
     });
   });
@@ -123,6 +125,7 @@ describe("normalizarPreferencias", () => {
       caja: "normal",
       tareasVisibles: "tres",
       reloj: "si",
+      vistaAgenda: "diaria",
       necesidades: ["bano", "agua", "descanso"],
     });
   });

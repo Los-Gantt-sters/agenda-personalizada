@@ -34,17 +34,29 @@ const etiqueta = (id: string) => screen.getByTestId(id).props.accessibilityLabel
 const pasaElBloqueo = () => act(() => new Promise<void>((r) => setTimeout(r, 850)));
 const tocar = (boton: ReturnType<typeof screen.getByRole>) => fireEvent.press(boton);
 
-/** Empieza «Lavarse las manos» (la demo la pide empezar) y espera a la pantalla de la tarea. */
+/**
+ * Empieza «Lavarse las manos» (la demo la pide empezar) y espera a la pantalla de la tarea. Como
+ * tiene pasos, es la de paso a paso (07, HU-10).
+ */
 async function empezarLavarse() {
   await pasaElBloqueo();
   tocar(await screen.findByRole("button", { name: "Empezar" }));
-  await screen.findByTestId("pantalla-tarea-en-curso");
+  await screen.findByTestId("pantalla-07-pasos");
 }
 
-/** Pulsa «Terminar» y espera a la pantalla 08 («¿Has terminado?»). */
+/**
+ * Pulsa «Terminar» y espera a la pantalla 08 («¿Has terminado?»). En una tarea con pasos (07),
+ * «Terminar tarea» está en el último paso: se avanza hasta él.
+ */
 async function pedirTerminar() {
   await pasaElBloqueo();
-  tocar(screen.getByRole("button", { name: "Terminar" }));
+  if (screen.queryByTestId("pantalla-07-pasos")) {
+    for (let i = 0; i < 20 && !screen.queryByRole("button", { name: "Terminar tarea" }); i++)
+      await tocar(screen.getByRole("button", { name: /^Siguiente: paso/ }));
+    await tocar(screen.getByRole("button", { name: "Terminar tarea" }));
+  } else {
+    tocar(screen.getByRole("button", { name: "Terminar" }));
+  }
   await screen.findByTestId("pantalla-confirmar-fin");
 }
 
@@ -110,16 +122,16 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
 
     await user.press(empezar);
 
-    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    // HU-10: con pasos, sale directamente el Paso 1 (07).
+    expect(await screen.findByTestId("pantalla-07-pasos")).toBeTruthy();
     // Arriba el nombre de la tarea; sin «Hecho» ni «Después».
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Lavarse las manos");
     expect(screen.queryByTestId("bloque-hecho")).toBeNull();
     expect(screen.queryByTestId("bloque-despues")).toBeNull();
     expect(screen.getByText("Empezaste a las 9:32")).toBeTruthy();
-    expect(screen.getByText("Antes del desayuno nos lavamos las manos.")).toBeTruthy();
-    expect(screen.getByText("Paso 1 de 4: Abre el grifo.")).toBeTruthy();
+    expect(screen.getByLabelText("Paso 1 de 4: Abre el grifo")).toBeTruthy();
     expect(screen.getByLabelText(/^Reloj visual:/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Terminar" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Siguiente: paso 2" })).toBeTruthy();
   });
 
   it("«Atrás» en la tarea empezada la deshace: vuelve a la agenda sin empezar", async () => {
@@ -154,7 +166,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
 
     await user.press(screen.getByTestId("btn-barra-atras"));
 
-    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    expect(await screen.findByTestId("pantalla-07-pasos")).toBeTruthy();
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Lavarse las manos");
     expect(screen.queryByText("¡Muy bien!")).toBeNull();
   });
@@ -220,20 +232,25 @@ describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
   };
   const estadoLavarse = async (repo: ReturnType<typeof crearRepositorioMemoria>["repo"]) =>
     (await repo.obtenerSecuenciaDia(ESTUDIANTE_DEMO, hoyISO())).find((e) => e.id === "e2")?.estado;
-  /** Avanza hasta el paso 3 y deja elegido el formato «solo texto». */
-  const irAlPaso3SoloTexto = async () => {
+  /**
+   * HU-10: «Terminar tarea» está en el último paso (07). Avanza hasta el paso 4 y deja elegido el
+   * formato Texto (07b).
+   */
+  const irAlUltimoPasoEnTexto = async () => {
     const user = userEvent.setup();
-    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
-    await user.press(screen.getByRole("button", { name: "Paso siguiente" }));
-    await user.press(screen.getByRole("radio", { name: "Ver solo el texto" }));
-    expect(screen.getByText("Paso 3 de 4: Frota las manos.")).toBeTruthy();
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 2" }));
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 3" }));
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 4" }));
+    await user.press(screen.getByTestId("btn-formato-texto"));
+    expect(screen.getByLabelText("Paso 4 de 4: Aclara y sécate")).toBeTruthy();
   };
-  const sigueEnPaso3SoloTexto = async () => {
-    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
-    expect(screen.getByText("Paso 3 de 4: Frota las manos.")).toBeTruthy();
-    expect(
-      screen.getByRole("radio", { name: "Ver solo el texto" }).props.accessibilityState,
-    ).toMatchObject({ checked: true });
+  const sigueEnUltimoPasoEnTexto = async () => {
+    expect(await screen.findByTestId("pantalla-07-pasos")).toBeTruthy();
+    expect(screen.getByLabelText("Paso 4 de 4: Aclara y sécate")).toBeTruthy();
+    expect(screen.getByTestId("btn-formato-texto").props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    expect(screen.getByTestId("texto-paso")).toHaveTextContent(/Quita la espuma con agua/);
   };
 
   it("«Terminar» pregunta antes, sin ventana emergente y sin dar la tarea por hecha", async () => {
@@ -251,22 +268,22 @@ describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
 
   it("«No, sigo» vuelve al último paso, con el mismo formato", async () => {
     const { repo } = await abrirAgenda();
-    await irAlPaso3SoloTexto();
+    await irAlUltimoPasoEnTexto();
     await pedirTerminar();
 
     await userEvent.setup().press(screen.getByRole("button", { name: "No, sigo" }));
 
-    await sigueEnPaso3SoloTexto();
+    await sigueEnUltimoPasoEnTexto();
     expect(await estadoLavarse(repo)).toBe("en_curso");
   });
 
   it("«Atrás» también vuelve al último paso y «Terminar» sigue funcionando", async () => {
     await abrirAgenda();
-    await irAlPaso3SoloTexto();
+    await irAlUltimoPasoEnTexto();
     await pedirTerminar();
 
     await userEvent.setup().press(screen.getByTestId("btn-barra-atras"));
-    await sigueEnPaso3SoloTexto();
+    await sigueEnUltimoPasoEnTexto();
 
     await pedirTerminar();
     expect(screen.getByTestId("pantalla-confirmar-fin")).toBeTruthy();
@@ -285,23 +302,27 @@ describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
 
   it("«Atrás» en la felicitación también vuelve al último paso", async () => {
     await abrirAgenda();
-    await irAlPaso3SoloTexto();
+    await irAlUltimoPasoEnTexto();
     await terminarTarea();
 
     await userEvent.setup().press(screen.getByTestId("btn-barra-atras"));
 
-    await sigueEnPaso3SoloTexto();
+    await sigueEnUltimoPasoEnTexto();
   });
 
   it("si deshace «Empezar», al volver a empezar la tarea arranca en el paso 1", async () => {
+    const user = userEvent.setup();
     await abrirAgenda();
-    await irAlPaso3SoloTexto();
+    await user.press(screen.getByRole("button", { name: "Siguiente: paso 2" }));
 
-    await userEvent.setup().press(screen.getByTestId("btn-barra-atras"));
+    // HU-10: «Atrás» vuelve al paso anterior; en el Paso 1, deshace «Empezar».
+    await user.press(screen.getByTestId("btn-barra-atras"));
+    expect(screen.getByLabelText("Paso 1 de 4: Abre el grifo")).toBeTruthy();
+    await user.press(screen.getByTestId("btn-barra-atras"));
     await screen.findByRole("button", { name: "Empezar" });
     await empezarLavarse();
 
-    expect(screen.getByText("Paso 1 de 4: Abre el grifo.")).toBeTruthy();
+    expect(screen.getByLabelText("Paso 1 de 4: Abre el grifo")).toBeTruthy();
   });
 
   it("si el tutor bloquea la tarea mientras se pregunta, vuelve a la agenda", async () => {
@@ -363,11 +384,17 @@ describe("Pantalla 10 «Tarea hecha» (SCRUM-263: T-08.5)", () => {
 });
 
 describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () => {
+  // Sin pasos: estas pruebas son de la pantalla de la tarea (HU-06/HU-08). Con pasos sale la 07.
   const repoEnCurso = () =>
     crearRepositorioMemoria(
       agendaDemo(hoyISO()).map((e) =>
         e.id === "e2"
-          ? { ...e, estado: "en_curso" as const, inicio_real: new Date().toISOString() }
+          ? {
+              ...e,
+              estado: "en_curso" as const,
+              inicio_real: new Date().toISOString(),
+              tarea: { ...e.tarea, pasos: [] },
+            }
           : e,
       ),
     ).repo;

@@ -39,10 +39,12 @@ import {
   ORDEN_TAREAS_VISIBLES,
   moverTareasVisibles,
   ORDEN_VER_RELOJ,
+  ORDEN_VISTAS_AGENDA,
   TAMANOS_BOTON,
   TAMANOS_LETRA,
   TAREAS_VISIBLES,
   VER_RELOJ,
+  VISTAS_AGENDA,
   type PreferenciasApariencia,
 } from "./opciones";
 
@@ -56,6 +58,7 @@ type Apartado =
   | "forma"
   | "tareasVisibles"
   | "reloj"
+  | "vistaAgenda"
   | "necesidades";
 
 /** Apartados del menú, en el orden en que se recorren con «Adelante». */
@@ -110,6 +113,13 @@ const APARTADOS: { clave: Apartado; titulo: string; ayuda: string; icono: Nombre
     icono: "reloj",
   },
   {
+    // MOD HU-17 (boceto 24): «Pantalla inicial tras login (según nivel cognitivo)».
+    clave: "vistaAgenda",
+    titulo: "Pantalla al entrar",
+    ayuda: "Al entrar, las tareas de hoy o la semana entera. Con la semana sale «Ver semana».",
+    icono: "calendario",
+  },
+  {
     clave: "necesidades",
     titulo: "Qué puede pedir en Ayuda",
     ayuda: "Lo que sale al pulsar «Ayuda». «Urgencia» sale siempre. Elige al menos una.",
@@ -138,6 +148,8 @@ function valorActual(apartado: Apartado, p: PreferenciasApariencia): string {
       return TAREAS_VISIBLES[p.tareasVisibles].etiqueta;
     case "reloj":
       return VER_RELOJ[p.reloj].etiqueta;
+    case "vistaAgenda":
+      return VISTAS_AGENDA[p.vistaAgenda].etiqueta;
     case "necesidades":
       return p.necesidades.map((n) => NECESIDADES_AYUDA[n].etiqueta).join(", ");
   }
@@ -372,6 +384,21 @@ function Opciones({ apartado }: { apartado: Apartado }) {
           ))}
         </>
       );
+    case "vistaAgenda":
+      return (
+        <>
+          {ORDEN_VISTAS_AGENDA.map((v) => (
+            <OpcionPreferencia
+              key={v}
+              testID={`vista-agenda-${v}`}
+              etiqueta={VISTAS_AGENDA[v].etiqueta}
+              accessibilityLabel={`${VISTAS_AGENDA[v].etiqueta}: ${VISTAS_AGENDA[v].descripcion}`}
+              elegida={p.vistaAgenda === v}
+              onPress={() => cambiar({ vistaAgenda: v })}
+            />
+          ))}
+        </>
+      );
     case "necesidades":
       // Se pueden elegir varias; la última que queda no se puede quitar (Ayuda nunca sale vacía).
       return (
@@ -502,6 +529,21 @@ function MuestraApartado({
           {p.reloj === "no" ? (
             <Icono nombre="cerrar" color={colores.textoSecundario} tam={28} grosor={3} />
           ) : null}
+        </View>
+      );
+      break;
+    case "vistaAgenda":
+      contenido = (
+        <View style={e.filaMuestra}>
+          {Array.from({ length: p.vistaAgenda === "semanal" ? 7 : 1 }, (_, i) => (
+            <View
+              key={i}
+              style={[
+                e.cuadroTarea,
+                { borderColor: colores.borde, width: p.vistaAgenda === "semanal" ? 10 : 40 },
+              ]}
+            />
+          ))}
         </View>
       );
       break;

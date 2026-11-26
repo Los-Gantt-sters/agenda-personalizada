@@ -14,7 +14,7 @@ import { reproducirSonido } from "../servicios/sonidos";
 import type { Paleta } from "../temas";
 import { Icono, type NombreIcono } from "../ui/Icono";
 import { Texto } from "../ui/Texto";
-import { useApariencia, useEstilos } from "../ui/apariencia";
+import { colorSobre, useApariencia, useEstilos } from "../ui/apariencia";
 
 /** Alto de los botones de la barra inferior (muy por encima de los 48 px mínimos). */
 export const ALTO_BOTON_BARRA = 72;
@@ -36,6 +36,8 @@ export interface MarcoPantallaProps {
   etiquetaAdelante?: string;
   /** Texto visible de «Adelante» cuando avanzar es una acción concreta («Entrar», «Seguir»). */
   textoAdelante?: string;
+  /** HU-10: «Adelante» en verde, para terminar («Terminar tarea» en el último paso de 07). */
+  adelanteVerde?: boolean;
   /** Sonido suave al pulsar Atrás y Adelante (pantallas del alumno, T-01.3). */
   conSonido?: boolean;
   /** Hueco izquierdo de la barra (en Pantalla, «Ayuda»). */
@@ -60,6 +62,7 @@ export function MarcoPantalla({
   etiquetaAtras = "Atrás",
   etiquetaAdelante,
   textoAdelante = "Adelante",
+  adelanteVerde = false,
   conSonido = false,
   barraIzquierda,
   barraDerecha,
@@ -121,6 +124,7 @@ export function MarcoPantalla({
               alPulsar={adelante ? conToque(adelante) : null}
               iconoDetras
               destacado={Boolean(adelante) && textoAdelante !== "Adelante"}
+              verde={Boolean(adelante) && adelanteVerde}
               testID={idAdelante}
             />
           </View>
@@ -140,6 +144,7 @@ export function BotonBarra({
   alPulsar,
   iconoDetras = false,
   destacado = false,
+  verde = false,
   ancho,
   textoPequeno = false,
   testID,
@@ -152,6 +157,8 @@ export function BotonBarra({
   alPulsar: (() => void) | null;
   iconoDetras?: boolean;
   destacado?: boolean;
+  /** Relleno verde (color de éxito) en vez del granate: «Terminar tarea» (HU-10). */
+  verde?: boolean;
   ancho?: number;
   textoPequeno?: boolean;
   testID?: string;
@@ -159,12 +166,15 @@ export function BotonBarra({
   const { colores } = useApariencia();
   const e = useEstilos(crearEstilos);
   const activo = alPulsar !== null;
-  const colorTinta = destacado ? colores.textoSobrePrimario : colores.texto;
+  const sobreVerde = colorSobre(colores.exito);
+  const colorTinta = verde ? sobreVerde : destacado ? colores.textoSobrePrimario : colores.texto;
   const colorIcono = !activo
     ? colores.textoSecundario
-    : destacado
-      ? colores.textoSobrePrimario
-      : colores.primario;
+    : verde
+      ? sobreVerde
+      : destacado
+        ? colores.textoSobrePrimario
+        : colores.primario;
   // Las flechas se ven siempre: en «Solo texto» quitan el dibujo, pero una flecha no distrae.
   const verTexto = canal !== "soloPictograma";
   const dibujoFinal = <Icono nombre={icono} color={colorIcono} tam={32} />;
@@ -182,6 +192,7 @@ export function BotonBarra({
         ancho ? { width: ancho } : null,
         textoPequeno && e.botonVertical,
         destacado && e.botonDestacado,
+        verde && e.botonVerde,
         !activo && e.botonApagado,
         pressed && e.pulsado,
       ]}
@@ -267,6 +278,7 @@ const crearEstilos = (c: Paleta) =>
     },
     botonVertical: { flexDirection: "column", gap: 4, minWidth: 0, paddingHorizontal: 6 },
     botonDestacado: { backgroundColor: c.primario },
+    botonVerde: { backgroundColor: c.exito, borderColor: c.exito },
     botonApagado: { borderStyle: "dashed", borderColor: c.borde, borderWidth: 2, opacity: 0.55 },
     pulsado: { opacity: 0.8 },
     textoBoton: { fontSize: 22, fontWeight: "700" },
