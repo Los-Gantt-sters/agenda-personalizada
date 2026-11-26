@@ -78,7 +78,6 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
       ["Tamaño de letra", 3],
       ["Tamaño de los botones", 3],
       ["Forma de los botones", 3],
-      ["Tareas que se ven", 3],
       ["Reloj en la tarea", 2],
     ];
     for (const [titulo, n] of cuantas) {
@@ -181,16 +180,32 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     expect(etiqueta.textTransform).toBe("none");
   });
 
-  it("«Tareas que se ven» enseña 1, 3 o muchas tarjetas en la muestra", async () => {
+  it("«Tareas que se ven» (boceto 24): contador «−» y «+» de 1 a 5 y después «Todas»", async () => {
     const user = userEvent.setup();
     await montar();
     await abrir(user, "Tareas que se ven");
-    const tareas = "Tareas que se ven";
+    const valor = () => screen.getByTestId("valor-tareas-visibles");
+    expect(valor()).toHaveTextContent("3 tareas");
     expect(screen.getAllByTestId(/^muestra-Después-/)).toHaveLength(3);
-    await user.press(grupo(tareas).getByRole("radio", { name: "Solo 1" }));
+
+    await user.press(screen.getByRole("button", { name: "Menos tareas" }));
+    await user.press(screen.getByRole("button", { name: "Menos tareas" }));
+    expect(valor()).toHaveTextContent("1 tarea");
     expect(screen.getAllByTestId(/^muestra-Después-/)).toHaveLength(1);
-    await user.press(grupo(tareas).getByRole("radio", { name: "Todas" }));
-    expect(screen.getAllByTestId(/^muestra-Después-/).length).toBeGreaterThan(3);
+    // En 1, «−» ya no hace nada.
+    expect(
+      screen.getByRole("button", { name: "Menos tareas" }).props.accessibilityState,
+    ).toMatchObject({ disabled: true });
+
+    for (let i = 0; i < 4; i++)
+      await user.press(screen.getByRole("button", { name: "Más tareas" }));
+    expect(valor()).toHaveTextContent("5 tareas");
+    await user.press(screen.getByRole("button", { name: "Más tareas" }));
+    expect(valor()).toHaveTextContent("Todas");
+    expect(screen.getAllByTestId(/^muestra-Después-/).length).toBeGreaterThan(5);
+    expect(
+      screen.getByRole("button", { name: "Más tareas" }).props.accessibilityState,
+    ).toMatchObject({ disabled: true });
   });
 
   it("«Reloj en la tarea»: se elige con o sin reloj y la muestra cambia al momento", async () => {

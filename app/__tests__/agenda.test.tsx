@@ -503,6 +503,21 @@ describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas q
     expect(etiqueta("bloque-despues")).toBe("Después: Desayuno");
   });
 
+  it("SCRUM-251: con «Hasta 2» (contador del boceto 24) en Después salen 2", async () => {
+    await render(
+      <AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} tareasVisibles={2} />,
+    );
+    await screen.findByTestId("bloque-ahora");
+    expect(etiqueta("bloque-despues")).toMatch(/^Después: Desayuno, Reprografía( y \d+ más)?$/);
+  });
+
+  it("SCRUM-251: la barra de abajo no lleva botones fijos de Comedor ni de Visita QR", async () => {
+    await render(<PantallaAgenda />);
+    await screen.findByTestId("bloque-ahora");
+    const botones = screen.getAllByRole("button").map((b) => String(b.props.accessibilityLabel));
+    expect(botones.some((n) => /comedor|visita|qr/i.test(n))).toBe(false);
+  });
+
   it("con «Todas», Después enseña más de 3 tareas o dice «y N más»", async () => {
     await render(
       <AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} tareasVisibles={99} />,

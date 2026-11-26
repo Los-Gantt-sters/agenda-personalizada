@@ -37,6 +37,7 @@ import {
   ORDEN_TAMANOS_BOTON,
   ORDEN_TAMANOS_LETRA,
   ORDEN_TAREAS_VISIBLES,
+  moverTareasVisibles,
   ORDEN_VER_RELOJ,
   ORDEN_VISTAS_AGENDA,
   TAMANOS_BOTON,
@@ -234,7 +235,9 @@ export function PanelPreferencias() {
           <View
             style={e.opciones}
             // «Qué puede pedir en Ayuda» admite varias: son casillas, no un grupo de radio.
-            accessibilityRole={abierto === "necesidades" ? undefined : "radiogroup"}
+            accessibilityRole={
+              abierto === "necesidades" || abierto === "tareasVisibles" ? undefined : "radiogroup"
+            }
             accessibilityLabel={actual.titulo}
             testID={`opciones-${abierto}`}
           >
@@ -366,18 +369,8 @@ function Opciones({ apartado }: { apartado: Apartado }) {
         </>
       );
     case "tareasVisibles":
-      return (
-        <>
-          {ORDEN_TAREAS_VISIBLES.map((t) => (
-            <OpcionPreferencia
-              key={t}
-              etiqueta={TAREAS_VISIBLES[t].etiqueta}
-              elegida={p.tareasVisibles === t}
-              onPress={() => cambiar({ tareasVisibles: t })}
-            />
-          ))}
-        </>
-      );
+      // SCRUM-251 (boceto 24): contador con «−» y «+» de 1 a 5 y, después de 5, «Todas».
+      return <ContadorTareasVisibles />;
     case "reloj":
       return (
         <>
@@ -515,7 +508,7 @@ function MuestraApartado({
       break;
     }
     case "tareasVisibles": {
-      const n = p.tareasVisibles === "una" ? 1 : p.tareasVisibles === "tres" ? 3 : 5;
+      const n = Math.min(TAREAS_VISIBLES[p.tareasVisibles].maximo, 5);
       contenido = (
         <View style={e.filaMuestra}>
           {Array.from({ length: n }, (_, i) => (
@@ -674,12 +667,61 @@ function VistaPrevia({ apartado }: { apartado: Apartado }) {
   );
 }
 
-/** Muestra de «Tareas que se ven»: Hecho | Ahora | Después con 1, 3 o muchas tarjetas. */
+/**
+ * «Tareas que se ven» (boceto 24): «−» [3 tareas] «+». Va de 1 a 5 y, pasado el 5, «Todas».
+ * Los botones son grandes (64 px) y se apagan en los extremos.
+ */
+function ContadorTareasVisibles() {
+  const { colores } = useApariencia();
+  const e = useEstilos(crearEstilos);
+  const { preferencias: p, cambiar } = usePreferencias();
+  const actual = p.tareasVisibles;
+  const primero = actual === ORDEN_TAREAS_VISIBLES[0];
+  const ultimo = actual === ORDEN_TAREAS_VISIBLES[ORDEN_TAREAS_VISIBLES.length - 1];
+  const maximo = TAREAS_VISIBLES[actual].maximo;
+  const texto = actual === "todas" ? "Todas" : maximo === 1 ? "1 tarea" : `${maximo} tareas`;
+  const boton = (delta: -1 | 1, apagado: boolean) => (
+    <Pressable
+      testID={delta < 0 ? "btn-menos-tareas" : "btn-mas-tareas"}
+      accessibilityRole="button"
+      accessibilityLabel={delta < 0 ? "Menos tareas" : "Más tareas"}
+      accessibilityState={{ disabled: apagado }}
+      disabled={apagado}
+      onPress={() => cambiar({ tareasVisibles: moverTareasVisibles(actual, delta) })}
+      style={({ pressed }) => [
+        e.botonContador,
+        delta > 0 && e.botonContadorMas,
+        apagado && e.botonContadorApagado,
+        pressed && e.pulsado,
+      ]}
+    >
+      <Text style={[e.signoContador, delta > 0 && { color: colores.textoSobrePrimario }]}>
+        {delta < 0 ? "−" : "+"}
+      </Text>
+    </Pressable>
+  );
+  return (
+    <View style={e.filaContador}>
+      {boton(-1, primero)}
+      <View style={e.valorContador}>
+        <Text
+          style={e.textoValorContador}
+          testID="valor-tareas-visibles"
+          accessibilityLiveRegion="polite"
+        >
+          {texto}
+        </Text>
+      </View>
+      {boton(1, ultimo)}
+    </View>
+  );
+}
+
+/** Muestra de «Tareas que se ven»: Hecho | Ahora | Después con tantas tarjetas como se elijan. */
 function BloquesMuestra() {
   const e = useEstilos(crearEstilos);
   const { preferencias } = usePreferencias();
-  const n =
-    preferencias.tareasVisibles === "una" ? 1 : preferencias.tareasVisibles === "tres" ? 3 : 6;
+  const n = Math.min(TAREAS_VISIBLES[preferencias.tareasVisibles].maximo, 6);
   const columna = (titulo: string) => (
     <View style={e.columnaBloque}>
       <Text style={e.tituloBloque}>{titulo}</Text>
@@ -794,6 +836,32 @@ const crearEstilos = (c: Paleta) =>
     botonMuestra: { backgroundColor: c.primario },
     cuadroTarea: { width: 16, height: 30, borderRadius: 4, borderWidth: 2 },
     botonRestablecer: { alignSelf: "flex-start" },
+    filaContador: { flexDirection: "row", alignItems: "center", gap: 14 },
+    botonContador: {
+      width: 64,
+      height: 64,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: c.borde,
+      backgroundColor: c.superficie,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    botonContadorMas: { backgroundColor: c.primario, borderColor: c.primario },
+    botonContadorApagado: { opacity: 0.4 },
+    signoContador: { fontSize: 32, fontWeight: "700", color: c.texto },
+    valorContador: {
+      minWidth: 190,
+      height: 64,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: c.primario,
+      backgroundColor: c.superficieDestacada,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 16,
+    },
+    textoValorContador: { fontSize: 22, fontWeight: "700", color: c.texto },
     // Apartado
     apartado: {
       flex: 1,
