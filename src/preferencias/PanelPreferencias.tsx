@@ -16,6 +16,7 @@ import { PictogramaTarea } from "../componentes/agenda/PictogramaTarea";
 import { RelojVisual } from "../componentes/reloj-visual/RelojVisual";
 import { OPCIONES_NECESIDADES_BASICAS } from "../necesidades/opcionesNecesidades";
 import { Pantalla } from "../pantalla/Pantalla";
+import { guardarVistaAgendaDeSesion } from "../servicios/destinoAgendaAlumno";
 import { NOMBRES_TEMAS, TEMAS, type Paleta } from "../temas";
 import { Icono, type NombreIcono } from "../ui/Icono";
 import { Texto as Text } from "../ui/Texto";
@@ -401,7 +402,11 @@ function Opciones({ apartado }: { apartado: Apartado }) {
               etiqueta={VISTAS_AGENDA[v].etiqueta}
               accessibilityLabel={`${VISTAS_AGENDA[v].etiqueta}: ${VISTAS_AGENDA[v].descripcion}`}
               elegida={p.vistaAgenda === v}
-              onPress={() => cambiar({ vistaAgenda: v })}
+              onPress={() => {
+                cambiar({ vistaAgenda: v });
+                // MOD HU-17: con la sesión del alumno, se guarda también en Supabase.
+                void guardarVistaAgendaDeSesion(v);
+              }}
             />
           ))}
         </>

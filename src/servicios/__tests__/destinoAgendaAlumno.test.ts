@@ -1,17 +1,26 @@
 import {
+  alumnoDeSesion,
   destinoTrasLoginAlumno,
   esIdDeAlumnoReal,
   guardarVistaAgenda,
+  guardarVistaAgendaDeSesion,
   obtenerVistaAgenda,
   rutaAgendaAlumno,
 } from "../destinoAgendaAlumno";
 import { supabase } from "../../lib/supabaseClient";
 
 jest.mock("../../lib/supabaseClient", () => ({
-  supabase: { from: jest.fn() },
+  supabase: { from: jest.fn(), auth: { getSession: jest.fn() } },
 }));
 
-const sb = supabase as unknown as { from: jest.Mock };
+const sb = supabase as unknown as { from: jest.Mock; auth: { getSession: jest.Mock } };
+
+/** Sesión de Supabase con este correo (o sin sesión si es null). */
+function conSesion(correo: string | null) {
+  sb.auth.getSession.mockResolvedValue({
+    data: { session: correo ? { user: { email: correo } } : null },
+  } as never);
+}
 
 const ID_REAL = "3f2b8c1e-7d4a-4e9b-9c55-0a1b2c3d4e5f";
 
@@ -138,6 +147,41 @@ describe("destinoAgendaAlumno (SCRUM-227: llevar al alumno a su agenda tras el l
     it("no intenta guardar para un alumno de ejemplo", async () => {
       await expect(guardarVistaAgenda("ale", "semanal")).resolves.toBe(false);
       expect(sb.from).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("guardarVistaAgendaDeSesion (MOD HU-17: Preferencias 24 con la sesión del alumno)", () => {
+    function consultaGuardar() {
+      const eq = jest.fn(() => Promise.resolve({ error: null }));
+      const update = jest.fn(() => ({ eq }));
+      sb.from.mockReturnValue({ update });
+      return { update, eq };
+    }
+
+    it("saca el alumno del correo técnico del inicio de sesión visual", async () => {
+      conSesion(`alu-${ID_REAL}@alumnos.agensible`);
+      await expect(alumnoDeSesion()).resolves.toBe(ID_REAL);
+    });
+
+    it("guarda la vista del alumno que tiene la sesión iniciada", async () => {
+      conSesion(`alu-${ID_REAL}@alumnos.agensible`);
+      const q = consultaGuardar();
+      await expect(guardarVistaAgendaDeSesion("semanal")).resolves.toBe(true);
+      expect(q.update).toHaveBeenCalledWith({ vista_agenda: "semanal" });
+      expect(q.eq).toHaveBeenCalledWith("alumno_id", ID_REAL);
+    });
+
+    it("no guarda nada si quien cambia las preferencias es un adulto o no hay sesión", async () => {
+      conSesion("tutora@colegio.es");
+      await expect(guardarVistaAgendaDeSesion("semanal")).resolves.toBe(false);
+      conSesion(null);
+      await expect(guardarVistaAgendaDeSesion("diaria")).resolves.toBe(false);
+      expect(sb.from).not.toHaveBeenCalled();
+    });
+
+    it("no falla si no se puede leer la sesión", async () => {
+      sb.auth.getSession.mockRejectedValue(new Error("sin red") as never);
+      await expect(guardarVistaAgendaDeSesion("semanal")).resolves.toBe(false);
     });
   });
 });

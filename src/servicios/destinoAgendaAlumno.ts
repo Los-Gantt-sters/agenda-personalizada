@@ -10,6 +10,8 @@ export type VistaAgenda = "diaria" | "semanal";
 const RUTA_AGENDA = "/agenda";
 const VISTA_POR_DEFECTO: VistaAgenda = "diaria";
 const ES_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Correo técnico del inicio de sesión visual del alumno (authService.signInEstudianteConDibujos).
+const CORREO_ALUMNO = /^alu-(.+)@alumnos\.agensible$/i;
 
 /**
  * Los alumnos de ejemplo del acceso (por ejemplo «ale») no existen en Supabase: solo los
@@ -45,7 +47,8 @@ export async function obtenerVistaAgenda(alumnoId: string): Promise<VistaAgenda>
 
 /**
  * MOD HU-17 (SCRUM-125): guarda la pantalla al entrar del alumno, «Hoy» (06) o «Semana» (06b), en
- * preferencias_alumnos.vista_agenda. La usan Preferencias (24) y Permisos del alumno (26d).
+ * preferencias_alumnos.vista_agenda. La usa Preferencias (24) a través de guardarVistaAgendaDeSesion;
+ * Permisos del alumno (26d) la usará cuando exista esa pantalla.
  * Devuelve false si no se ha podido guardar (alumno de ejemplo, sin conexión o sin permiso).
  */
 export async function guardarVistaAgenda(alumnoId: string, vista: VistaAgenda): Promise<boolean> {
@@ -59,6 +62,27 @@ export async function guardarVistaAgenda(alumnoId: string, vista: VistaAgenda): 
   } catch {
     return false;
   }
+}
+
+/** Alumno con la sesión iniciada (por su correo técnico), o null si quien entra no es un alumno. */
+export async function alumnoDeSesion(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const correo = data.session?.user?.email ?? "";
+    return CORREO_ALUMNO.exec(correo)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Preferencias (24): si quien la cambia es el alumno con su sesión, la «Pantalla al entrar» se
+ * guarda en Supabase para que la próxima vez entre directamente en la agenda diaria o la semanal.
+ * Con el panel abierto por un adulto no se guarda nada (devuelve false).
+ */
+export async function guardarVistaAgendaDeSesion(vista: VistaAgenda): Promise<boolean> {
+  const alumnoId = await alumnoDeSesion();
+  return alumnoId ? guardarVistaAgenda(alumnoId, vista) : false;
 }
 
 /** Ruta a la que se lleva al alumno justo después de iniciar sesión. */
