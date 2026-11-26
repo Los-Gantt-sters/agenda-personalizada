@@ -78,6 +78,7 @@ export function useAvisoAnticipado(
   // cierto: la tarea ya no está pendiente, la han movido de hora o ha llegado su hora.
   const actual = aviso ? entradas.find((e) => e.id === aviso.entrada_id) : undefined;
   const vigente =
+    activado &&
     aviso &&
     actual?.estado === "pendiente" &&
     !esPendienteRetomar(actual) &&
