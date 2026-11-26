@@ -17,11 +17,34 @@ jest.mock("../../lib/supabaseClient", () => {
         signOut: jest.fn(),
         getSession: jest.fn(),
       },
+      from: jest.fn(),
     },
   };
 });
 
+const mockFrom = supabase.from as jest.Mock;
+
+/** Simula la fila del usuario en public.perfiles (SCRUM-280); null = el usuario no tiene perfil. */
+function perfilEnBD(perfil: Record<string, unknown> | null, error: unknown = null) {
+  const maybeSingle = jest.fn().mockResolvedValue({ data: perfil, error });
+  const eq = jest.fn(() => ({ maybeSingle }));
+  const select = jest.fn(() => ({ eq }));
+  mockFrom.mockReturnValueOnce({ select });
+  return { select, eq };
+}
+
+const perfilTutora = {
+  rol: "tutor_docente",
+  nombre_completo: "Ana Docente",
+  centro_id: "centro-granada-1",
+  activo: true,
+};
+
 describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
+  beforeEach(() => {
+    (supabase.auth.signOut as jest.Mock).mockResolvedValue({ error: null });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -35,12 +58,12 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
       expect(getRoleHomeRoute("tutor_docente")).toBe("/docente/agenda");
     });
 
-    it("debe validar y normalizar roles desconocidos al default tutor_docente", () => {
+    it("valida los roles y deniega (null) los desconocidos en vez de dar uno por defecto (SCRUM-280)", () => {
       expect(normalizeRole("admin")).toBe("admin");
       expect(normalizeRole("familiar")).toBe("familiar");
       expect(normalizeRole("estudiante")).toBe("estudiante");
-      expect(normalizeRole("rol_inexistente")).toBe("tutor_docente");
-      expect(normalizeRole(undefined)).toBe("tutor_docente");
+      expect(normalizeRole("rol_inexistente")).toBeNull();
+      expect(normalizeRole(undefined)).toBeNull();
     });
   });
 
@@ -67,13 +90,78 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
         data: { user: mockUser, session: mockSession },
         error: null,
       });
+      const consulta = perfilEnBD(perfilTutora);
 
       const result = await signInSupervisor("tutor@purisima.es", "PasswordSeguro123!");
 
       expect(result.success).toBe(true);
       expect(result.session?.accessToken).toBe("mock-jwt-token-purisima");
       expect(result.session?.user.role).toBe("tutor_docente");
+      expect(mockFrom).toHaveBeenCalledWith("perfiles");
+      expect(consulta.eq).toHaveBeenCalledWith("id", "usr-123");
     });
+
+    // SCRUM-280 · criterios 1 y 2: el rol no se puede cambiar desde user_metadata
+    it("toma el rol de la tabla perfiles aunque user_metadata diga admin", async () => {
+      (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+        data: {
+          user: { id: "fam-1", email: "familia@purisima.es", user_metadata: { role: "admin" } },
+          session: { access_token: "jwt", refresh_token: "r", expires_at: 4102444800 },
+        },
+        error: null,
+      });
+      perfilEnBD({ ...perfilTutora, rol: "familiar", nombre_completo: "Familia López" });
+
+      const result = await signInSupervisor("familia@purisima.es", "PasswordSeguro123!");
+
+      expect(result.session?.user.role).toBe("familiar");
+    });
+
+    // SCRUM-280 · criterio 5: nombre y centro salen del perfil
+    it("toma el nombre y el centro del perfil, no de user_metadata", async () => {
+      (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+        data: {
+          user: {
+            id: "usr-123",
+            email: "tutor@purisima.es",
+            user_metadata: { full_name: "Nombre falso", centro_id: "otro-centro" },
+          },
+          session: { access_token: "jwt", refresh_token: "r", expires_at: 4102444800 },
+        },
+        error: null,
+      });
+      perfilEnBD(perfilTutora);
+
+      const result = await signInSupervisor("tutor@purisima.es", "PasswordSeguro123!");
+
+      expect(result.session?.user.fullName).toBe("Ana Docente");
+      expect(result.session?.user.centroId).toBe("centro-granada-1");
+    });
+
+    // SCRUM-280 · criterio 3: sin perfil válido no hay sesión
+    it.each([
+      ["no tiene perfil", null, null],
+      ["tiene el perfil desactivado", { ...perfilTutora, activo: false }, null],
+      ["tiene un rol que no existe", { ...perfilTutora, rol: "superadmin" }, null],
+      ["falla la consulta del perfil", null, { message: "permission denied" }],
+    ])(
+      "deniega el acceso con el mensaje genérico y cierra la sesión si %s",
+      async (_caso, perfil, error) => {
+        (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+          data: {
+            user: { id: "usr-9", email: "x@purisima.es", user_metadata: { role: "admin" } },
+            session: { access_token: "jwt", refresh_token: "r", expires_at: 4102444800 },
+          },
+          error: null,
+        });
+        perfilEnBD(perfil, error);
+
+        const result = await signInSupervisor("x@purisima.es", "PasswordSeguro123!");
+
+        expect(result).toEqual({ success: false, error: AUTH_GENERIC_ERROR_MESSAGE });
+        expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+      },
+    );
 
     it("emite un mensaje de error genérico cuando las credenciales son inválidas (RF1.8)", async () => {
       (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
@@ -110,15 +198,38 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
         data: { user: mockEstudianteUser, session: mockSession },
         error: null,
       });
+      perfilEnBD({ ...perfilTutora, rol: "estudiante", nombre_completo: "Carlos" });
 
       const result = await signInEstudianteConDibujos("carlos", ["manzana", "perro", "estrella"]);
 
       expect(result.success).toBe(true);
       expect(result.session?.user.role).toBe("estudiante");
+      expect(result.session?.user.email).toBe("alu-carlos@alumnos.agensible");
       expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
         email: "alu-carlos@alumnos.agensible",
         password: "manzana-perro-estrella",
       });
+    });
+
+    // SCRUM-280 · criterio 4: con dibujos solo entra quien tiene perfil de estudiante
+    it.each([
+      ["no tiene perfil", null],
+      ["su perfil es de supervisor", perfilTutora],
+    ])("no deja entrar con dibujos si la cuenta %s", async (_caso, perfil) => {
+      (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+        data: {
+          user: { id: "est-456", user_metadata: { role: "estudiante" } },
+          session: { access_token: "jwt", refresh_token: "r", expires_at: 4102444800 },
+        },
+        error: null,
+      });
+      perfilEnBD(perfil);
+
+      const result = await signInEstudianteConDibujos("carlos", ["manzana", "perro", "estrella"]);
+
+      expect(result.success).toBe(false);
+      expect(result.session).toBeUndefined();
+      expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     });
 
     it("rechaza llamadas sin exactamente 3 dibujos", async () => {
@@ -140,7 +251,7 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
   });
 
   describe("getCurrentSession", () => {
-    it("obtiene la sesión activa con perfil RBAC", async () => {
+    function sesionGuardada(metadataRole: string) {
       (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
         data: {
           session: {
@@ -148,20 +259,42 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
             refresh_token: "refresh-activo",
             expires_at: 4102444800, // 2100-01-01: sesión vigente
             user: {
-              id: "admin-1",
-              email: "admin@purisima.es",
-              user_metadata: { role: "admin", full_name: "Admin Purísima" },
+              id: "usr-1",
+              email: "usuario@purisima.es",
+              user_metadata: { role: metadataRole, full_name: "Nombre en metadata" },
               created_at: "2026-10-01T00:00:00Z",
             },
           },
         },
         error: null,
       });
+    }
+
+    it("obtiene la sesión activa con el rol de su perfil", async () => {
+      sesionGuardada("admin");
+      perfilEnBD({ ...perfilTutora, rol: "admin", nombre_completo: "Admin Purísima" });
 
       const session = await getCurrentSession();
       expect(session).not.toBeNull();
       expect(session?.accessToken).toBe("jwt-activo");
       expect(session?.user.role).toBe("admin");
+      expect(session?.user.fullName).toBe("Admin Purísima");
+    });
+
+    // SCRUM-280 · criterio 2: cambiar user_metadata y recargar no da otro rol
+    it("al recargar mantiene el rol del perfil aunque user_metadata se haya cambiado a admin", async () => {
+      sesionGuardada("admin");
+      perfilEnBD(perfilTutora);
+
+      const session = await getCurrentSession();
+      expect(session?.user.role).toBe("tutor_docente");
+    });
+
+    it("devuelve null si el usuario ya no tiene perfil activo", async () => {
+      sesionGuardada("tutor_docente");
+      perfilEnBD({ ...perfilTutora, activo: false });
+
+      expect(await getCurrentSession()).toBeNull();
     });
   });
 });

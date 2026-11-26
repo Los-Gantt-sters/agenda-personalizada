@@ -33,7 +33,11 @@ export type NombreIcono =
   | "buscar"
   | "escudo"
   | "cubiertos"
-  | "mas";
+  | "mas"
+  | "grafica"
+  | "abajo"
+  | "arriba"
+  | "siguiente";
 
 const TRAZOS: Record<NombreIcono, React.ReactNode> = {
   llave: (
@@ -172,6 +176,10 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
   escudo: <Path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z" />,
   cubiertos: <Path d="M5 3v7a3 3 0 006 0V3M8 3v18M16 3v18M16 3c2.5 1 3 4 3 7h-3" />,
   mas: <Path d="M12 5v14M5 12h14" />,
+  grafica: <Path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  abajo: <Path d="M6 9l6 6 6-6" />,
+  arriba: <Path d="M6 15l6-6 6 6" />,
+  siguiente: <Path d="M9 5l7 7-7 7" />,
 };
 
 export interface IconoProps {
