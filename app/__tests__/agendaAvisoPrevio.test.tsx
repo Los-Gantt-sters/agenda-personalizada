@@ -1,8 +1,10 @@
 // SCRUM-240 (pantalla 25): con «Sin aviso previo» no sale el aviso de 5 minutos (08b).
-// Los dos unmount() van con await: en Testing Library 14 devuelven una promesa y, sin esperarla, el
-// desmontaje se solapaba con el segundo render («overlapping act() calls»). En el CI a veces no salía
-// la 08b y Jest no terminaba hasta que vencía el temporizador del aviso (SCRUM-236).
-import { render, screen } from "@testing-library/react-native";
+// Temporizadores falsos completos, como el resto de pruebas de la agenda con hora fija (SCRUM-236): si
+// solo se congela Date y los setTimeout son reales, las animaciones (que miden con Date.now()) no
+// terminan nunca y se repintan sin parar; en una máquina lenta, como la del CI, la 08b no llegaba a
+// salir y Jest no terminaba. Así el reloj avanza mientras findBy espera. Los unmount() devuelven una
+// promesa en Testing Library 14 y se esperan para no solapar act() con el render siguiente.
+import { act, render, screen } from "@testing-library/react-native";
 
 import PantallaAgenda from "../agenda";
 import { PreferenciasProvider } from "../../src/preferencias";
@@ -21,17 +23,7 @@ jest.mock("expo-router", () => ({
 describe("Pantalla agenda del día: preferencia «Aviso previo» (pantalla 25)", () => {
   it("con «Sin aviso previo» (avisoPrevio: 'no' en pantalla 25) no sale el aviso de 5 minutos (08b)", async () => {
     // La tarea «Lavarse las manos» (e2) empieza a las 09:30; a las 09:25 faltan 5 minutos.
-    jest.useFakeTimers({
-      doNotFake: [
-        "nextTick",
-        "setImmediate",
-        "setTimeout",
-        "clearTimeout",
-        "setInterval",
-        "clearInterval",
-      ],
-      now: new Date(2026, 10, 5, 9, 25),
-    });
+    jest.useFakeTimers({ now: new Date(2026, 10, 5, 9, 25) });
     try {
       const { unmount } = await render(
         <TemaProvider>
@@ -42,6 +34,8 @@ describe("Pantalla agenda del día: preferencia «Aviso previo» (pantalla 25)",
       );
       // Con avisoPrevio="no" se ve la agenda normal y NO sale la pantalla 08b de aviso anticipado
       expect(await screen.findByTestId("bloque-ahora", {}, { timeout: 10_000 })).toBeTruthy();
+      // Se deja pasar un segundo: si el aviso estuviera programado, ya habría salido.
+      await act(() => jest.advanceTimersByTimeAsync(1000));
       expect(screen.queryByTestId("pantalla-aviso")).toBeNull();
       await unmount();
 
