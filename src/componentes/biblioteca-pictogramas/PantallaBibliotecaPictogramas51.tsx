@@ -312,6 +312,11 @@ export function PantallaBibliotecaPictogramas51({
             >
               {archivoSubidoOk ? MENSAJE_EXITO_SUBIDA_51 : MENSAJE_INICIAL_SUBIDA_51}
             </Texto>
+            {errorSubida ? (
+              <Texto style={estilos.textoBotonQuitarFila} testID="error-subida-51">
+                {errorSubida}
+              </Texto>
+            ) : null}
             <View style={estilos.filaInputs}>
               <TextInput
                 testID="input-palabra-clave-51"

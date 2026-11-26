@@ -18,6 +18,8 @@ import type {
 
 export const BUCKET_PICTOGRAMAS_PROPIOS = "pictogramas-propios";
 
+const DURACION_URL_FIRMADA_SEGUNDOS = 3600;
+
 export const MENSAJE_INICIAL_SUBIDA_51 =
   "Pulsa directamente el icono «+» para subir un archivo propio";
 
@@ -177,7 +179,23 @@ export async function cargarPictogramasPropiosDesdeBD(
     throw new Error(`No se pudo cargar tu biblioteca de pictogramas: ${error.message}`);
   }
 
-  return ((data ?? []) as FilaPictogramaPropioBD[]).map(mapearFilaBD);
+  const filas = (data ?? []) as FilaPictogramaPropioBD[];
+  const resultados = await Promise.all(
+    filas.map(async (fila) => {
+      const mapeado = mapearFilaBD(fila);
+      if (fila.ruta_storage) {
+        const { data: firmada } = await supabase.storage
+          .from(BUCKET_PICTOGRAMAS_PROPIOS)
+          .createSignedUrl(fila.ruta_storage, DURACION_URL_FIRMADA_SEGUNDOS);
+        if (firmada?.signedUrl) {
+          mapeado.imagenUrl = firmada.signedUrl;
+        }
+      }
+      return mapeado;
+    }),
+  );
+
+  return resultados;
 }
 
 /**
@@ -217,13 +235,15 @@ export async function subirArchivoPictogramaPropio51(input: {
     throw new Error(`No se pudo subir el archivo a Storage: ${uploadError.message}`);
   }
 
-  const { data: urlData } = supabase.storage
+  const { data: signedData, error: signedError } = await supabase.storage
     .from(BUCKET_PICTOGRAMAS_PROPIOS)
-    .getPublicUrl(rutaStorage);
+    .createSignedUrl(rutaStorage, DURACION_URL_FIRMADA_SEGUNDOS);
 
-  const imagenUrl = urlData?.publicUrl;
-  if (!imagenUrl) {
-    throw new Error("No se pudo obtener la URL pública del archivo subido.");
+  const imagenUrl = signedData?.signedUrl;
+  if (signedError || !imagenUrl) {
+    throw new Error(
+      `No se pudo generar la URL firmada del archivo subido: ${signedError?.message ?? "error desconocido"}`,
+    );
   }
 
   const { data: filaInsertada, error: insertError } = await supabase

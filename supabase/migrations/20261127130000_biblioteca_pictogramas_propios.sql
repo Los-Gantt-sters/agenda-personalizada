@@ -52,17 +52,21 @@ CREATE POLICY "pictogramas_propios_delete_propios"
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.pictogramas_propios TO authenticated;
 
--- Bucket de Storage para los archivos de imagen subidos desde el recuadro punteado '+'
+-- Bucket PRIVADO de Storage para los archivos de imagen subidos desde el recuadro punteado '+'
+-- El acceso se realiza exclusivamente mediante URLs firmadas para el usuario autenticado propietario.
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('pictogramas-propios', 'pictogramas-propios', TRUE)
-ON CONFLICT (id) DO NOTHING;
+VALUES ('pictogramas-propios', 'pictogramas-propios', FALSE)
+ON CONFLICT (id) DO UPDATE SET public = FALSE;
 
 DROP POLICY IF EXISTS "storage_pictogramas_propios_lectura" ON storage.objects;
 CREATE POLICY "storage_pictogramas_propios_lectura"
   ON storage.objects
   FOR SELECT
-  TO public
-  USING (bucket_id = 'pictogramas-propios');
+  TO authenticated
+  USING (
+    bucket_id = 'pictogramas-propios'
+    AND (storage.foldername(name))[1] = auth.uid()::TEXT
+  );
 
 DROP POLICY IF EXISTS "storage_pictogramas_propios_insert" ON storage.objects;
 CREATE POLICY "storage_pictogramas_propios_insert"
