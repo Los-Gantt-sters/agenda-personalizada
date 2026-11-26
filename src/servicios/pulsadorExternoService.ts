@@ -46,13 +46,7 @@ export const CONFIGURACION_PULSADOR_EXTERNO_POR_DEFECTO: ConfiguracionPulsadorEx
     "GamepadButton0",
   ],
   teclasRetrocederManual: ["ArrowLeft", "ArrowUp"],
-  teclasSeleccionarManual: [
-    "Enter",
-    "NumpadEnter",
-    "F8",
-    "Switch2",
-    "GamepadButton1",
-  ],
+  teclasSeleccionarManual: ["Enter", "NumpadEnter", "F8", "Switch2", "GamepadButton1"],
   teclasPulsadorUnico: [
     " ",
     "Space",
@@ -70,7 +64,8 @@ export const CONFIGURACION_PULSADOR_EXTERNO_POR_DEFECTO: ConfiguracionPulsadorEx
 export interface ResultadoCapturaPulsador {
   ejecutado: boolean;
   accion: AccionPulsadorExterno;
-  motivoIgnorado?: "modo_desactivado" | "campo_texto" | "repeticion_mantenida" | "rebote" | "tecla_no_mapeada";
+  motivoIgnorado?:
+    "modo_desactivado" | "campo_texto" | "repeticion_mantenida" | "rebote" | "tecla_no_mapeada";
   tecla: string;
   timestamp: number;
 }
@@ -79,8 +74,7 @@ const ETIQUETAS_CAMPO_TEXTO = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 
 function coincideTecla(evento: EventoEntradaPulsador, lista: string[]): boolean {
   return (
-    lista.includes(evento.key) ||
-    (typeof evento.code === "string" && lista.includes(evento.code))
+    lista.includes(evento.key) || (typeof evento.code === "string" && lista.includes(evento.code))
   );
 }
 

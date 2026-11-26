@@ -1,7 +1,4 @@
-import {
-  ControladorPulsadorExterno,
-  resolverAccionPulsador,
-} from "../pulsadorExternoService";
+import { ControladorPulsadorExterno, resolverAccionPulsador } from "../pulsadorExternoService";
 
 describe("SCRUM-121: T-05.2 Servicio pulsadorExternoService (switch/USB/Bluetooth)", () => {
   it("mapea Espacio, Intro y Switch1 a seleccionar en modo automático (1 pulsador) e ignora campos INPUT", () => {
@@ -9,10 +6,7 @@ describe("SCRUM-121: T-05.2 Servicio pulsadorExternoService (switch/USB/Bluetoot
     expect(resolverAccionPulsador({ key: "Enter" }, "automatico").accion).toBe("seleccionar");
     expect(resolverAccionPulsador({ key: "Switch1" }, "automatico").accion).toBe("seleccionar");
 
-    const enInput = resolverAccionPulsador(
-      { key: " ", targetTagName: "INPUT" },
-      "automatico",
-    );
+    const enInput = resolverAccionPulsador({ key: " ", targetTagName: "INPUT" }, "automatico");
     expect(enInput.accion).toBe("ignorar");
     expect(enInput.motivoIgnorado).toBe("campo_texto");
   });
@@ -31,30 +25,24 @@ describe("SCRUM-121: T-05.2 Servicio pulsadorExternoService (switch/USB/Bluetoot
     const controlador = new ControladorPulsadorExterno({ antiReboteMs: 250 });
     const alSeleccionar = jest.fn();
 
-    const primero = controlador.procesarEvento(
-      { key: " ", timestamp: 1000 },
-      "automatico",
-      { alSeleccionar },
-    );
+    const primero = controlador.procesarEvento({ key: " ", timestamp: 1000 }, "automatico", {
+      alSeleccionar,
+    });
     expect(primero.ejecutado).toBe(true);
     expect(alSeleccionar).toHaveBeenCalledTimes(1);
 
     // Rebote mecánico 80 ms después (< 250 ms)
-    const rebote = controlador.procesarEvento(
-      { key: " ", timestamp: 1080 },
-      "automatico",
-      { alSeleccionar },
-    );
+    const rebote = controlador.procesarEvento({ key: " ", timestamp: 1080 }, "automatico", {
+      alSeleccionar,
+    });
     expect(rebote.ejecutado).toBe(false);
     expect(rebote.motivoIgnorado).toBe("rebote");
     expect(alSeleccionar).toHaveBeenCalledTimes(1);
 
     // Nueva pulsación válida 300 ms después (>= 250 ms)
-    const segundo = controlador.procesarEvento(
-      { key: " ", timestamp: 1350 },
-      "automatico",
-      { alSeleccionar },
-    );
+    const segundo = controlador.procesarEvento({ key: " ", timestamp: 1350 }, "automatico", {
+      alSeleccionar,
+    });
     expect(segundo.ejecutado).toBe(true);
     expect(alSeleccionar).toHaveBeenCalledTimes(2);
     expect(controlador.obtenerEstadisticas()).toEqual({

@@ -3,11 +3,7 @@ import { Text } from "react-native";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import { TemaProvider } from "../../../temas";
-import {
-  CapturadorPulsadorExterno,
-  ElementoBarrido,
-  MotorBarridoProvider,
-} from "../index";
+import { CapturadorPulsadorExterno, ElementoBarrido, MotorBarridoProvider } from "../index";
 
 describe("SCRUM-121: T-05.2 Componente CapturadorPulsadorExterno", () => {
   it("integra CapturadorPulsadorExterno con MotorBarridoProvider en modo manual de 2 pulsadores", async () => {

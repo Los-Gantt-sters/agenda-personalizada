@@ -421,9 +421,7 @@ export function FlujoAgendaBarridoUnPulsador({
                       : "Seleccionar tarea Lavarse las manos (07)"
                   }
                   orden={2}
-                  alActivar={() =>
-                    setTipoTarea((prev) => (prev === "manos" ? "comedor" : "manos"))
-                  }
+                  alActivar={() => setTipoTarea((prev) => (prev === "manos" ? "comedor" : "manos"))}
                 >
                   <View style={estilos.botonSecundario06}>
                     <Text style={estilos.textoBotonSecundario06}>
