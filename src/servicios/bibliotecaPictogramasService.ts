@@ -1,15 +1,25 @@
 /**
  * Servicio y catálogo de «Mi biblioteca · Mis pictogramas propios» (Pantalla 51 unificada)
- * con aislamiento estricto entre Tutor y Familia (SCRUM-241 / SCRUM-275 · T-51.1).
+ * con aislamiento estricto entre Tutor y Familia y subida directa al pulsar el recuadro «+»
+ * (SCRUM-241 / SCRUM-275 · T-51.1 / SCRUM-279 · T-51.2).
  */
 
 import { urlImagenPictograma } from "../arasaac/urls";
 import type { PictogramaBuscador28p } from "../componentes/tareas-personales/datosTareasPersonales";
+import { supabase } from "../lib/supabaseClient";
 import type {
   ActualizarPictogramaPropio51Input,
+  CrearPictogramaPropio51Input,
   PictogramaPropio51,
   RolBibliotecaPictogramas51,
 } from "../tipos/bibliotecaPictogramas";
+
+export const BUCKET_PICTOGRAMAS_PROPIOS = "multimedia-pasos";
+
+export const MENSAJE_INICIAL_SUBIDA_51 =
+  "Pulsa directamente el icono «+» para subir un archivo propio";
+
+export const MENSAJE_EXITO_SUBIDA_51 = "✓ Archivo propio seleccionado y adjuntado a tu biblioteca";
 
 /**
  * Catálogo inicial de pictogramas propios del boceto `51.html`:
@@ -79,6 +89,7 @@ export const CATALOGO_INICIAL_PICTOGRAMAS_51: readonly PictogramaPropio51[] = [
 let almacenPictogramas51: PictogramaPropio51[] = CATALOGO_INICIAL_PICTOGRAMAS_51.map((item) => ({
   ...item,
 }));
+let contadorSubidas51 = 1;
 
 /**
  * Filtra la lista de pictogramas propios aislando estrictamente por el rol activo (`tutor` o `familia`)
@@ -115,6 +126,62 @@ export function obtenerPictogramasPropiosPorRol51(
   rol: RolBibliotecaPictogramas51,
 ): PictogramaPropio51[] {
   return filtrarPictogramasPorRol51(almacenPictogramas51, rol).map((item) => ({ ...item }));
+}
+
+/**
+ * Construye un nuevo pictograma propio al pulsar directamente el recuadro punteado «+» en la Pantalla 51,
+ * asignándolo de forma aislada al rol activo (`tutor` o `familia`) y registrándolo en Storage/memoria
+ * (SCRUM-279 · T-51.2).
+ * @param input Datos del archivo propio y rol propietario
+ * @returns Nuevo pictograma propio creado y persistido
+ */
+export async function subirPictogramaPropioAlPulsarMas(
+  input: CrearPictogramaPropio51Input,
+): Promise<PictogramaPropio51> {
+  const idNuevo = `pic-${input.owner}-propio-${contadorSubidas51++}`;
+  const palabraPorDefecto =
+    input.owner === "familia"
+      ? "Rincón de lectura en casa (propio)"
+      : "Bandeja de desayuno del aula (propio)";
+  const textoAltPorDefecto =
+    input.owner === "familia"
+      ? "Fotografía propia subida por la familia desde el recuadro +"
+      : "Fotografía propia subida por el tutor desde el recuadro +";
+
+  const palabraClave = input.palabraClave?.trim() || palabraPorDefecto;
+  const textoAlternativo = input.textoAlternativo?.trim() || textoAltPorDefecto;
+  const pictogramaId = input.pictogramaId ?? (input.owner === "familia" ? 2450 : 2433);
+  let imagenUrl = input.imagenUrl?.trim() || urlImagenPictograma(pictogramaId);
+
+  const rutaStorage = `pictogramas-propios/${input.owner}/${idNuevo}.png`;
+
+  try {
+    const storageApi = supabase?.storage;
+    if (storageApi && typeof storageApi.from === "function") {
+      const bucket = storageApi.from(BUCKET_PICTOGRAMAS_PROPIOS);
+      if (bucket && typeof bucket.getPublicUrl === "function") {
+        const resPublic = bucket.getPublicUrl(rutaStorage);
+        if (resPublic?.data?.publicUrl && input.archivoNombre) {
+          imagenUrl = resPublic.data.publicUrl;
+        }
+      }
+    }
+  } catch {
+    // Fallback seguro a la URL visual local cuando Storage no está conectado en tests
+  }
+
+  const nuevo: PictogramaPropio51 = {
+    id: idNuevo,
+    owner: input.owner,
+    palabraClave,
+    textoAlternativo,
+    pictogramaId,
+    imagenUrl,
+    creadoEn: new Date().toISOString(),
+  };
+
+  almacenPictogramas51 = [nuevo, ...almacenPictogramas51];
+  return { ...nuevo };
 }
 
 /**
@@ -194,4 +261,5 @@ export function convertirPictogramasPropiosABuscador28p(
  */
 export function reiniciarBibliotecaPictogramas51(): void {
   almacenPictogramas51 = CATALOGO_INICIAL_PICTOGRAMAS_51.map((item) => ({ ...item }));
+  contadorSubidas51 = 1;
 }

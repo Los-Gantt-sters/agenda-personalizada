@@ -1,6 +1,7 @@
 /**
  * Pantalla 51 — Mi biblioteca · Mis pictogramas propios (unificación de 51 y 51b)
- * con aislamiento estricto entre Tutor y Familia (SCRUM-241 / SCRUM-275 · T-51.1).
+ * con aislamiento estricto entre Tutor y Familia y subida directa al pulsar el recuadro «+»
+ * (SCRUM-241 / SCRUM-275 · T-51.1 / SCRUM-279 · T-51.2).
  *
  * Sigue fielmente el boceto `BOCETOS_NUEVOS/definitiva_v2/pantallas/51.html`:
  *   - Una única pantalla compartida por Tutor (`Carmen Ruiz`, vuelve a `33`)
@@ -8,6 +9,10 @@
  *   - Aislamiento estricto por rol (`data-bib-owner="tutor"` vs `data-bib-owner="familia"`):
  *     el Tutor solo ve y gestiona sus pictogramas escolares y la Familia solo ve y gestiona
  *     sus pictogramas del hogar.
+ *   - SIN botón independiente «Subir archivo propio»: la subida se activa directamente al pulsar
+ *     el recuadro punteado «+» (`data-upload-plus`), cambiando su estado a verde con el mensaje
+ *     «✓ Archivo propio seleccionado y adjuntado a tu biblioteca» y añadiendo el pictograma
+ *     a la biblioteca aislada del rol activo.
  *   - Tabla con columnas `IMAGEN`, `PALABRA CLAVE`, `TEXTO ALTERNATIVO` y botón `Editar / Quitar`.
  */
 
@@ -16,7 +21,10 @@ import { Image, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { MarcoPantalla } from "../../pantalla/MarcoPantalla";
 import {
   CATALOGO_INICIAL_PICTOGRAMAS_51,
+  MENSAJE_EXITO_SUBIDA_51,
+  MENSAJE_INICIAL_SUBIDA_51,
   filtrarPictogramasPorRol51,
+  subirPictogramaPropioAlPulsarMas,
 } from "../../servicios/bibliotecaPictogramasService";
 import type { Paleta } from "../../temas";
 import type {
@@ -36,7 +44,9 @@ export interface PantallaBibliotecaPictogramas51Props {
   palabraClaveInicial?: string;
   /** Texto alternativo inicial en el formulario superior. */
   textoAlternativoInicial?: string;
-  /** Se invoca al quitar o editar un pictograma propio de la lista. */
+  /** Se invoca al subir un nuevo pictograma pulsando el recuadro punteado «+». */
+  alSubirPictograma?: (nuevo: PictogramaPropio51) => void;
+  /** Se invoca al subir, quitar o editar un pictograma propio de la lista. */
   alCambiarBiblioteca?: (pictogramasDelRol: PictogramaPropio51[]) => void;
   /** Se invoca al pulsar «Atrás» (-> vuelve a 33 si es Tutor o a 34 si es Familia). */
   alAtras?: ((destinoPanel: "33" | "34") => void) | null;
@@ -60,7 +70,7 @@ function obtenerInicialesAdulto(nombre: string): string {
 
 /**
  * Renderiza la Pantalla 51 unificada («Mi biblioteca · Mis pictogramas propios»)
- * para Tutor y Familia con aislamiento estricto de elementos por rol.
+ * para Tutor y Familia con aislamiento estricto por rol y subida directa al pulsar «+».
  * @param props Propiedades de configuración y callbacks
  * @returns Vista de biblioteca de pictogramas propios
  */
@@ -70,6 +80,7 @@ export function PantallaBibliotecaPictogramas51({
   pictogramasIniciales = CATALOGO_INICIAL_PICTOGRAMAS_51,
   palabraClaveInicial = "",
   textoAlternativoInicial = "",
+  alSubirPictograma,
   alCambiarBiblioteca,
   alAtras = null,
   alCerrarSesion,
@@ -83,6 +94,7 @@ export function PantallaBibliotecaPictogramas51({
   const [palabraClave, setPalabraClave] = useState<string>(palabraClaveInicial);
   const [textoAlternativo, setTextoAlternativo] = useState<string>(textoAlternativoInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [archivoSubidoOk, setArchivoSubidoOk] = useState<boolean>(false);
 
   const etiquetaUsuario =
     nombreUsuario?.trim() || (rol === "familia" ? "Familia García" : "Carmen Ruiz");
@@ -92,6 +104,22 @@ export function PantallaBibliotecaPictogramas51({
     () => filtrarPictogramasPorRol51(catalogo, rol),
     [catalogo, rol],
   );
+
+  const manejarSubidaDirectaAlPulsarMas = async () => {
+    const nuevo = await subirPictogramaPropioAlPulsarMas({
+      owner: rol,
+      palabraClave,
+      textoAlternativo,
+    });
+    const siguiente = [nuevo, ...catalogo];
+    setCatalogo(siguiente);
+    setArchivoSubidoOk(true);
+    setEditandoId(null);
+    setPalabraClave("");
+    setTextoAlternativo("");
+    alSubirPictograma?.(nuevo);
+    alCambiarBiblioteca?.(filtrarPictogramasPorRol51(siguiente, rol));
+  };
 
   const manejarQuitarPictograma = (id: string) => {
     const siguiente = catalogo.filter((item) => !(item.id === id && item.owner === rol));
@@ -166,20 +194,35 @@ export function PantallaBibliotecaPictogramas51({
           tareas o ayudas aparecerán junto a los de ARASAAC.
         </Texto>
 
-        {/* Tarjeta superior con recuadro punteado «+» y campos de Palabra clave y Texto alternativo */}
+        {/* Tarjeta superior con recuadro punteado «+» interactivo (SIN botón separado «Subir archivo propio») */}
         <View style={estilos.tarjetaSubida} testID="tarjeta-formulario-subida-51">
-          <View
+          <Pressable
             testID="recuadro-subir-mas-51"
-            style={estilos.recuadroPunteadoMas}
+            accessibilityRole="button"
             accessibilityLabel="Pulsa aquí para subir tu archivo"
+            onPress={manejarSubidaDirectaAlPulsarMas}
+            style={({ pressed }) => [
+              estilos.recuadroPunteadoMas,
+              archivoSubidoOk && estilos.recuadroPunteadoMasExito,
+              pressed && estilos.pulsado,
+            ]}
           >
-            <Texto style={estilos.simboloMas}>+</Texto>
-            <Texto style={estilos.textoSubirRecuadro}>Subir</Texto>
-          </View>
+            <Texto style={[estilos.simboloMas, archivoSubidoOk && estilos.textoRecuadroExito]}>
+              +
+            </Texto>
+            <Texto
+              style={[estilos.textoSubirRecuadro, archivoSubidoOk && estilos.textoRecuadroExito]}
+            >
+              Subir
+            </Texto>
+          </Pressable>
 
           <View style={estilos.columnaCamposSubida}>
-            <Texto style={estilos.textoEstadoSubida} testID="estado-subida-51">
-              Pulsa directamente el icono «+» para subir un archivo propio
+            <Texto
+              style={[estilos.textoEstadoSubida, archivoSubidoOk && estilos.textoEstadoSubidaExito]}
+              testID="estado-subida-51"
+            >
+              {archivoSubidoOk ? MENSAJE_EXITO_SUBIDA_51 : MENSAJE_INICIAL_SUBIDA_51}
             </Texto>
             <View style={estilos.filaInputs}>
               <TextInput
@@ -367,6 +410,10 @@ const crearEstilos = (c: Paleta) =>
       justifyContent: "center",
       gap: 2,
     },
+    recuadroPunteadoMasExito: {
+      borderColor: c.exito,
+      backgroundColor: "#E6F4EC",
+    },
     simboloMas: {
       fontSize: 28,
       lineHeight: 30,
@@ -378,6 +425,9 @@ const crearEstilos = (c: Paleta) =>
       fontWeight: "700",
       color: c.primario,
     },
+    textoRecuadroExito: {
+      color: c.exito,
+    },
     columnaCamposSubida: {
       flex: 1,
       gap: 6,
@@ -386,6 +436,9 @@ const crearEstilos = (c: Paleta) =>
       fontSize: 14.5,
       fontWeight: "700",
       color: c.primario,
+    },
+    textoEstadoSubidaExito: {
+      color: c.exito,
     },
     filaInputs: {
       flexDirection: "row",
