@@ -9,6 +9,18 @@ export type ClaveNecesidadBasica = "bano" | "agua" | "descanso";
 
 export type ClaveNecesidad = ClaveNecesidadBasica | "urgencia";
 
+/**
+ * Una ayuda que el adulto ha elegido en la pantalla 26 (MOD HU-18, máximo 3). Se guarda completa
+ * para que la pantalla 14 la pinte sin pedir nada a la red.
+ */
+export interface AyudaElegida {
+  /** "arasaac:<idPictograma>" o "propio:<idPictogramaPropio>". */
+  id: string;
+  texto: string;
+  imagenUrl: string;
+  origen: "arasaac" | "biblioteca";
+}
+
 export interface OpcionNecesidadArasaac {
   clave: ClaveNecesidadBasica;
   etiqueta: string;

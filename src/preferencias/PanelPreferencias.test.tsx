@@ -322,7 +322,10 @@ describe("PanelPreferencias (SCRUM-240 · Bocetos 16, 16b, 17, 18, 19, 22, 24, 2
     expect(
       screen.getByRole("button", { name: "Ayuda (máximo 3): 2 ayudas (máx. 3)" }),
     ).toBeTruthy();
-    expect(leerEstadoSonda().preferencias.ayudas).toEqual(["bano", "agua"]);
+    expect(leerEstadoSonda().preferencias.ayudas.map((a) => a.id)).toEqual([
+      "arasaac:6929",
+      "arasaac:2248",
+    ]);
     expect(leerEstadoSonda().preferencias.necesidades).toEqual(["bano", "agua"]);
   });
 

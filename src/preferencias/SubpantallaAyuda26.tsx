@@ -5,11 +5,12 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { urlImagenPictograma } from "../arasaac/urls";
 import { PictogramaTarea } from "../componentes/agenda/PictogramaTarea";
-import type { ClaveNecesidadBasica } from "../necesidades/tipos";
+import type { AyudaElegida } from "../necesidades/tipos";
 import type { Paleta } from "../temas";
 import { Icono } from "../ui/Icono";
 import { Texto as Text } from "../ui/Texto";
 import { colorSobre, useApariencia, useEstilos } from "../ui/apariencia";
+import { ayudaDesdeCatalogo26, necesidadesDesdeAyudas } from "./ayudas";
 import { CATALOGO_AYUDAS_26, type PreferenciasApariencia } from "./opciones";
 
 export interface SubpantallaAyuda26Props {
@@ -35,22 +36,20 @@ export function SubpantallaAyuda26({
     (item) => !filtro || item.etiqueta.toLowerCase().includes(filtro),
   );
 
-  const alternarAyuda = (id: string) => {
-    const yaElegida = elegidas.includes(id);
-    let nuevas: string[];
-    if (yaElegida) {
+  const estaElegida = (ayuda: AyudaElegida) => elegidas.some((x) => x.id === ayuda.id);
+
+  const alternarAyuda = (ayuda: AyudaElegida) => {
+    let nuevas: AyudaElegida[];
+    if (estaElegida(ayuda)) {
       if (elegidas.length <= 1) return; // Nunca dejar vacía la pantalla de Ayuda
-      nuevas = elegidas.filter((x) => x !== id);
+      nuevas = elegidas.filter((x) => x.id !== ayuda.id);
     } else {
       if (elegidas.length >= 3) return; // Máximo 3 ayudas
-      nuevas = [...elegidas, id];
+      nuevas = [...elegidas, ayuda];
     }
-    const basicas: ClaveNecesidadBasica[] = CATALOGO_AYUDAS_26.filter(
-      (c) => nuevas.includes(c.id) && c.claveBasica,
-    ).map((c) => c.claveBasica!);
     actualizarBorrador({
       ayudas: nuevas,
-      ...(basicas.length > 0 ? { necesidades: basicas } : {}),
+      necesidades: necesidadesDesdeAyudas(nuevas, p.necesidades),
     });
   };
 
@@ -82,7 +81,8 @@ export function SubpantallaAyuda26({
 
         <View style={e.rejilla26}>
           {catalogoFiltrado.map((item) => {
-            const activa = elegidas.includes(item.id);
+            const ayuda = ayudaDesdeCatalogo26(item);
+            const activa = estaElegida(ayuda);
             const esPropio = item.origen === "Mi biblioteca";
             return (
               <Pressable
@@ -91,7 +91,7 @@ export function SubpantallaAyuda26({
                 accessibilityRole="checkbox"
                 accessibilityLabel={item.etiqueta}
                 accessibilityState={{ checked: activa }}
-                onPress={() => alternarAyuda(item.id)}
+                onPress={() => alternarAyuda(ayuda)}
                 style={[e.tarjetaPicto26, activa && e.tarjetaPicto26Activa]}
               >
                 {activa ? (
@@ -142,12 +142,16 @@ export function SubpantallaAyuda26({
 
         <View style={e.filaHuecos26}>
           {[0, 1, 2].map((idx) => {
-            const idElegido = elegidas[idx];
-            const item = CATALOGO_AYUDAS_26.find((c) => c.id === idElegido);
+            const item = elegidas[idx];
+            const delCatalogo = item
+              ? CATALOGO_AYUDAS_26.find((c) => ayudaDesdeCatalogo26(c).id === item.id)
+              : undefined;
             return (
               <View
                 key={idx}
-                testID={item ? `muestra-necesidad-${item.id}` : `hueco-vacio-26-${idx}`}
+                testID={
+                  item ? `muestra-necesidad-${delCatalogo?.id ?? item.id}` : `hueco-vacio-26-${idx}`
+                }
                 style={[e.hueco26, !item && e.hueco26Vacio]}
               >
                 <View style={e.pildoraPrimaria26}>
@@ -156,15 +160,11 @@ export function SubpantallaAyuda26({
                 {item ? (
                   <>
                     <PictogramaTarea
-                      tarea={{
-                        titulo: item.etiqueta,
-                        emoji: item.emoji,
-                        pictograma_url: urlImagenPictograma(item.pictoIdArasaac, 300),
-                      }}
+                      tarea={{ titulo: item.texto, pictograma_url: item.imagenUrl }}
                       tam={52}
                     />
                     <Text style={e.textoHuecoNombre26} numberOfLines={2}>
-                      {item.etiqueta}
+                      {item.texto}
                     </Text>
                   </>
                 ) : (

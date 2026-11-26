@@ -1,5 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { AYUDAS_POR_DEFECTO } from "./ayudas";
+
 import {
   CAJAS_LETRA,
   FORMAS_BOTON,
@@ -67,7 +69,7 @@ describe("opciones del prototipo (FONTS, FS, BS, SHAPES y CANAL)", () => {
       reloj: "si",
       avisoPrevio: "si",
       necesidades: ["bano", "agua", "descanso"],
-      ayudas: ["bano", "agua", "descanso"],
+      ayudas: [...AYUDAS_POR_DEFECTO],
       modoBarrido: "desactivado",
       intervaloBarridoMs: 1600,
     });
@@ -151,7 +153,7 @@ describe("normalizarPreferencias", () => {
       reloj: "si",
       avisoPrevio: "no",
       necesidades: ["bano", "agua", "descanso"],
-      ayudas: ["bano", "agua", "descanso"],
+      ayudas: [...AYUDAS_POR_DEFECTO],
       modoBarrido: "automatico",
       intervaloBarridoMs: 2400,
     });
@@ -187,8 +189,11 @@ describe("reloj, aviso previo 5m y necesidades de Ayuda (pantallas 25 y 26)", ()
       "descanso",
     ]);
     expect(normalizarPreferencias({ necesidades: "agua" }).necesidades).toHaveLength(3);
-    expect(normalizarPreferencias({ ayudas: ["casa", "libro", "futbol", "ayuda"] }).ayudas).toEqual(
-      ["casa", "libro", "futbol"],
-    );
+    // Los códigos antiguos del catálogo de la 26 se convierten en ayudas completas (MOD HU-18).
+    expect(
+      normalizarPreferencias({ ayudas: ["casa", "libro", "futbol", "ayuda"] }).ayudas.map(
+        (a) => a.id,
+      ),
+    ).toEqual(["arasaac:6964", "propio:libro", "arasaac:7137"]);
   });
 });
