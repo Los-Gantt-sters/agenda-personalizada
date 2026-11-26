@@ -5,7 +5,9 @@
 -- La pantalla de acceso del alumno se ve ANTES de iniciar sesión, y las políticas RLS de aulas y
 -- alumnos solo dejan leer a usuarios con sesión. Estas dos funciones dan a esa pantalla lo justo
 -- para pintar las tarjetas, y nada más:
---   - aulas_acceso():          id, nombre, icono (forma o imagen) y orden de cada aula.
+--   - aulas_acceso():          id, nombre, icono (forma o imagen) y orden de cada aula del curso
+--                              activo. Las de cursos cerrados o que aún no han empezado no salen
+--                              (toda aula tiene curso: la 48b lo pide al crearla).
 --   - alumnos_acceso(aula):    id, nombre de pila, icono y color de los alumnos activos.
 --
 -- Protección de datos (hay menores): no salen apellidos, expediente, fecha de nacimiento, dieta,
@@ -16,6 +18,16 @@
 -- intentar entrar a ciegas. Pendiente de decidir en el equipo cómo protegerla (código de la tableta
 -- del centro, límite de intentos de acceso, enlaces a la foto que caducan...).
 -- ==============================================================================
+
+-- No puede haber aulas sin curso lectivo: la 48b lo pide al crearlas, pero las creadas antes de este
+-- cambio se guardaron sin él. Se les pone el curso activo para que no desaparezcan de la pantalla 01.
+-- (Si no hay curso activo no cambia nada.)
+UPDATE public.aulas a
+SET curso_lectivo_id = cl.id
+FROM public.cursos_lectivos cl
+WHERE a.curso_lectivo_id IS NULL
+  AND cl.activo
+  AND NOT cl.cerrado;
 
 CREATE OR REPLACE FUNCTION public.aulas_acceso()
 RETURNS TABLE (
@@ -30,14 +42,16 @@ STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-    -- Mismo orden que fija el administrador en la pantalla 48b
+    -- Solo las aulas del curso activo (y no cerrado), en el orden que fija el administrador en la 48b
     SELECT a.id, a.nombre::TEXT, a.icono_forma::TEXT, a.icono_url, a.orden
     FROM public.aulas a
+    JOIN public.cursos_lectivos cl ON cl.id = a.curso_lectivo_id
+    WHERE cl.activo AND NOT cl.cerrado
     ORDER BY a.orden, a.nombre, a.id;
 $$;
 
 COMMENT ON FUNCTION public.aulas_acceso() IS
-    'SCRUM-249: aulas de la pantalla 01 (acceso del alumno, sin sesión). Solo nombre, icono y orden.';
+    'SCRUM-249: aulas del curso activo para la pantalla 01 (acceso del alumno, sin sesión). Solo nombre, icono y orden.';
 
 CREATE OR REPLACE FUNCTION public.alumnos_acceso(p_aula UUID)
 RETURNS TABLE (
@@ -51,10 +65,16 @@ STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-    -- Solo los alumnos activos del aula: ni bajas, ni egresados, ni archivados (RGPD)
+    -- Solo los alumnos activos del aula: ni bajas, ni egresados, ni archivados (RGPD). Y solo si el
+    -- aula es del curso activo, igual que en aulas_acceso(): con el id de un aula de un curso cerrado
+    -- no sale nadie.
     SELECT al.id, al.nombre::TEXT, al.icono_personal::TEXT, al.color_identificativo::TEXT
     FROM public.alumnos al
+    JOIN public.aulas au ON au.id = al.aula_id
+    JOIN public.cursos_lectivos cl ON cl.id = au.curso_lectivo_id
     WHERE al.aula_id = p_aula
+      AND cl.activo
+      AND NOT cl.cerrado
       AND al.activo
       AND al.estado = 'activo'
     ORDER BY al.nombre, al.id;

@@ -64,7 +64,7 @@ done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan` y `NOTICE: acceso_alumnos: las 6 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 7 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan` y `NOTICE: acceso_alumnos: las 7 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
@@ -83,4 +83,4 @@ La pantalla de acceso del alumno (01 y 02) se ve **antes** de iniciar sesión, y
 | `aulas_acceso()` | `id`, `nombre`, `icono_forma`, `icono_url`, `orden` (en el orden de la 48b) | 01 / 01b |
 | `alumnos_acceso(p_aula)` | `id`, `nombre` (de pila), `icono_personal`, `color_identificativo` de los alumnos **activos** del aula | 02 / 02b |
 
-**Protección de datos:** no salen apellidos, expediente, fecha de nacimiento, dieta, método ni secuencia de acceso. La **foto** tampoco, de momento: junto al `id` y con solo 729 contraseñas posibles (3 dibujos de 9) facilitaría intentar entrar a ciegas; queda pendiente de decidir en el equipo cómo protegerla. `acceso_alumnos_test.sql` comprueba el orden, que solo salen los alumnos activos del aula, las columnas exactas que devuelven, los permisos de `anon` y que `anon` sigue sin políticas sobre las tablas. En la app las usa `src/servicios/accesoAlumnosService.ts`; si fallan o no hay Supabase configurado, la pantalla usa sus datos de prueba.
+**Protección de datos:** no salen apellidos, expediente, fecha de nacimiento, dieta, método ni secuencia de acceso. La **foto** tampoco, de momento: junto al `id` y con solo 729 contraseñas posibles (3 dibujos de 9) facilitaría intentar entrar a ciegas; queda pendiente de decidir en el equipo cómo protegerla. `acceso_alumnos_test.sql` comprueba el orden, que solo salen las aulas del curso activo (ni las de cursos cerrados ni las del curso siguiente) y los alumnos activos de esas aulas, las columnas exactas que devuelven, los permisos de `anon` y que `anon` sigue sin políticas sobre las tablas. En la app las usa `src/servicios/accesoAlumnosService.ts`; si fallan o no hay Supabase configurado, la pantalla usa sus datos de prueba.

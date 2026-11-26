@@ -3,6 +3,8 @@
 // (tutor). Puede haber más de 9: 01 y 35 las reparten en páginas. Los cambios se guardan todos
 // juntos con «Guardar configuración» (barra de abajo). Sin ventanas emergentes: «Cambiar icono»
 // abre otra pantalla y «Atrás» vuelve sin cambiar nada.
+// SCRUM-249: no puede haber aulas sin curso lectivo (la 01 solo enseña las del curso activo), así
+// que «Añadir nueva aula» abre antes otra pantalla para elegir su curso entre los no cerrados.
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
@@ -13,16 +15,22 @@ import {
   crearAula,
   guardarConfiguracionAulas,
   obtenerAulas,
+  obtenerCursosAbiertos,
 } from "../../src/servicios/aulasService";
 import type { Paleta } from "../../src/temas";
-import type { Aula } from "../../src/tipos/alumnos";
+import type { Aula, CursoLectivo } from "../../src/tipos/alumnos";
 import { Icono, Texto, useApariencia, useEstilos } from "../../src/ui";
 
 const ERROR_CARGA = "No se han podido cargar las aulas. Inténtalo otra vez.";
+const ERROR_CARGA_CURSOS = "No se han podido cargar los cursos. Inténtalo otra vez.";
 const NOMBRE_AULA_NUEVA = "Clase nueva";
 const PREFIJO_NUEVA = "nueva-";
 
-type AulaEditable = Pick<Aula, "id" | "nombre" | "iconoForma" | "iconoUrl">;
+type AulaEditable = Pick<Aula, "id" | "nombre" | "iconoForma" | "iconoUrl" | "cursoLectivoId">;
+
+/** Cursos lectivos no cerrados: mientras llegan, si fallan o ya están. */
+type CargaCursos =
+  { estado: "cargando" } | { estado: "error" } | { estado: "ok"; datos: CursoLectivo[] };
 
 export default function ConfigurarAulas() {
   const { colores } = useApariencia();
@@ -36,6 +44,9 @@ export default function ConfigurarAulas() {
   /** Posición del aula cuyo icono se está eligiendo. */
   const [eligiendo, setEligiendo] = useState<number | null>(null);
   const [contadorNuevas, setContadorNuevas] = useState(0);
+  /** Se está eligiendo el curso de un aula nueva (pantalla propia, antes de añadirla). */
+  const [eligiendoCurso, setEligiendoCurso] = useState(false);
+  const [cursos, setCursos] = useState<CargaCursos>({ estado: "cargando" });
 
   // Guarda en el estado lo que devuelve obtenerAulas (se llama cuando ya ha llegado la respuesta)
   const aplicar = useCallback((r: Awaited<ReturnType<typeof obtenerAulas>>) => {
@@ -46,6 +57,7 @@ export default function ConfigurarAulas() {
           nombre: a.nombre,
           iconoForma: a.iconoForma,
           iconoUrl: a.iconoUrl ?? null,
+          cursoLectivoId: a.cursoLectivoId ?? null,
         })),
       );
     }
@@ -61,6 +73,27 @@ export default function ConfigurarAulas() {
     };
   }, [aplicar]);
 
+  // Cursos para elegir el de las aulas nuevas y para poner el de cada aula en la lista
+  const pedirCursos = useCallback(() => {
+    let vigente = true;
+    obtenerCursosAbiertos().then((r) => {
+      if (!vigente) return;
+      setCursos(r.success ? { estado: "ok", datos: r.data ?? [] } : { estado: "error" });
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+  useEffect(pedirCursos, [pedirCursos]);
+
+  function reintentarCursos() {
+    setCursos({ estado: "cargando" });
+    pedirCursos();
+  }
+
+  const cursoDe = (id: string | null | undefined) =>
+    cursos.estado === "ok" ? cursos.datos.find((c) => c.id === id) : undefined;
+
   function reintentar() {
     setCargando(true);
     setErrorCarga(null);
@@ -72,8 +105,9 @@ export default function ConfigurarAulas() {
     setAulas((actuales) => actuales.map((a, i) => (i === indice ? { ...a, ...cambios } : a)));
   }
 
-  function anadir() {
+  function anadir(cursoLectivoId: string) {
     setGuardado(false);
+    setEligiendoCurso(false);
     setAulas((actuales) => [
       ...actuales,
       {
@@ -81,6 +115,7 @@ export default function ConfigurarAulas() {
         nombre: NOMBRE_AULA_NUEVA,
         iconoForma: "tri",
         iconoUrl: null,
+        cursoLectivoId,
       },
     ]);
     setContadorNuevas((n) => n + 1);
@@ -101,6 +136,7 @@ export default function ConfigurarAulas() {
       }
       const r = await crearAula({
         nombre: a.nombre,
+        cursoLectivoId: a.cursoLectivoId ?? "",
         iconoForma: a.iconoForma,
         iconoUrl: a.iconoUrl,
       });
@@ -120,6 +156,59 @@ export default function ConfigurarAulas() {
     }
     setAulas(resueltas);
     setGuardado(true);
+  }
+
+  // ---- Elegir el curso de un aula nueva: una pantalla propia, antes de añadirla ----
+  if (eligiendoCurso) {
+    return (
+      <Pantalla
+        titulo="¿De qué curso es la nueva aula?"
+        simbolo={<Icono nombre="calendario" color={colores.primario} tam={36} />}
+        alAtras={() => setEligiendoCurso(false)}
+        etiquetaAtras="Atrás: volver a la lista sin añadir"
+      >
+        <View style={estilos.pantalla}>
+          {cursos.estado === "cargando" && <Texto style={estilos.estado}>Cargando cursos…</Texto>}
+          {cursos.estado === "error" && (
+            <View style={estilos.filaError}>
+              <Icono nombre="alerta" color={colores.peligro} tam={22} />
+              <Texto style={estilos.error} accessibilityRole="alert">
+                {ERROR_CARGA_CURSOS}
+              </Texto>
+              <Pressable
+                style={estilos.boton}
+                accessibilityRole="button"
+                accessibilityLabel="Reintentar la carga de los cursos"
+                onPress={reintentarCursos}
+              >
+                <Texto style={estilos.textoBoton}>Reintentar</Texto>
+              </Pressable>
+            </View>
+          )}
+          {cursos.estado === "ok" && cursos.datos.length === 0 && (
+            <Texto style={estilos.estado}>
+              No hay ningún curso abierto. Crea primero el curso lectivo y vuelve a añadir el aula.
+            </Texto>
+          )}
+          {cursos.estado === "ok" &&
+            cursos.datos.map((c) => (
+              <Pressable
+                key={c.id}
+                style={estilos.botonCurso}
+                accessibilityRole="button"
+                accessibilityLabel={`Curso ${c.anioEscolar}${c.activo ? ", el actual" : ""}`}
+                testID={`curso-${c.id}`}
+                onPress={() => anadir(c.id)}
+              >
+                <Texto style={estilos.textoAnadir}>
+                  {c.anioEscolar}
+                  {c.activo ? " · curso actual" : ""}
+                </Texto>
+              </Pressable>
+            ))}
+        </View>
+      </Pantalla>
+    );
   }
 
   // ---- Elegir el icono de un aula: una pantalla propia ----
@@ -162,7 +251,7 @@ export default function ConfigurarAulas() {
           accessibilityRole="button"
           accessibilityLabel="Añadir nueva aula al centro"
           testID="anadir-aula"
-          onPress={anadir}
+          onPress={() => setEligiendoCurso(true)}
         >
           <Texto style={estilos.textoAnadir}>+ Añadir nueva aula al centro</Texto>
         </Pressable>
@@ -210,32 +299,45 @@ export default function ConfigurarAulas() {
 
         {!cargando && !errorCarga && (
           <ScrollView contentContainerStyle={estilos.lista}>
-            {aulas.map((a, i) => (
-              <View key={a.id} style={estilos.fila} testID={`aula-${i}`}>
-                <View style={estilos.columnaNombre}>
-                  <Texto style={estilos.detalle}>Aula #{i + 1} · Visible en 01 y 35</Texto>
-                  <TextInput
-                    style={estilos.campo}
-                    value={a.nombre}
-                    onChangeText={(t) => cambiar(i, { nombre: t })}
-                    accessibilityLabel={`Nombre del aula ${i + 1}`}
-                    testID={`nombre-aula-${i}`}
-                  />
+            {aulas.map((a, i) => {
+              const curso = cursoDe(a.cursoLectivoId);
+              return (
+                <View key={a.id} style={estilos.fila} testID={`aula-${i}`}>
+                  <View style={estilos.columnaNombre}>
+                    <Texto style={estilos.detalle}>
+                      {`Aula #${i + 1}`}
+                      {/* Hasta tener los cursos no se sabe si se ve en la 01: solo el número */}
+                      {cursos.estado !== "ok"
+                        ? ""
+                        : !curso
+                          ? " · Sin curso abierto: no se ve en 01"
+                          : curso.activo
+                            ? ` · Curso ${curso.anioEscolar} · Visible en 01 y 35`
+                            : ` · Curso ${curso.anioEscolar} · Se verá en 01 cuando empiece ese curso`}
+                    </Texto>
+                    <TextInput
+                      style={estilos.campo}
+                      value={a.nombre}
+                      onChangeText={(t) => cambiar(i, { nombre: t })}
+                      accessibilityLabel={`Nombre del aula ${i + 1}`}
+                      testID={`nombre-aula-${i}`}
+                    />
+                  </View>
+                  <View style={estilos.columnaIcono}>
+                    <IconoAula iconoForma={a.iconoForma} iconoUrl={a.iconoUrl} tam={48} />
+                    <Pressable
+                      style={estilos.boton}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Cambiar icono de ${a.nombre}`}
+                      testID={`cambiar-icono-${i}`}
+                      onPress={() => setEligiendo(i)}
+                    >
+                      <Texto style={estilos.textoBoton}>Cambiar icono</Texto>
+                    </Pressable>
+                  </View>
                 </View>
-                <View style={estilos.columnaIcono}>
-                  <IconoAula iconoForma={a.iconoForma} iconoUrl={a.iconoUrl} tam={48} />
-                  <Pressable
-                    style={estilos.boton}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Cambiar icono de ${a.nombre}`}
-                    testID={`cambiar-icono-${i}`}
-                    onPress={() => setEligiendo(i)}
-                  >
-                    <Texto style={estilos.textoBoton}>Cambiar icono</Texto>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
         )}
       </View>
@@ -292,6 +394,17 @@ const crearEstilos = (c: Paleta) =>
       justifyContent: "center",
       paddingHorizontal: 18,
       borderRadius: 10,
+      borderWidth: 2,
+      borderColor: c.primario,
+      backgroundColor: c.superficie,
+    },
+    botonCurso: {
+      alignSelf: "flex-start",
+      minHeight: 64,
+      minWidth: 280,
+      justifyContent: "center",
+      paddingHorizontal: 22,
+      borderRadius: 12,
       borderWidth: 2,
       borderColor: c.primario,
       backgroundColor: c.superficie,

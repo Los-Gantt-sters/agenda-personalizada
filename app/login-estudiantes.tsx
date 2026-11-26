@@ -57,7 +57,6 @@ import {
   useEstilos,
 } from "../src/ui";
 
-// Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
 /** Nombre de la clase en pantalla: el del administrador o, en las de prueba, «Clase <nombre>». */
 const nombreDeClase = (c: Clase) => c.nombreVisible ?? `Clase ${c.nombre}`;
 
@@ -90,6 +89,7 @@ function SimboloClase({ clase, tam }: { clase: Clase; tam: number }) {
   return <FormaClase claseId={clase.id} simbolo={clase.simbolo} tam={tam} />;
 }
 
+// Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
 const MENSAJE_SECUENCIA_INCORRECTA = "No es esa. Prueba otra vez";
 
 export interface LoginEstudiantesScreenProps {
@@ -188,20 +188,43 @@ export default function LoginEstudiantesScreen({
     });
   };
 
-  // Modo tableta personal: si la tableta recuerda a un alumno, se abre directamente su contraseña
+  // Modo tableta personal: si la tableta recuerda a un alumno, se abre directamente su contraseña.
+  // Con la base de datos (SCRUM-249) se espera a tener las aulas y se busca al alumno entre los de
+  // su aula (la tableta guarda las dos cosas); sin ella, entre los datos de prueba. Solo una vez.
+  const tabletaRevisada = useRef(false);
   useEffect(() => {
-    if (!modoTabletaPersonal) return;
-    let montado = true;
-    obtenerAlumnoTableta().then((alumnoId) => {
-      const recordado = ESTUDIANTES_MOCK.find((x) => x.id === alumnoId);
-      if (!montado || !recordado) return;
-      setClase(Object.values(CLASES).find((c) => c.id === recordado.claseId) ?? null);
-      setAlumno(recordado);
+    if (!modoTabletaPersonal || tabletaRevisada.current) return;
+    // Aún no se sabe qué aulas hay (o fallaron: se revisa cuando el alumno vuelva a probar)
+    if (aulasBD?.estado === "cargando" || aulasBD?.estado === "error") return;
+    tabletaRevisada.current = true;
+    const aulas = aulasBD?.estado === "ok" ? aulasBD.datos : null;
+
+    obtenerAlumnoTableta().then(async (recordado) => {
+      if (!montado.current || !recordado) return;
+      if (!aulas) {
+        const deprueba = ESTUDIANTES_MOCK.find((x) => x.id === recordado.alumnoId);
+        if (!deprueba) return;
+        setClase(Object.values(CLASES).find((c) => c.id === deprueba.claseId) ?? null);
+        setAlumno(deprueba);
+        return;
+      }
+      const aula = aulas.find((c) => c.id === recordado.aulaId);
+      // Aula que ya no existe (o guardado de antes de SCRUM-249): se olvida y sigue el flujo normal
+      if (!aula) return void olvidarAlumnoTableta();
+      aulaPedida.current = aula.id;
+      const r = await obtenerAlumnosAcceso(aula.id);
+      // Si mientras tanto el alumno ha tocado un aula, manda lo que ha tocado
+      if (!montado.current || aulaPedida.current !== aula.id || r.estado !== "ok") return;
+      const alumnos = r.datos.map((a) => alumnoAEstudiante(a, aula.id));
+      const encontrado = alumnos.find((x) => x.id === recordado.alumnoId);
+      // Ya no está en esa aula (cambio de aula, baja…): se olvida. Si la petición falló, no se
+      // sabe, y por eso arriba se sale sin olvidar.
+      if (!encontrado) return void olvidarAlumnoTableta();
+      setAlumnosBD({ aulaId: aula.id, estado: "ok", datos: alumnos });
+      setClase(aula);
+      setAlumno(encontrado);
     });
-    return () => {
-      montado = false;
-    };
-  }, [modoTabletaPersonal]);
+  }, [modoTabletaPersonal, aulasBD]);
 
   /** Abre las fotos de una clase; si es de la base de datos, pide sus alumnos (pantalla 02). */
   const abrirClase = (c: Clase) => {
@@ -254,7 +277,7 @@ export default function LoginEstudiantesScreen({
     const dibujos = secuencia;
 
     if (alCompletarCredencialVisual) {
-      if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id);
+      if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id, alumno.claseId);
       await alCompletarCredencialVisual(alumno.id, dibujos);
       return;
     }
@@ -278,7 +301,7 @@ export default function LoginEstudiantesScreen({
 
     setMensajeError(null);
     // La tableta solo recuerda al alumno cuando ha entrado de verdad
-    if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id);
+    if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id, alumno.claseId);
     // SCRUM-227: a SU agenda con sus datos, semanal o diaria según su preferencia (HU-01 → HU-06).
     // replace: con «atrás» no se vuelve a la pantalla de acceso
     router.replace((await destinoTrasLoginAlumno(alumno.id)) as Href);

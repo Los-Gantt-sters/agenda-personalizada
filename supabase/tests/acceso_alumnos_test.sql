@@ -8,11 +8,22 @@ BEGIN;
 INSERT INTO public.centros (id, nombre, codigo)
 VALUES ('00000000-0000-0000-0000-0000000000c9', 'CEE Purísima', 'PRUEBA-ACC');
 
--- El administrador las ha ordenado así en la 48b: Círculo, Triángulo y Sol (con imagen)
-INSERT INTO public.aulas (id, centro_id, nombre, icono_forma, icono_url, orden) VALUES
-    ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000c9', 'Clase Triángulo', 'tri', NULL, 1),
-    ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c9', 'Clase Círculo', 'cir', NULL, 0),
-    ('00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000c9', 'Clase Sol', 'tri', 'https://picto/sol.png', 2);
+-- Cursos: el activo, uno ya cerrado y el del año que viene (abierto, pero aún no activo).
+-- Solo puede haber un curso activo: se desactiva el que hubiera (se deshace con el ROLLBACK).
+UPDATE public.cursos_lectivos SET activo = false WHERE activo;
+INSERT INTO public.cursos_lectivos (id, anio_escolar, fecha_inicio, fecha_fin, activo, cerrado) VALUES
+    ('00000000-0000-0000-0000-0000000000e1', 'PRUEBA-ACTIVO', '2026-09-01', '2027-06-30', true, false),
+    ('00000000-0000-0000-0000-0000000000e2', 'PRUEBA-CERRADO', '2025-09-01', '2026-06-30', false, true),
+    ('00000000-0000-0000-0000-0000000000e3', 'PRUEBA-SIGUIENTE', '2027-09-01', '2028-06-30', false, false);
+
+-- El administrador las ha ordenado así en la 48b: Círculo, Triángulo y Sol (con imagen).
+-- Luna es de un curso cerrado y Estrella del curso siguiente: no salen en la pantalla 01.
+INSERT INTO public.aulas (id, centro_id, curso_lectivo_id, nombre, icono_forma, icono_url, orden) VALUES
+    ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000e1', 'Clase Triángulo', 'tri', NULL, 1),
+    ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000e1', 'Clase Círculo', 'cir', NULL, 0),
+    ('00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000e1', 'Clase Sol', 'tri', 'https://picto/sol.png', 2),
+    ('00000000-0000-0000-0000-0000000000b4', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000e2', 'Clase Luna', 'cir', NULL, 3),
+    ('00000000-0000-0000-0000-0000000000b5', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000e3', 'Clase Estrella', 'tri', NULL, 4);
 
 INSERT INTO public.alumnos (id, centro_id, aula_id, codigo_expediente, nombre, apellidos, fecha_nacimiento,
                             estado, activo, foto_url, icono_personal, color_identificativo) VALUES
@@ -26,7 +37,10 @@ INSERT INTO public.alumnos (id, centro_id, aula_id, codigo_expediente, nombre, a
     ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000b1',
      'EXP-ACC4', 'Carla', 'Ruiz', '2008-01-01', 'archivado', true, NULL, '⚽', '#2f62b8'),
     ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000b2',
-     'EXP-ACC5', 'Nora', 'Gil', '2010-01-01', 'activo', true, NULL, '🐢', '#2f62b8');
+     'EXP-ACC5', 'Nora', 'Gil', '2010-01-01', 'activo', true, NULL, '🐢', '#2f62b8'),
+    -- Activo, pero en Clase Luna, que es de un curso cerrado: tampoco sale
+    ('00000000-0000-0000-0000-0000000000d6', '00000000-0000-0000-0000-0000000000c9', '00000000-0000-0000-0000-0000000000b4',
+     'EXP-ACC6', 'Olga', 'Sanz', '2010-01-01', 'activo', true, NULL, '🌙', '#2f62b8');
 
 -- ---- Comprobaciones ---------------------------------------------------------
 DO $$
@@ -42,6 +56,16 @@ BEGIN
                    '00000000-0000-0000-0000-0000000000b3');
     IF filas IS DISTINCT FROM ARRAY['Clase Círculo', 'Clase Triángulo', 'Clase Sol'] THEN
         RAISE EXCEPTION 'FALLA orden de las aulas: %', filas;
+    END IF;
+    -- 1b. Solo las aulas del curso activo: ni la del curso cerrado ni la del curso siguiente
+    IF EXISTS (
+        SELECT 1 FROM public.aulas_acceso() a
+        WHERE a.id IN ('00000000-0000-0000-0000-0000000000b4', '00000000-0000-0000-0000-0000000000b5')
+    ) THEN
+        RAISE EXCEPTION 'FALLA salen aulas de cursos cerrados o que no han empezado';
+    END IF;
+    IF (SELECT count(*) FROM public.alumnos_acceso('00000000-0000-0000-0000-0000000000b4')) <> 0 THEN
+        RAISE EXCEPTION 'FALLA salen alumnos de un aula de un curso cerrado';
     END IF;
     SELECT * INTO r FROM public.aulas_acceso() a WHERE a.nombre = 'Clase Sol';
     IF r.icono_url IS DISTINCT FROM 'https://picto/sol.png' OR r.icono_forma IS DISTINCT FROM 'tri' THEN
@@ -94,7 +118,7 @@ BEGIN
         RAISE EXCEPTION 'FALLA hay políticas para anon en alumnos o aulas';
     END IF;
 
-    RAISE NOTICE 'acceso_alumnos: las 6 comprobaciones pasan';
+    RAISE NOTICE 'acceso_alumnos: las 7 comprobaciones pasan';
 END $$;
 
 ROLLBACK;

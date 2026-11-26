@@ -2,8 +2,11 @@
 // administrador en la 48b, y los alumnos de la 02 salen de la base de datos. Flujo 01 → 02 → 03.
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import LoginEstudiantesScreen from "../login-estudiantes";
 import { obtenerAlumnosAcceso, obtenerAulasAcceso } from "../../src/servicios/accesoAlumnosService";
+import { obtenerAlumnoTableta, recordarAlumnoTableta } from "../../src/servicios/tabletaPersonal";
 
 jest.mock("expo-router", () => ({ useRouter: () => ({ push: jest.fn(), replace: jest.fn() }) }));
 jest.mock("../../src/servicios/sonidos", () => ({ reproducirSonido: jest.fn() }));
@@ -148,5 +151,41 @@ describe("Acceso del alumno con aulas y alumnos de la base de datos (SCRUM-249)"
     await act(async () => lentaCirculo.resolver(ok(ALUMNOS_CIRCULO)));
     expect(screen.getByText("Nuria")).toBeTruthy();
     expect(screen.queryByText("Lucía")).toBeNull();
+  });
+
+  describe("modo tableta personal con alumnos de la base de datos", () => {
+    beforeEach(async () => {
+      await AsyncStorage.clear();
+    });
+
+    it("si la tableta recuerda a un alumno real, abre directamente su contraseña", async () => {
+      await recordarAlumnoTableta("al-1", "aula-cir");
+      await render(<LoginEstudiantesScreen modoTabletaPersonal />);
+
+      expect(await screen.findByText("¿Eres Lucía?")).toBeTruthy();
+      expect(mockAlumnos).toHaveBeenCalledWith("aula-cir");
+    });
+
+    it("«Atrás» (no soy yo) vuelve a los alumnos de su aula y la tableta lo olvida", async () => {
+      const user = userEvent.setup();
+      await recordarAlumnoTableta("al-1", "aula-cir");
+      await render(<LoginEstudiantesScreen modoTabletaPersonal />);
+
+      await screen.findByText("¿Eres Lucía?");
+      await user.press(screen.getByTestId("btn-barra-atras"));
+
+      expect(screen.getByText("Hugo")).toBeTruthy();
+      expect(await obtenerAlumnoTableta()).toBeNull();
+    });
+
+    it("si el alumno ya no está en esa aula, enseña las aulas como siempre y lo olvida", async () => {
+      await recordarAlumnoTableta("al-9", "aula-cir");
+      await render(<LoginEstudiantesScreen modoTabletaPersonal />);
+
+      expect(await screen.findByText("Clase Círculo")).toBeTruthy();
+      await act(async () => {}); // deja terminar la búsqueda del alumno
+      expect(screen.queryByText(/¿Eres/)).toBeNull();
+      expect(await obtenerAlumnoTableta()).toBeNull();
+    });
   });
 });

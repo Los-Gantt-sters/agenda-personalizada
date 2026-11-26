@@ -5,9 +5,16 @@
  */
 
 import { supabase } from "../lib/supabaseClient";
-import type { ActualizarAulaInput, Aula, AlumnosResult, CrearAulaInput } from "../tipos/alumnos";
+import type {
+  ActualizarAulaInput,
+  Aula,
+  AlumnosResult,
+  CrearAulaInput,
+  CursoLectivo,
+} from "../tipos/alumnos";
 
 export const ERROR_NOMBRE_AULA_OBLIGATORIO = "El nombre del aula es obligatorio.";
+export const ERROR_CURSO_AULA_OBLIGATORIO = "Elige el curso del aula.";
 export const ERROR_AULA_CON_ALUMNOS =
   "No se puede eliminar un aula que tiene alumnos. Muévelos antes a otra aula.";
 const CENTRO_POR_DEFECTO = "11111111-1111-1111-1111-111111111111"; // CEE Purísima, igual que alumnosService
@@ -25,6 +32,7 @@ function filaAAula(row: any): Aula {
     nivel: row.nivel,
     tutorTitularId: row.tutor_titular_id ?? undefined,
     orden: row.orden ?? 0,
+    cursoLectivoId: row.curso_lectivo_id ?? null,
     creadoEn: row.creado_en,
   };
 }
@@ -47,10 +55,37 @@ export async function obtenerAulas(centroId?: string): Promise<AlumnosResult<Aul
   }
 }
 
+/**
+ * Cursos lectivos que se pueden elegir al crear un aula (SCRUM-249): los que no están cerrados,
+ * del más antiguo al más nuevo. Así se pueden preparar las aulas del curso siguiente.
+ */
+export async function obtenerCursosAbiertos(): Promise<AlumnosResult<CursoLectivo[]>> {
+  try {
+    const { data, error } = await supabase
+      .from("cursos_lectivos")
+      .select("id, anio_escolar, activo")
+      .eq("cerrado", false)
+      .order("fecha_inicio", { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return {
+      success: true,
+      data: (data || []).map((c: any) => ({
+        id: c.id,
+        anioEscolar: c.anio_escolar,
+        activo: Boolean(c.activo),
+      })),
+    };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
+  }
+}
+
 /** Crea un aula nueva al final de la lista (pantalla 48b · «Añadir nueva aula al centro»). */
 export async function crearAula(input: CrearAulaInput): Promise<AlumnosResult<Aula>> {
   const nombre = input.nombre?.trim();
   if (!nombre) return { success: false, error: ERROR_NOMBRE_AULA_OBLIGATORIO };
+  // No puede haber aulas sin curso: la pantalla 01 solo enseña las del curso activo
+  if (!input.cursoLectivoId) return { success: false, error: ERROR_CURSO_AULA_OBLIGATORIO };
 
   const centroId = input.centroId || CENTRO_POR_DEFECTO;
   try {
@@ -68,6 +103,7 @@ export async function crearAula(input: CrearAulaInput): Promise<AlumnosResult<Au
       .from("aulas")
       .insert({
         centro_id: centroId,
+        curso_lectivo_id: input.cursoLectivoId,
         nombre,
         icono_forma: input.iconoForma || FORMA_POR_DEFECTO,
         icono_url: input.iconoUrl ?? null,
