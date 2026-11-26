@@ -30,7 +30,7 @@ jest.mock("../../preferencias/PantallaVistaAccesible", () => ({
   PantallaVistaAccesible: () => null,
 }));
 
-describe("Pantalla - botones «Ayuda» y «Accesibilidad» de los lados", () => {
+describe("Pantalla - botones «Ayuda» y «Preferencias» de los lados (sin SesionProvider)", () => {
   it("por defecto salen los dos", async () => {
     await render(
       <Pantalla titulo="Mi agenda">
@@ -38,7 +38,7 @@ describe("Pantalla - botones «Ayuda» y «Accesibilidad» de los lados", () => 
       </Pantalla>,
     );
     expect(screen.getByTestId("btn-necesidades")).toBeTruthy();
-    expect(screen.getByTestId("btn-barra-accesibilidad")).toBeTruthy();
+    expect(screen.getByTestId("btn-barra-preferencias")).toBeTruthy();
   });
 
   it("con sinAyuda y sinAccesibilidad (administración) no sale ninguno", async () => {
@@ -48,17 +48,17 @@ describe("Pantalla - botones «Ayuda» y «Accesibilidad» de los lados", () => 
       </Pantalla>,
     );
     expect(screen.queryByTestId("btn-necesidades")).toBeNull();
-    expect(screen.queryByTestId("btn-barra-accesibilidad")).toBeNull();
+    expect(screen.queryByTestId("btn-barra-preferencias")).toBeNull();
     expect(screen.getByText("contenido")).toBeTruthy();
   });
 
-  it("con solo sinAccesibilidad se quita Accesibilidad y se queda Ayuda", async () => {
+  it("con solo sinAccesibilidad se quita Preferencias y se queda Ayuda", async () => {
     await render(
       <Pantalla titulo="Otra" sinAccesibilidad>
         <Text>contenido</Text>
       </Pantalla>,
     );
     expect(screen.getByTestId("btn-necesidades")).toBeTruthy();
-    expect(screen.queryByTestId("btn-barra-accesibilidad")).toBeNull();
+    expect(screen.queryByTestId("btn-barra-preferencias")).toBeNull();
   });
 });
