@@ -16,18 +16,24 @@
  *   - Tabla con columnas `IMAGEN`, `PALABRA CLAVE`, `TEXTO ALTERNATIVO` y botón `Editar / Quitar`.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { MarcoPantalla } from "../../pantalla/MarcoPantalla";
 import {
   CATALOGO_INICIAL_PICTOGRAMAS_51,
   MENSAJE_EXITO_SUBIDA_51,
   MENSAJE_INICIAL_SUBIDA_51,
+  actualizarPictogramaPropioEnBD51,
+  cargarPictogramasPropiosDesdeBD,
+  eliminarPictogramaPropioEnBD51,
   filtrarPictogramasPorRol51,
+  seleccionarArchivoImagenPropio,
+  subirArchivoPictogramaPropio51,
   subirPictogramaPropioAlPulsarMas,
 } from "../../servicios/bibliotecaPictogramasService";
 import type { Paleta } from "../../temas";
 import type {
+  ArchivoImagenSeleccionado51,
   PictogramaPropio51,
   RolBibliotecaPictogramas51,
 } from "../../tipos/bibliotecaPictogramas";
@@ -40,6 +46,10 @@ export interface PantallaBibliotecaPictogramas51Props {
   nombreUsuario?: string;
   /** Catálogo inicial de pictogramas propios (por defecto los 6 del boceto `51.html`). */
   pictogramasIniciales?: readonly PictogramaPropio51[];
+  /** Si es `true`, carga y persiste los pictogramas reales del usuario en Supabase (`pictogramas_propios` + Storage). */
+  usarBaseDeDatos?: boolean;
+  /** Selector de archivo inyectable (por defecto abre el selector nativo de archivos de imagen del navegador). */
+  seleccionarArchivo?: () => Promise<ArchivoImagenSeleccionado51 | null>;
   /** Palabra clave inicial en el formulario superior. */
   palabraClaveInicial?: string;
   /** Texto alternativo inicial en el formulario superior. */
@@ -78,6 +88,8 @@ export function PantallaBibliotecaPictogramas51({
   rol = "tutor",
   nombreUsuario,
   pictogramasIniciales = CATALOGO_INICIAL_PICTOGRAMAS_51,
+  usarBaseDeDatos = false,
+  seleccionarArchivo,
   palabraClaveInicial = "",
   textoAlternativoInicial = "",
   alSubirPictograma,
@@ -89,12 +101,35 @@ export function PantallaBibliotecaPictogramas51({
   const estilos = useEstilos(crearEstilos);
 
   const [catalogo, setCatalogo] = useState<PictogramaPropio51[]>(() =>
-    pictogramasIniciales.map((item) => ({ ...item })),
+    usarBaseDeDatos ? [] : pictogramasIniciales.map((item) => ({ ...item })),
   );
   const [palabraClave, setPalabraClave] = useState<string>(palabraClaveInicial);
   const [textoAlternativo, setTextoAlternativo] = useState<string>(textoAlternativoInicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [archivoSubidoOk, setArchivoSubidoOk] = useState<boolean>(false);
+  const [errorSubida, setErrorSubida] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!usarBaseDeDatos) return;
+    let activo = true;
+    cargarPictogramasPropiosDesdeBD(rol)
+      .then((filas) => {
+        if (activo) {
+          setCatalogo(filas);
+          setErrorSubida(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (activo) {
+          setErrorSubida(
+            err instanceof Error ? err.message : "No se pudo cargar tu biblioteca de pictogramas.",
+          );
+        }
+      });
+    return () => {
+      activo = false;
+    };
+  }, [usarBaseDeDatos, rol]);
 
   const etiquetaUsuario =
     nombreUsuario?.trim() || (rol === "familia" ? "Familia García" : "Carmen Ruiz");
@@ -106,22 +141,59 @@ export function PantallaBibliotecaPictogramas51({
   );
 
   const manejarSubidaDirectaAlPulsarMas = async () => {
-    const nuevo = await subirPictogramaPropioAlPulsarMas({
-      owner: rol,
-      palabraClave,
-      textoAlternativo,
-    });
-    const siguiente = [nuevo, ...catalogo];
-    setCatalogo(siguiente);
-    setArchivoSubidoOk(true);
-    setEditandoId(null);
-    setPalabraClave("");
-    setTextoAlternativo("");
-    alSubirPictograma?.(nuevo);
-    alCambiarBiblioteca?.(filtrarPictogramasPorRol51(siguiente, rol));
+    setErrorSubida(null);
+    try {
+      let nuevo: PictogramaPropio51;
+      if (usarBaseDeDatos || seleccionarArchivo) {
+        const selector = seleccionarArchivo ?? seleccionarArchivoImagenPropio;
+        const elegido = await selector();
+        if (!elegido) {
+          return;
+        }
+        nuevo = await subirArchivoPictogramaPropio51({
+          owner: rol,
+          archivo: elegido.archivo,
+          nombreArchivo: elegido.nombreArchivo,
+          tipoMime: elegido.tipoMime,
+          palabraClave,
+          textoAlternativo,
+        });
+      } else {
+        nuevo = await subirPictogramaPropioAlPulsarMas({
+          owner: rol,
+          palabraClave,
+          textoAlternativo,
+        });
+      }
+      const siguiente = [nuevo, ...catalogo];
+      setCatalogo(siguiente);
+      setArchivoSubidoOk(true);
+      setEditandoId(null);
+      setPalabraClave("");
+      setTextoAlternativo("");
+      alSubirPictograma?.(nuevo);
+      alCambiarBiblioteca?.(filtrarPictogramasPorRol51(siguiente, rol));
+    } catch (err: unknown) {
+      setArchivoSubidoOk(false);
+      setErrorSubida(
+        err instanceof Error ? err.message : "No se pudo subir el archivo seleccionado.",
+      );
+    }
   };
 
-  const manejarQuitarPictograma = (id: string) => {
+  const manejarQuitarPictograma = async (id: string) => {
+    setErrorSubida(null);
+    const objetivo = catalogo.find((item) => item.id === id && item.owner === rol);
+    if (usarBaseDeDatos && objetivo) {
+      try {
+        await eliminarPictogramaPropioEnBD51(id, rol, objetivo.rutaStorage);
+      } catch (err: unknown) {
+        setErrorSubida(
+          err instanceof Error ? err.message : "No se pudo eliminar el pictograma propio.",
+        );
+        return;
+      }
+    }
     const siguiente = catalogo.filter((item) => !(item.id === id && item.owner === rol));
     setCatalogo(siguiente);
     if (editandoId === id) {
@@ -130,10 +202,26 @@ export function PantallaBibliotecaPictogramas51({
     alCambiarBiblioteca?.(filtrarPictogramasPorRol51(siguiente, rol));
   };
 
-  const manejarIniciarOGuardarEdicion = (item: PictogramaPropio51) => {
+  const manejarIniciarOGuardarEdicion = async (item: PictogramaPropio51) => {
+    setErrorSubida(null);
     if (editandoId === item.id) {
       const nuevaPalabra = palabraClave.trim() || item.palabraClave;
       const nuevoTextoAlt = textoAlternativo.trim() || item.textoAlternativo;
+      if (usarBaseDeDatos) {
+        try {
+          await actualizarPictogramaPropioEnBD51({
+            id: item.id,
+            owner: rol,
+            palabraClave: nuevaPalabra,
+            textoAlternativo: nuevoTextoAlt,
+          });
+        } catch (err: unknown) {
+          setErrorSubida(
+            err instanceof Error ? err.message : "No se pudo actualizar el pictograma propio.",
+          );
+          return;
+        }
+      }
       const siguiente = catalogo.map((actual) =>
         actual.id === item.id && actual.owner === rol
           ? {
@@ -224,6 +312,11 @@ export function PantallaBibliotecaPictogramas51({
             >
               {archivoSubidoOk ? MENSAJE_EXITO_SUBIDA_51 : MENSAJE_INICIAL_SUBIDA_51}
             </Texto>
+            {errorSubida ? (
+              <Texto style={estilos.textoBotonQuitarFila} testID="error-subida-51">
+                {errorSubida}
+              </Texto>
+            ) : null}
             <View style={estilos.filaInputs}>
               <TextInput
                 testID="input-palabra-clave-51"
