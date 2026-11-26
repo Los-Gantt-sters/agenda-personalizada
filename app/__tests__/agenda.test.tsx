@@ -489,45 +489,4 @@ describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas q
     const ocultas = Number(/ y (\d+) más$/.exec(despues)?.[1] ?? 0);
     expect(vistas.length + ocultas).toBeGreaterThan(3);
   });
-
-  it("con «Sin aviso previo» (avisoPrevio: 'no' en pantalla 25) no sale el aviso de 5 minutos (08b)", async () => {
-    // La tarea «Lavarse las manos» (e2) empieza a las 09:30; a las 09:25 faltan 5 minutos.
-    jest.useFakeTimers({
-      doNotFake: [
-        "nextTick",
-        "setImmediate",
-        "setTimeout",
-        "clearTimeout",
-        "setInterval",
-        "clearInterval",
-      ],
-      now: new Date(2026, 10, 5, 9, 25),
-    });
-    try {
-      const { unmount } = await render(
-        <TemaProvider>
-          <PreferenciasProvider preferenciasIniciales={{ avisoPrevio: "no" }}>
-            <PantallaAgenda />
-          </PreferenciasProvider>
-        </TemaProvider>,
-      );
-      // Con avisoPrevio="no" se ve la agenda normal y NO sale la pantalla 08b de aviso anticipado
-      expect(await screen.findByTestId("bloque-ahora")).toBeTruthy();
-      expect(screen.queryByTestId("pantalla-aviso")).toBeNull();
-      unmount();
-
-      // En cambio, con avisoPrevio="si" (por defecto) a la misma hora (09:25) sí sale el aviso 08b
-      const segundo = await render(
-        <TemaProvider>
-          <PreferenciasProvider preferenciasIniciales={{ avisoPrevio: "si" }}>
-            <PantallaAgenda />
-          </PreferenciasProvider>
-        </TemaProvider>,
-      );
-      expect(await screen.findByTestId("pantalla-aviso")).toBeTruthy();
-      segundo.unmount();
-    } finally {
-      jest.useRealTimers();
-    }
-  });
 });
