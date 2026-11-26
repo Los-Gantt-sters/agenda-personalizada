@@ -3,6 +3,7 @@ import { fireEvent, render, screen, userEvent, waitFor } from "@testing-library/
 import ConfigurarAulas from "../admin/aulas";
 import {
   crearAula,
+  eliminarAula,
   guardarConfiguracionAulas,
   obtenerAulas,
   obtenerCursosAbiertos,
@@ -16,6 +17,7 @@ jest.mock("expo-router", () => ({
 jest.mock("../../src/servicios/aulasService", () => ({
   obtenerAulas: jest.fn(),
   crearAula: jest.fn(),
+  eliminarAula: jest.fn(),
   guardarConfiguracionAulas: jest.fn(),
   obtenerCursosAbiertos: jest.fn(),
 }));
@@ -28,6 +30,7 @@ jest.mock("../../src/arasaac", () => ({
 
 const mockObtener = obtenerAulas as jest.Mock;
 const mockCrear = crearAula as jest.Mock;
+const mockEliminar = eliminarAula as jest.Mock;
 const mockGuardar = guardarConfiguracionAulas as jest.Mock;
 const mockCursos = obtenerCursosAbiertos as jest.Mock;
 
@@ -47,6 +50,7 @@ describe("ConfigurarAulas - SCRUM-259 (pantalla 48b)", () => {
     mockObtener.mockResolvedValue({ success: true, data: AULAS });
     mockGuardar.mockResolvedValue({ success: true, data: [] });
     mockCursos.mockResolvedValue({ success: true, data: CURSOS });
+    mockEliminar.mockResolvedValue({ success: true, data: null });
   });
 
   it("enseña el nombre de cada aula", async () => {
@@ -234,5 +238,71 @@ describe("ConfigurarAulas - SCRUM-259 (pantalla 48b)", () => {
 
     expect(await screen.findByText("Solo administradores")).toBeTruthy();
     expect(screen.queryByText("Configuración guardada")).toBeNull();
+  });
+
+  it("«Eliminar» marca el aula y se borra al guardar, sin incluirla en la configuración", async () => {
+    const user = userEvent.setup();
+    await render(<ConfigurarAulas />);
+    await screen.findByDisplayValue("Clase Triángulo");
+
+    await user.press(screen.getByTestId("eliminar-aula-0"));
+    expect(screen.getByText("Se eliminará al guardar")).toBeTruthy();
+    expect(mockEliminar).not.toHaveBeenCalled();
+
+    await user.press(screen.getByLabelText("Guardar configuración de las aulas"));
+
+    await waitFor(() => expect(mockGuardar).toHaveBeenCalled());
+    expect(mockEliminar).toHaveBeenCalledWith("a1");
+    expect(mockGuardar.mock.calls[0][0].map((a: { id: string }) => a.id)).toEqual(["a2"]);
+  });
+
+  it("«Deshacer» recupera el aula marcada y no se elimina", async () => {
+    const user = userEvent.setup();
+    await render(<ConfigurarAulas />);
+    await screen.findByDisplayValue("Clase Triángulo");
+
+    await user.press(screen.getByTestId("eliminar-aula-0"));
+    await user.press(screen.getByTestId("deshacer-aula-0"));
+    expect(screen.queryByText("Se eliminará al guardar")).toBeNull();
+
+    await user.press(screen.getByLabelText("Guardar configuración de las aulas"));
+
+    await waitFor(() => expect(mockGuardar).toHaveBeenCalled());
+    expect(mockEliminar).not.toHaveBeenCalled();
+    expect(mockGuardar.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  it("un aula nueva sin guardar desaparece sin llamar a eliminar", async () => {
+    const user = userEvent.setup();
+    await render(<ConfigurarAulas />);
+    await screen.findByDisplayValue("Clase Triángulo");
+
+    await user.press(screen.getByTestId("anadir-aula"));
+    await user.press(await screen.findByTestId("curso-c26")); // SCRUM-249: primero, su curso
+    await user.press(screen.getByTestId("eliminar-aula-2"));
+    expect(screen.queryByTestId("aula-2")).toBeNull();
+
+    await user.press(screen.getByLabelText("Guardar configuración de las aulas"));
+    await waitFor(() => expect(mockGuardar).toHaveBeenCalled());
+    expect(mockEliminar).not.toHaveBeenCalled();
+    expect(mockCrear).not.toHaveBeenCalled();
+  });
+
+  it("si el aula tiene alumnos avisa, no la borra y sigue en la lista", async () => {
+    mockEliminar.mockResolvedValue({
+      success: false,
+      error: "No se puede eliminar un aula que tiene alumnos. Muévelos antes a otra aula.",
+    });
+    const user = userEvent.setup();
+    await render(<ConfigurarAulas />);
+    await screen.findByDisplayValue("Clase Triángulo");
+
+    await user.press(screen.getByTestId("eliminar-aula-0"));
+    await user.press(screen.getByLabelText("Guardar configuración de las aulas"));
+
+    expect(await screen.findByText(/Clase Triángulo: No se puede eliminar un aula/)).toBeTruthy();
+    expect(mockGuardar).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue("Clase Triángulo")).toBeTruthy();
+    expect(screen.queryByText("Se eliminará al guardar")).toBeNull();
   });
 });

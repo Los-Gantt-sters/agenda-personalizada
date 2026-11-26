@@ -8,6 +8,8 @@
 --   - aulas_acceso():          id, nombre, icono (forma o imagen) y orden de cada aula del curso
 --                              activo. Las de cursos cerrados o que aún no han empezado no salen
 --                              (toda aula tiene curso: la 48b lo pide al crearla).
+--                              No se filtra por centro: la app es para un solo centro (CEE
+--                              Purísima). Si algún día hubiera más, habría que pasarle el centro.
 --   - alumnos_acceso(aula):    id, nombre de pila, icono y color de los alumnos activos.
 --
 -- Protección de datos (hay menores): no salen apellidos, expediente, fecha de nacimiento, dieta,

@@ -1,7 +1,8 @@
 // Administración · Configurar aulas y clases (pantalla 48b, SCRUM-235 / SCRUM-259).
 // El administrador pone nombre e icono a cada aula; se ven en la pantalla 01 (alumno) y en la 35
 // (tutor). Puede haber más de 9: 01 y 35 las reparten en páginas. Los cambios se guardan todos
-// juntos con «Guardar configuración» (barra de abajo). Sin ventanas emergentes: «Cambiar icono»
+// juntos con «Guardar configuración» (barra de abajo). «Eliminar» marca el aula para borrarla al
+// guardar (se puede «Deshacer» antes); si tiene alumnos no se borra y se avisa. Sin ventanas emergentes: «Cambiar icono»
 // abre otra pantalla y «Atrás» vuelve sin cambiar nada.
 // SCRUM-249: no puede haber aulas sin curso lectivo (la 01 solo enseña las del curso activo), así
 // que «Añadir nueva aula» abre antes otra pantalla para elegir su curso entre los no cerrados.
@@ -13,6 +14,7 @@ import { IconoAula } from "../../src/componentes/administracion/IconoAula";
 import { Pantalla } from "../../src/pantalla";
 import {
   crearAula,
+  eliminarAula,
   guardarConfiguracionAulas,
   obtenerAulas,
   obtenerCursosAbiertos,
@@ -47,6 +49,8 @@ export default function ConfigurarAulas() {
   /** Se está eligiendo el curso de un aula nueva (pantalla propia, antes de añadirla). */
   const [eligiendoCurso, setEligiendoCurso] = useState(false);
   const [cursos, setCursos] = useState<CargaCursos>({ estado: "cargando" });
+  /** Aulas ya guardadas que se borrarán al pulsar «Guardar configuración». */
+  const [marcadas, setMarcadas] = useState<string[]>([]);
 
   // Guarda en el estado lo que devuelve obtenerAulas (se llama cuando ya ha llegado la respuesta)
   const aplicar = useCallback((r: Awaited<ReturnType<typeof obtenerAulas>>) => {
@@ -121,15 +125,48 @@ export default function ConfigurarAulas() {
     setContadorNuevas((n) => n + 1);
   }
 
+  function eliminar(indice: number) {
+    const aula = aulas[indice];
+    setGuardado(false);
+    if (aula.id.startsWith(PREFIJO_NUEVA)) {
+      // Aún no está guardada: simplemente desaparece de la lista
+      setAulas((actuales) => actuales.filter((_, i) => i !== indice));
+    } else {
+      setMarcadas((m) => [...m, aula.id]);
+    }
+  }
+
+  function deshacerEliminar(id: string) {
+    setGuardado(false);
+    setMarcadas((m) => m.filter((x) => x !== id));
+  }
+
   async function guardar() {
     if (guardando) return;
     setGuardando(true);
     setErrorGuardar(null);
     setGuardado(false);
 
+    // Primero se eliminan las marcadas. Si una no se puede (tiene alumnos) se para y se avisa:
+    // esa aula se queda en la lista y las que ya se borraron desaparecen.
+    const borradas: string[] = [];
+    for (const id of marcadas) {
+      const r = await eliminarAula(id);
+      if (!r.success) {
+        const nombre = aulas.find((a) => a.id === id)?.nombre ?? "El aula";
+        setAulas((actuales) => actuales.filter((a) => !borradas.includes(a.id)));
+        setMarcadas((m) => m.filter((x) => x !== id && !borradas.includes(x)));
+        setGuardando(false);
+        setErrorGuardar(`${nombre}: ${r.error ?? "No se ha podido eliminar."}`);
+        return;
+      }
+      borradas.push(id);
+    }
+    const restantes = aulas.filter((a) => !marcadas.includes(a.id));
+
     // Primero se crean las aulas nuevas (así tienen id real) y luego se guarda todo en orden
     const resueltas: AulaEditable[] = [];
-    for (const a of aulas) {
+    for (const a of restantes) {
       if (!a.id.startsWith(PREFIJO_NUEVA)) {
         resueltas.push(a);
         continue;
@@ -155,6 +192,7 @@ export default function ConfigurarAulas() {
       return;
     }
     setAulas(resueltas);
+    setMarcadas([]);
     setGuardado(true);
   }
 
@@ -216,6 +254,8 @@ export default function ConfigurarAulas() {
     const aula = aulas[eligiendo];
     return (
       <Pantalla
+        sinAyuda
+        sinAccesibilidad
         titulo={`Icono de ${aula.nombre}`}
         simbolo={<IconoAula iconoForma={aula.iconoForma} iconoUrl={aula.iconoUrl} tam={36} />}
         alAtras={() => setEligiendo(null)}
@@ -234,6 +274,8 @@ export default function ConfigurarAulas() {
 
   return (
     <Pantalla
+      sinAyuda
+      sinAccesibilidad
       titulo="Configurar aulas y clases"
       simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
       alAdelante={cargando || errorCarga || guardando ? null : () => void guardar()}
@@ -300,9 +342,14 @@ export default function ConfigurarAulas() {
         {!cargando && !errorCarga && (
           <ScrollView contentContainerStyle={estilos.lista}>
             {aulas.map((a, i) => {
+              const marcada = marcadas.includes(a.id);
               const curso = cursoDe(a.cursoLectivoId);
               return (
-                <View key={a.id} style={estilos.fila} testID={`aula-${i}`}>
+                <View
+                  key={a.id}
+                  style={[estilos.fila, marcada && estilos.filaMarcada]}
+                  testID={`aula-${i}`}
+                >
                   <View style={estilos.columnaNombre}>
                     <Texto style={estilos.detalle}>
                       {`Aula #${i + 1}`}
@@ -318,22 +365,49 @@ export default function ConfigurarAulas() {
                     <TextInput
                       style={estilos.campo}
                       value={a.nombre}
+                      editable={!marcada}
                       onChangeText={(t) => cambiar(i, { nombre: t })}
                       accessibilityLabel={`Nombre del aula ${i + 1}`}
                       testID={`nombre-aula-${i}`}
                     />
+                    {marcada && (
+                      <Texto style={estilos.avisoEliminar}>Se eliminará al guardar</Texto>
+                    )}
                   </View>
                   <View style={estilos.columnaIcono}>
                     <IconoAula iconoForma={a.iconoForma} iconoUrl={a.iconoUrl} tam={48} />
-                    <Pressable
-                      style={estilos.boton}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Cambiar icono de ${a.nombre}`}
-                      testID={`cambiar-icono-${i}`}
-                      onPress={() => setEligiendo(i)}
-                    >
-                      <Texto style={estilos.textoBoton}>Cambiar icono</Texto>
-                    </Pressable>
+                    {marcada ? (
+                      <Pressable
+                        style={estilos.botonAnadir}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Deshacer: no eliminar ${a.nombre}`}
+                        testID={`deshacer-aula-${i}`}
+                        onPress={() => deshacerEliminar(a.id)}
+                      >
+                        <Texto style={estilos.textoAnadir}>Deshacer</Texto>
+                      </Pressable>
+                    ) : (
+                      <>
+                        <Pressable
+                          style={estilos.boton}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Cambiar icono de ${a.nombre}`}
+                          testID={`cambiar-icono-${i}`}
+                          onPress={() => setEligiendo(i)}
+                        >
+                          <Texto style={estilos.textoBoton}>Cambiar icono</Texto>
+                        </Pressable>
+                        <Pressable
+                          style={estilos.botonEliminar}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Eliminar el aula ${a.nombre}`}
+                          testID={`eliminar-aula-${i}`}
+                          onPress={() => eliminar(i)}
+                        >
+                          <Texto style={estilos.textoEliminar}>Eliminar</Texto>
+                        </Pressable>
+                      </>
+                    )}
                   </View>
                 </View>
               );
@@ -365,6 +439,8 @@ const crearEstilos = (c: Paleta) =>
       borderColor: c.borde,
       backgroundColor: c.superficie,
     },
+    filaMarcada: { borderColor: c.peligro, opacity: 0.7 },
+    avisoEliminar: { fontSize: 15, fontWeight: "700", color: c.peligro },
     columnaNombre: { flexGrow: 1, flexBasis: 260, gap: 6 },
     columnaIcono: { flexDirection: "row", alignItems: "center", gap: 12 },
     detalle: { fontSize: 15, color: c.textoSecundario },
@@ -409,6 +485,18 @@ const crearEstilos = (c: Paleta) =>
       borderColor: c.primario,
       backgroundColor: c.superficie,
     },
+    botonEliminar: {
+      alignSelf: "flex-start",
+      minHeight: 48,
+      minWidth: 48,
+      justifyContent: "center",
+      paddingHorizontal: 18,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: c.peligro,
+      backgroundColor: c.superficie,
+    },
+    textoEliminar: { fontSize: 16, fontWeight: "700", color: c.peligro },
     textoBoton: { fontSize: 16, fontWeight: "700", color: c.textoSobrePrimario },
     textoAnadir: { fontSize: 16, fontWeight: "700", color: c.primario },
   });

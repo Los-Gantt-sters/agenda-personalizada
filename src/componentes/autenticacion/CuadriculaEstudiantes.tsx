@@ -12,6 +12,8 @@ export interface CuadriculaEstudiantesProps {
   estudianteSeleccionadoId?: string;
   /** Alto mínimo de cada tarjeta; nunca baja de 120 px (RNF1.1). */
   tamanioMinimoTarjeta?: number;
+  /** Página con la que se abre (0 = la primera); p. ej. la de antes, al volver de la contraseña. */
+  paginaInicial?: number;
   /** Avisa de la página que se enseña (0 = la primera), para poner «Página 2». */
   alCambiarPagina?: (pagina: number) => void;
 }
@@ -21,12 +23,14 @@ export const CuadriculaEstudiantes: React.FC<CuadriculaEstudiantesProps> = ({
   alSeleccionarEstudiante,
   estudianteSeleccionadoId,
   tamanioMinimoTarjeta = 120,
+  paginaInicial,
   alCambiarPagina,
 }) => (
   <CuadriculaPaginada
     elementos={estudiantes}
     clave={(estudiante) => estudiante.id}
     queHayMas="alumnos"
+    paginaInicial={paginaInicial}
     alCambiarPagina={alCambiarPagina}
     testID="cuadricula-estudiantes"
     pintar={(estudiante) => (

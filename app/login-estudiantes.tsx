@@ -226,9 +226,13 @@ export default function LoginEstudiantesScreen({
     });
   }, [modoTabletaPersonal, aulasBD]);
 
-  /** Abre las fotos de una clase; si es de la base de datos, pide sus alumnos (pantalla 02). */
-  const abrirClase = (c: Clase) => {
-    setPaginaAlumnos(0);
+  /**
+   * Abre las fotos de una clase; si es de la base de datos, pide sus alumnos (pantalla 02).
+   * Al tocar una clase se empieza en su página 1; con «Adelante» se vuelve a la página en la que
+   * se estaba (mantenerPagina), como al volver de la contraseña.
+   */
+  const abrirClase = (c: Clase, mantenerPagina = false) => {
+    if (!mantenerPagina) setPaginaAlumnos(0);
     setClase(c);
     if (!esDeBaseDatos(c)) return;
     // Si ya estaban (se vuelve a la misma aula), no se piden otra vez
@@ -360,6 +364,7 @@ export default function LoginEstudiantesScreen({
               key={clase.id}
               estudiantes={alumnosDeClase}
               alSeleccionarEstudiante={elegirAlumno}
+              paginaInicial={paginaAlumnos}
               alCambiarPagina={setPaginaAlumnos}
             />
           )}
@@ -375,7 +380,7 @@ export default function LoginEstudiantesScreen({
       simbolo={<PictogramaInterfaz nombre="colegio" etiqueta="colegio" tam={48} />}
       derecha={<LogoColegio ancho={190} />}
       alAtras={null}
-      alAdelante={claseAnterior ? () => abrirClase(claseAnterior) : null}
+      alAdelante={claseAnterior ? () => abrirClase(claseAnterior, true) : null}
       etiquetaAdelante={claseAnterior ? `Adelante: ${nombreDeClase(claseAnterior)}` : undefined}
       conSonido
       sinAyuda
