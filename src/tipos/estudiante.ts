@@ -15,6 +15,15 @@ export interface Clase {
   nombre: string;
   simbolo: string;
   color?: string;
+  /**
+   * Aulas de la base de datos (SCRUM-249): nombre tal cual lo puso el administrador en la 48b
+   * («Clase Triángulo», «Aula Sol»...). Las de prueba no lo llevan y se ven como «Clase <nombre>».
+   */
+  nombreVisible?: string;
+  /** Forma del aula en la base de datos (ids de FormaClase). */
+  iconoForma?: string | null;
+  /** Pictograma o imagen del aula; si hay, sustituye a la forma. */
+  iconoUrl?: string | null;
 }
 
 export interface DibujoCredencialVisual {

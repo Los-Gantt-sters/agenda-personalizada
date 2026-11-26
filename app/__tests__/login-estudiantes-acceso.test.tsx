@@ -187,7 +187,7 @@ describe("LoginEstudiantesScreen - SCRUM-51 (T-01.2, acceso con 3 dibujos)", () 
       await tocarDibujos(user, "manzana", "perro", "estrella");
 
       await waitFor(() => expect(mockReplace).toHaveBeenCalled());
-      expect(await obtenerAlumnoTableta()).toBe("ale");
+      expect(await obtenerAlumnoTableta()).toEqual({ alumnoId: "ale", aulaId: "tri" });
     });
   });
 });

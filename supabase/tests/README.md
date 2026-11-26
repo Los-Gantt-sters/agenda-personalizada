@@ -55,21 +55,24 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261105000000_schema_inicial.sql \
          supabase/migrations/20261110000000_secuencia_dia.sql \
          supabase/migrations/20261123100000_auto_pendiente.sql \
+         supabase/migrations/20261124000000_aulas_configurables.sql \
          supabase/migrations/20261124230000_requiere_inicio_fin.sql \
          supabase/migrations/20261126000000_seguridad_perfiles_vinculos.sql \
          supabase/migrations/20261128000000_progreso_alumno.sql \
          supabase/migrations/20261128100000_agenda_compartida_y_franjas.sql \
+         supabase/migrations/20261129000000_acceso_alumnos_sin_sesion.sql \
          supabase/tests/secuencia_dia_test.sql \
          supabase/tests/auto_pendiente_test.sql \
          supabase/tests/seguridad_perfiles_vinculos_test.sql \
          supabase/tests/progreso_alumno_test.sql \
-         supabase/tests/agenda_compartida_y_franjas_test.sql; do
+         supabase/tests/agenda_compartida_y_franjas_test.sql \
+         supabase/tests/acceso_alumnos_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan`, `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan` `NOTICE: progreso_alumno: las 13 comprobaciones pasan` y `NOTICE: agenda_compartida_y_franjas: las 14 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan`, `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan`, `NOTICE: progreso_alumno: las 13 comprobaciones pasan`, `NOTICE: agenda_compartida_y_franjas: las 14 comprobaciones pasan` y `NOTICE: acceso_alumnos: las 7 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
@@ -139,3 +142,14 @@ Mismos criterios que `secuencia_dia`: las canceladas no cuentan y `hecho`/`compl
 12. La familia no mueve las suyas a la mañana ni quita las del tutor, pero sí quita las suyas.
 13. La familia no crea tareas de clase.
 14. Administración y el editor SQL no tienen límite de horario.
+
+## Acceso del alumno sin sesión (SCRUM-249 · T-01.7, MOD HU-01)
+
+La pantalla de acceso del alumno (01 y 02) se ve **antes** de iniciar sesión, y las políticas RLS de `aulas` y `alumnos` solo dejan leer a usuarios con sesión. La migración `20261129000000_acceso_alumnos_sin_sesion.sql` crea dos funciones que puede llamar `anon` y que devuelven solo lo que pinta la pantalla:
+
+| Función | Devuelve | Pantalla |
+|---|---|---|
+| `aulas_acceso()` | `id`, `nombre`, `icono_forma`, `icono_url`, `orden` (en el orden de la 48b) | 01 / 01b |
+| `alumnos_acceso(p_aula)` | `id`, `nombre` (de pila), `icono_personal`, `color_identificativo` de los alumnos **activos** del aula | 02 / 02b |
+
+**Protección de datos:** no salen apellidos, expediente, fecha de nacimiento, dieta, método ni secuencia de acceso. La **foto** tampoco, de momento: junto al `id` y con solo 729 contraseñas posibles (3 dibujos de 9) facilitaría intentar entrar a ciegas; queda pendiente de decidir en el equipo cómo protegerla. `acceso_alumnos_test.sql` comprueba el orden, que solo salen las aulas del curso activo (ni las de cursos cerrados ni las del curso siguiente) y los alumnos activos de esas aulas, las columnas exactas que devuelven, los permisos de `anon` y que `anon` sigue sin políticas sobre las tablas. En la app las usa `src/servicios/accesoAlumnosService.ts`; si fallan o no hay Supabase configurado, la pantalla usa sus datos de prueba.

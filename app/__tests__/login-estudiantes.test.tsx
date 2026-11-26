@@ -83,7 +83,7 @@ describe("LoginEstudiantesScreen", () => {
     });
 
     it("si la tableta recuerda a un alumno, abre directamente su credencial de 3 dibujos", async () => {
-      await recordarAlumnoTableta("ale");
+      await recordarAlumnoTableta("ale", "tri");
       await render(<LoginEstudiantesScreen modoTabletaPersonal />);
 
       expect(await screen.findByText("¿Eres Alejandro?")).toBeTruthy();
@@ -101,12 +101,12 @@ describe("LoginEstudiantesScreen", () => {
       await user.press(screen.getByTestId("dibujo-credencial-perro"));
       await user.press(screen.getByTestId("dibujo-credencial-estrella"));
       await user.press(screen.getByTestId("btn-entrar-credencial"));
-      expect(await obtenerAlumnoTableta()).toBe("ale");
+      expect(await obtenerAlumnoTableta()).toEqual({ alumnoId: "ale", aulaId: "tri" });
     });
 
     it("«Atrás» (no soy yo) hace que la tableta olvide al alumno y vuelve a la cuadrícula", async () => {
       const user = userEvent.setup();
-      await recordarAlumnoTableta("ale");
+      await recordarAlumnoTableta("ale", "tri");
       await render(<LoginEstudiantesScreen modoTabletaPersonal />);
 
       await screen.findByText("¿Eres Alejandro?");
@@ -117,7 +117,7 @@ describe("LoginEstudiantesScreen", () => {
     });
 
     it("en tableta compartida (por defecto) no recuerda a nadie", async () => {
-      await recordarAlumnoTableta("ale");
+      await recordarAlumnoTableta("ale", "tri");
       await render(<LoginEstudiantesScreen />);
 
       expect(screen.getByText("¿Cuál es tu clase?")).toBeTruthy();

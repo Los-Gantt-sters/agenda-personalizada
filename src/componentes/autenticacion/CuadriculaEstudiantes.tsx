@@ -1,56 +1,45 @@
+// Alumnos de una clase (pantallas 02 y 02b, HU-01). Desde la MOD HU-01 (SCRUM-247) no hay scroll:
+// 9 alumnos por página y «Más alumnos» para ver los siguientes (CuadriculaPaginada).
 import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+
 import { Estudiante } from "../../tipos/estudiante";
+import { CuadriculaPaginada } from "./CuadriculaPaginada";
 import { TarjetaEstudiante } from "./TarjetaEstudiante";
 
 export interface CuadriculaEstudiantesProps {
   estudiantes: Estudiante[];
   alSeleccionarEstudiante: (estudiante: Estudiante) => void;
   estudianteSeleccionadoId?: string;
-  tamanioMinimoTarjeta?: number; // Garantiza >= 120px
+  /** Alto mínimo de cada tarjeta; nunca baja de 120 px (RNF1.1). */
+  tamanioMinimoTarjeta?: number;
+  /** Página con la que se abre (0 = la primera); p. ej. la de antes, al volver de la contraseña. */
+  paginaInicial?: number;
+  /** Avisa de la página que se enseña (0 = la primera), para poner «Página 2». */
+  alCambiarPagina?: (pagina: number) => void;
 }
 
 export const CuadriculaEstudiantes: React.FC<CuadriculaEstudiantesProps> = ({
   estudiantes,
   alSeleccionarEstudiante,
   estudianteSeleccionadoId,
-  tamanioMinimoTarjeta = 140,
-}) => {
-  return (
-    <ScrollView
-      contentContainerStyle={estilos.contenedorScroll}
-      showsVerticalScrollIndicator={false}
-      testID="cuadricula-estudiantes-scroll"
-    >
-      <View style={estilos.cuadricula} testID="cuadricula-estudiantes" accessibilityRole="none">
-        {estudiantes.map((estudiante) => (
-          <TarjetaEstudiante
-            key={estudiante.id}
-            estudiante={estudiante}
-            alSeleccionar={alSeleccionarEstudiante}
-            seleccionado={estudiante.id === estudianteSeleccionadoId}
-            tamanioMinimo={tamanioMinimoTarjeta}
-          />
-        ))}
-      </View>
-    </ScrollView>
-  );
-};
-
-const estilos = StyleSheet.create({
-  contenedorScroll: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-  },
-  cuadricula: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
-    maxWidth: 900,
-    width: "100%",
-  },
-});
+  tamanioMinimoTarjeta = 120,
+  paginaInicial,
+  alCambiarPagina,
+}) => (
+  <CuadriculaPaginada
+    elementos={estudiantes}
+    clave={(estudiante) => estudiante.id}
+    queHayMas="alumnos"
+    paginaInicial={paginaInicial}
+    alCambiarPagina={alCambiarPagina}
+    testID="cuadricula-estudiantes"
+    pintar={(estudiante) => (
+      <TarjetaEstudiante
+        estudiante={estudiante}
+        alSeleccionar={alSeleccionarEstudiante}
+        seleccionado={estudiante.id === estudianteSeleccionadoId}
+        tamanioMinimo={tamanioMinimoTarjeta}
+      />
+    )}
+  />
+);
