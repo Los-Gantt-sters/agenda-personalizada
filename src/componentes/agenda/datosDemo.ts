@@ -103,3 +103,22 @@ export function agendaDemoAviso(fecha: string, ahora: Date = new Date()): Entrad
     return { ...e, hora_inicio: hora };
   });
 }
+
+/** Demo de la 08c (HU-22): el tutor ha activado el Plan B de la tarea de «Ahora». */
+export function agendaDemoPlanB(fecha: string): EntradaAgenda[] {
+  return agendaDemo(fecha).map((e) =>
+    e.id === "e2"
+      ? {
+          ...e,
+          tarea: { id: "plan-b", titulo: "Juegos en clase", emoji: "🧩" },
+          plan_b: {
+            original: {
+              titulo: e.tarea.titulo,
+              pictograma_url: e.tarea.pictograma_url,
+              emoji: e.tarea.emoji,
+            },
+          },
+        }
+      : e,
+  );
+}
