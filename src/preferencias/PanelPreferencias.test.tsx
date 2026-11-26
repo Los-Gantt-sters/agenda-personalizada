@@ -296,28 +296,32 @@ describe("PanelPreferencias (SCRUM-240 · Bocetos 16, 16b, 17, 18, 19, 22, 24, 2
     );
 
     // Con 3 ya elegidas, tocar una 4ª ("Tengo hambre") no supera el límite de 3
-    await user.press(screen.getByTestId("necesidad-desayuno"));
-    expect(screen.getByTestId("necesidad-desayuno").props.accessibilityState).toMatchObject({
+    await user.press(screen.getByTestId("resultado-ayuda-arasaac:4626"));
+    expect(
+      screen.getByTestId("resultado-ayuda-arasaac:4626").props.accessibilityState,
+    ).toMatchObject({
       checked: false,
     });
 
     // Quitamos "Beber agua" y "Descansar (propio)" -> queda solo "Ir al baño" (1 de 3)
-    await user.press(screen.getByTestId("necesidad-agua"));
-    await user.press(screen.getByTestId("necesidad-descanso"));
-    expect(screen.queryByTestId("muestra-necesidad-agua")).toBeNull();
-    expect(screen.getByTestId("muestra-necesidad-bano")).toBeTruthy();
+    await user.press(screen.getByTestId("resultado-ayuda-arasaac:2248"));
+    await user.press(screen.getByTestId("resultado-ayuda-propio:descanso"));
+    expect(screen.queryByTestId("muestra-ayuda-arasaac:2248")).toBeNull();
+    expect(screen.getByTestId("muestra-ayuda-arasaac:6929")).toBeTruthy();
     expect(screen.getByTestId("contador-ayudas-26")).toHaveTextContent(
       "1 de 3 seleccionados (máx. 3)",
     );
 
     // La última que queda ("Ir al baño") no se puede quitar: Ayuda nunca puede quedarse vacía
-    await user.press(screen.getByTestId("necesidad-bano"));
-    expect(screen.getByTestId("necesidad-bano").props.accessibilityState).toMatchObject({
+    await user.press(screen.getByTestId("resultado-ayuda-arasaac:6929"));
+    expect(
+      screen.getByTestId("resultado-ayuda-arasaac:6929").props.accessibilityState,
+    ).toMatchObject({
       checked: true,
     });
 
     // Añadimos "Beber agua" y guardamos
-    await user.press(screen.getByTestId("necesidad-agua"));
+    await user.press(screen.getByTestId("resultado-ayuda-arasaac:2248"));
     await pulsarGuardarCambios(user);
     expect(
       screen.getByRole("button", { name: "Ayuda (máximo 3): 2 ayudas (máx. 3)" }),

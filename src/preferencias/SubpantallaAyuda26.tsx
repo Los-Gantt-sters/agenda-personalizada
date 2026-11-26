@@ -1,17 +1,42 @@
 // Subpantalla 26: «Ayuda: qué puede pedir (máximo 3)» fiel a BOCETOS_NUEVOS/26.html.
 // Respeta la paleta activa (incluido el modo de alto contraste) y etiqueta accesible en el buscador.
-import React from "react";
+// MOD HU-18 (SCRUM-269): el buscador busca de verdad en ARASAAC y en Mi biblioteca del adulto que
+// la abre (tutor o familia) y cada ayuda elegida se guarda completa (AyudaElegida). Sin texto se
+// enseñan como sugerencias los 8 pictogramas del catálogo.
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { urlImagenPictograma } from "../arasaac/urls";
+import type { ClienteArasaac } from "../arasaac/clienteArasaac";
+import { normalizarTexto } from "../arasaac/texto";
+import { useBuscadorPictogramas } from "../arasaac/useBuscadorPictogramas";
 import { PictogramaTarea } from "../componentes/agenda/PictogramaTarea";
 import type { AyudaElegida } from "../necesidades/tipos";
+import {
+  cargarPictogramasPropiosDesdeBD,
+  obtenerPictogramasPropiosPorRol51,
+} from "../servicios/bibliotecaPictogramasService";
+import { useSesionOpcional } from "../sesion/SesionProvider";
 import type { Paleta } from "../temas";
+import type {
+  PictogramaPropio51,
+  RolBibliotecaPictogramas51,
+} from "../tipos/bibliotecaPictogramas";
 import { Icono } from "../ui/Icono";
 import { Texto as Text } from "../ui/Texto";
 import { colorSobre, useApariencia, useEstilos } from "../ui/apariencia";
-import { ayudaDesdeCatalogo26, necesidadesDesdeAyudas } from "./ayudas";
+import {
+  MAXIMO_AYUDAS,
+  ayudaDesdeArasaac,
+  ayudaDesdeBiblioteca,
+  ayudaDesdeCatalogo26,
+  necesidadesDesdeAyudas,
+} from "./ayudas";
 import { CATALOGO_AYUDAS_26, type PreferenciasApariencia } from "./opciones";
+
+/** Resultados que caben en la cuadrícula sin scroll (2 filas de 4). */
+const MAXIMO_RESULTADOS = 8;
+
+const SUGERENCIAS = CATALOGO_AYUDAS_26.map(ayudaDesdeCatalogo26);
 
 export interface SubpantallaAyuda26Props {
   borrador: PreferenciasApariencia;
@@ -19,6 +44,13 @@ export interface SubpantallaAyuda26Props {
   onChangeBusqueda: (q: string) => void;
   actualizarBorrador: (c: Partial<PreferenciasApariencia>) => void;
   alGuardar: () => void;
+  /** Cliente de ARASAAC (por defecto, el compartido de la app; en las pruebas, uno simulado). */
+  clienteArasaac?: ClienteArasaac;
+  /**
+   * Cómo se carga Mi biblioteca del rol. Por defecto: con un adulto dentro, de Supabase (como la
+   * pantalla 51); sin sesión, el catálogo en memoria.
+   */
+  cargarBiblioteca?: (rol: RolBibliotecaPictogramas51) => Promise<PictogramaPropio51[]>;
 }
 
 export function SubpantallaAyuda26({
@@ -27,14 +59,52 @@ export function SubpantallaAyuda26({
   onChangeBusqueda,
   actualizarBorrador,
   alGuardar,
+  clienteArasaac,
+  cargarBiblioteca,
 }: SubpantallaAyuda26Props) {
   const { colores } = useApariencia();
   const e = useEstilos(crearEstilos);
   const elegidas = p.ayudas;
-  const filtro = busqueda.trim().toLowerCase();
-  const catalogoFiltrado = CATALOGO_AYUDAS_26.filter(
-    (item) => !filtro || item.etiqueta.toLowerCase().includes(filtro),
+
+  // Mi biblioteca del adulto que configura: la familia ve la suya; cualquier otro, la del tutor.
+  const sesion = useSesionOpcional()?.sesion ?? null;
+  const rol: RolBibliotecaPictogramas51 = sesion?.user.role === "familiar" ? "familia" : "tutor";
+  const [biblioteca, setBiblioteca] = useState<PictogramaPropio51[]>([]);
+  const [errorBiblioteca, setErrorBiblioteca] = useState(false);
+  useEffect(() => {
+    let activo = true;
+    const cargar =
+      cargarBiblioteca ??
+      (sesion
+        ? cargarPictogramasPropiosDesdeBD
+        : async (r: RolBibliotecaPictogramas51) => obtenerPictogramasPropiosPorRol51(r));
+    cargar(rol)
+      .then((lista) => {
+        if (activo) setBiblioteca(lista);
+      })
+      .catch(() => {
+        if (activo) setErrorBiblioteca(true);
+      });
+    return () => {
+      activo = false;
+    };
+    // Se carga una vez por rol; la función de carga no cambia mientras la pantalla está abierta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rol]);
+
+  const arasaac = useBuscadorPictogramas(
+    busqueda,
+    clienteArasaac ? { cliente: clienteArasaac } : {},
   );
+  const termino = normalizarTexto(busqueda.trim());
+  const resultados = useMemo<AyudaElegida[]>(() => {
+    if (!termino) return SUGERENCIAS;
+    const propios = biblioteca
+      .filter((pic) => normalizarTexto(pic.palabraClave).includes(termino))
+      .map(ayudaDesdeBiblioteca);
+    const deArasaac = arasaac.resultados.map(ayudaDesdeArasaac);
+    return [...propios, ...deArasaac].slice(0, MAXIMO_RESULTADOS);
+  }, [termino, biblioteca, arasaac.resultados]);
 
   const estaElegida = (ayuda: AyudaElegida) => elegidas.some((x) => x.id === ayuda.id);
 
@@ -44,7 +114,7 @@ export function SubpantallaAyuda26({
       if (elegidas.length <= 1) return; // Nunca dejar vacía la pantalla de Ayuda
       nuevas = elegidas.filter((x) => x.id !== ayuda.id);
     } else {
-      if (elegidas.length >= 3) return; // Máximo 3 ayudas
+      if (elegidas.length >= MAXIMO_AYUDAS) return; // Máximo 3 ayudas
       nuevas = [...elegidas, ayuda];
     }
     actualizarBorrador({
@@ -79,17 +149,32 @@ export function SubpantallaAyuda26({
           />
         </View>
 
+        {termino && arasaac.estado === "cargando" ? (
+          <Text testID="cargando-arasaac-26" style={e.avisoBusqueda26}>
+            Buscando en ARASAAC…
+          </Text>
+        ) : null}
+        {termino && arasaac.estado === "error" ? (
+          <Text testID="error-arasaac-26" style={e.avisoBusqueda26}>
+            ARASAAC no responde ahora: se ven solo los de Mi biblioteca.
+          </Text>
+        ) : null}
+        {errorBiblioteca ? (
+          <Text testID="error-biblioteca-26" style={e.avisoBusqueda26}>
+            No se pudo cargar Mi biblioteca.
+          </Text>
+        ) : null}
+
         <View style={e.rejilla26}>
-          {catalogoFiltrado.map((item) => {
-            const ayuda = ayudaDesdeCatalogo26(item);
+          {resultados.map((ayuda) => {
             const activa = estaElegida(ayuda);
-            const esPropio = item.origen === "Mi biblioteca";
+            const esPropio = ayuda.origen === "biblioteca";
             return (
               <Pressable
-                key={item.id}
-                testID={`necesidad-${item.id}`}
+                key={ayuda.id}
+                testID={`resultado-ayuda-${ayuda.id}`}
                 accessibilityRole="checkbox"
-                accessibilityLabel={item.etiqueta}
+                accessibilityLabel={`${ayuda.texto}, ${esPropio ? "Mi biblioteca" : "ARASAAC"}`}
                 accessibilityState={{ checked: activa }}
                 onPress={() => alternarAyuda(ayuda)}
                 style={[e.tarjetaPicto26, activa && e.tarjetaPicto26Activa]}
@@ -111,19 +196,15 @@ export function SubpantallaAyuda26({
                       esPropio ? e.textoOrigenBiblioteca : e.textoOrigenArasaac,
                     ]}
                   >
-                    {item.origen}
+                    {esPropio ? "Mi biblioteca" : "ARASAAC"}
                   </Text>
                 </View>
                 <PictogramaTarea
-                  tarea={{
-                    titulo: item.etiqueta,
-                    emoji: item.emoji,
-                    pictograma_url: urlImagenPictograma(item.pictoIdArasaac, 300),
-                  }}
+                  tarea={{ titulo: ayuda.texto, pictograma_url: ayuda.imagenUrl }}
                   tam={48}
                 />
                 <Text style={e.etiquetaPicto26} numberOfLines={2}>
-                  {item.etiqueta}
+                  {ayuda.texto}
                 </Text>
               </Pressable>
             );
@@ -143,15 +224,10 @@ export function SubpantallaAyuda26({
         <View style={e.filaHuecos26}>
           {[0, 1, 2].map((idx) => {
             const item = elegidas[idx];
-            const delCatalogo = item
-              ? CATALOGO_AYUDAS_26.find((c) => ayudaDesdeCatalogo26(c).id === item.id)
-              : undefined;
             return (
               <View
                 key={idx}
-                testID={
-                  item ? `muestra-necesidad-${delCatalogo?.id ?? item.id}` : `hueco-vacio-26-${idx}`
-                }
+                testID={item ? `muestra-ayuda-${item.id}` : `hueco-vacio-26-${idx}`}
                 style={[e.hueco26, !item && e.hueco26Vacio]}
               >
                 <View style={e.pildoraPrimaria26}>
@@ -211,6 +287,7 @@ const crearEstilos = (c: Paleta) =>
       alignItems: "center",
     },
     tituloSeccion26: { fontSize: 18, fontWeight: "700", color: c.texto },
+    avisoBusqueda26: { fontSize: 15, fontWeight: "600", color: c.texto, marginBottom: 6 },
     pildoraPrimaria26: {
       backgroundColor: c.superficieDestacada,
       borderColor: c.primario,
