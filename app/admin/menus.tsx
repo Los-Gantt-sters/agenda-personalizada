@@ -121,6 +121,8 @@ export default function MenusYAlergias() {
     const personalizadas = alergias.filter((x) => !IDS_ALERGENOS_FIJOS.includes(x));
     return (
       <Pantalla
+        sinAyuda
+        sinAccesibilidad
         titulo={`Menú de ${nombreCompleto(editando)}`}
         simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
         alAtras={() => setEditando(null)}
@@ -237,6 +239,8 @@ export default function MenusYAlergias() {
   // ---- 46: lista de alumnos ----
   return (
     <Pantalla
+      sinAyuda
+      sinAccesibilidad
       titulo="Menús, dietas y alergias"
       simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
     >

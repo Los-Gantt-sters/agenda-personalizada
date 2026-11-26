@@ -151,6 +151,41 @@ export const COMBINACIONES_DE_USO: readonly Combinacion[] = [
     tipo: "texto",
     pares: [["aviso", "fondo"]],
   },
+  {
+    id: "exito-exitoSuave",
+    elemento: "Etiqueta de estado «Hecha» y porcentaje de un día completo",
+    usoEn: "ProgresoHistorial43 (tabla y «Ver días»)",
+    tipo: "texto",
+    pares: [["exito", "exitoSuave"]],
+  },
+  {
+    id: "aviso-resalteSuave",
+    elemento: "Etiqueta de estado «Pendiente» y porcentaje de un día sin completar",
+    usoEn: "ProgresoHistorial43 (tabla y «Ver días»)",
+    tipo: "texto",
+    pares: [["aviso", "resalteSuave"]],
+  },
+  {
+    id: "texto-exitoSuave",
+    elemento: "Tarjeta verde del resumen (días con todo hecho)",
+    usoEn: "ProgresoHistorial43 (resumen del periodo)",
+    tipo: "texto",
+    pares: [["texto", "exitoSuave"]],
+  },
+  {
+    id: "texto-resalteSuave",
+    elemento: "Tarjeta amarilla del resumen (tareas pendientes)",
+    usoEn: "ProgresoHistorial43 (resumen del periodo)",
+    tipo: "texto",
+    pares: [["texto", "resalteSuave"]],
+  },
+  {
+    id: "texto-peligroSuave",
+    elemento: "Tarjeta roja del resumen (urgencias sin atender)",
+    usoEn: "ProgresoHistorial43 (resumen del periodo)",
+    tipo: "texto",
+    pares: [["texto", "peligroSuave"]],
+  },
 
   // ---- Componentes ----
   {

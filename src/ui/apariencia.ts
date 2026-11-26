@@ -1,7 +1,7 @@
 // Apariencia activa para cualquier pantalla: colores del tema y letra del perfil del estudiante.
 // Funciona también fuera de los proveedores (tests, componentes sueltos): entonces usa el tema
 // claro («Piedra») y la letra por defecto (Lexend).
-import { useMemo } from "react";
+import { createContext, useContext, useMemo } from "react";
 
 import { TEMAS, TEMA_POR_DEFECTO, useTemaOpcional, type Paleta } from "../temas";
 import { ratioContraste } from "../temas/contraste";
@@ -29,13 +29,21 @@ export interface Apariencia {
 
 const FUENTE_POR_DEFECTO = FUENTES[PREFERENCIAS_POR_DEFECTO.fuente];
 
+/**
+ * Letra fija de una pantalla concreta, que manda sobre la del perfil. Se pone con <LetraFija>
+ * (LetraFija.tsx); fuera de ella vale null y se usa la del perfil.
+ */
+export const LetraFijaContexto = createContext<{ normal: string; negrita: string } | null>(null);
+
 export function useApariencia(): Apariencia {
   const tema = useTemaOpcional();
   const prefs = usePreferenciasOpcional();
+  const fija = useContext(LetraFijaContexto);
   const colores = tema?.colores ?? TEMAS[TEMA_POR_DEFECTO].paleta;
   const esOscuro = tema?.tema.esOscuro ?? false;
-  const normal = prefs?.estilos.fuenteNormal ?? FUENTE_POR_DEFECTO.familiaNormal;
-  const negrita = prefs?.estilos.fuenteNegrita ?? FUENTE_POR_DEFECTO.familiaNegrita;
+  const normal = fija?.normal ?? prefs?.estilos.fuenteNormal ?? FUENTE_POR_DEFECTO.familiaNormal;
+  const negrita =
+    fija?.negrita ?? prefs?.estilos.fuenteNegrita ?? FUENTE_POR_DEFECTO.familiaNegrita;
   const mayusculas = prefs?.preferencias.caja === "mayusculas";
   const canal = prefs?.preferencias.canal ?? "ambos";
   const escalaLetra = TAMANOS_LETRA[prefs?.preferencias.tamanoLetra ?? "normal"].escala;

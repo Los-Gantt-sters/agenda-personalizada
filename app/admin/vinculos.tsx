@@ -128,6 +128,8 @@ export default function ConsolaVinculos() {
   if (edicion) {
     return (
       <Pantalla
+        sinAyuda
+        sinAccesibilidad
         titulo={`${edicion.tipo === "aula" ? "Tutor de aula" : "Familia"} de ${nombreCompleto(edicion.alumno)}`}
         simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
         alAtras={() => setEdicion(null)}
@@ -150,6 +152,8 @@ export default function ConsolaVinculos() {
 
   return (
     <Pantalla
+      sinAyuda
+      sinAccesibilidad
       titulo="Tutores y familias"
       simbolo={<Icono nombre="personas" color={colores.primario} tam={36} />}
       derecha={
@@ -171,25 +175,6 @@ export default function ConsolaVinculos() {
           Cada estudiante tiene un tutor de aula y, como mucho, una familia. Solo administración
           cambia estos vínculos.
         </Texto>
-
-        {/* PROVISIONAL (SCRUM-259 y 260): acceso a las pantallas 48b y 46 hasta que exista el panel de
-            administración (pantalla 48, con las tarjetas Aulas y Clases, Menús y Alergias...).
-            Cuando esté, se quita este bloque. */}
-        <View style={estilos.accesoProvisional}>
-          <Boton
-            texto="Aulas y clases"
-            etiqueta="Ir a configurar aulas y clases"
-            alPulsar={() => router.push("/admin/aulas")}
-          />
-          <Boton
-            texto="Menús y alergias"
-            etiqueta="Ir a menús, dietas y alergias"
-            alPulsar={() => router.push("/admin/menus")}
-          />
-          <Texto style={estilos.avisoProvisional}>
-            Acceso provisional: se quitará cuando esté el panel de administración (pantalla 48).
-          </Texto>
-        </View>
 
         {cargando && <Texto style={estilos.estado}>Cargando estudiantes…</Texto>}
 
@@ -296,8 +281,6 @@ const crearEstilos = (c: Paleta) =>
     },
     textoSalir: { fontSize: 16, fontWeight: "700", color: c.primario },
     subtitulo: { fontSize: 16, color: c.textoSecundario, maxWidth: 760 },
-    accesoProvisional: { gap: 4 },
-    avisoProvisional: { fontSize: 14, fontStyle: "italic", color: c.textoSecundario },
     estado: { fontSize: 18, color: c.textoSecundario },
     filaError: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
     error: { fontSize: 16, fontWeight: "700", color: c.peligro },
