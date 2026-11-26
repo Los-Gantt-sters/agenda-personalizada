@@ -7,11 +7,12 @@
  */
 
 import React, { useState } from "react";
+import { PantallaEjecucionRestringida07e, PantallaPermisosAlumno26d } from "../permisos-alumno";
 import { BuscadorAlumnosAula } from "./BuscadorAlumnosAula";
 import { FichaAlumnoTutor, type DestinoFichaTutor } from "./FichaAlumnoTutor";
 import { SelectorAulasTutor } from "./SelectorAulasTutor";
 
-export type PasoNavegacionTutor = "35" | "36" | "37";
+export type PasoNavegacionTutor = "35" | "36" | "37" | "26d" | "07e";
 
 export interface NavegacionTutorProps {
   /** Pantalla inicial del flujo (`35` por defecto). */
@@ -75,11 +76,42 @@ export function NavegacionTutor({
     );
   }
 
+  if (paso === "26d") {
+    return (
+      <PantallaPermisosAlumno26d
+        alumnoId={alumnoId}
+        nombreTutor={nombreTutor}
+        alAbrirVistaPrevia07e={() => setPaso("07e")}
+        alGuardar={() => setPaso("37")}
+        alAtras={() => setPaso("37")}
+        alCerrarSesion={alCerrarSesion}
+      />
+    );
+  }
+
+  if (paso === "07e") {
+    return (
+      <PantallaEjecucionRestringida07e
+        alAtras={() => setPaso("26d")}
+        alTerminarTarea={() => setPaso("26d")}
+      />
+    );
+  }
+
   return (
     <FichaAlumnoTutor
       alumnoId={alumnoId}
       nombreTutor={nombreTutor}
-      alNavegarDestino={(destino, id) => alAbrirDestinoFicha?.(destino, id)}
+      alNavegarDestino={(destino, id) => {
+        if (alAbrirDestinoFicha) {
+          alAbrirDestinoFicha(destino, id);
+          return;
+        }
+        if (destino === "26d") {
+          setAlumnoId(id);
+          setPaso("26d");
+        }
+      }}
       alAtras={() => setPaso("36")}
       alCerrarSesion={alCerrarSesion}
     />

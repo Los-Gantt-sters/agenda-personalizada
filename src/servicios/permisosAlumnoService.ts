@@ -258,10 +258,11 @@ export function puedeAccederAgendaSemanal06b(
 export async function obtenerPermisosAlumno26d(
   alumnoId: string,
   nombreAlumno?: string,
+  opciones?: { forzarRemoto?: boolean },
 ): Promise<PermisosAlumno26d> {
   const idLimpio = alumnoId.trim() || "ale";
   const enMemoria = almacenPermisosMemoria.get(idLimpio);
-  if (enMemoria) {
+  if (enMemoria && !opciones?.forzarRemoto) {
     return {
       ...enMemoria,
       formatosPermitidos: [...enMemoria.formatosPermitidos],
@@ -270,9 +271,9 @@ export async function obtenerPermisosAlumno26d(
 
   try {
     const { data, error } = await supabase
-      .from("permisos_alumno_26d")
+      .from("preferencias_alumnos")
       .select(
-        "alumno_id, nombre_alumno, formatos_permitidos, entrada_tras_login, mostrar_boton_preferencias_16, actualizado_en",
+        "alumno_id, formatos_multimedia_permitidos, vista_agenda, nivel_permisos_preferencias, actualizado_en",
       )
       .eq("alumno_id", idLimpio)
       .single();
@@ -280,29 +281,22 @@ export async function obtenerPermisosAlumno26d(
     if (!error && data) {
       const fila = data as {
         alumno_id: string;
-        nombre_alumno?: string | null;
-        formatos_permitidos?: FormatoMultimediaAlumno[] | null;
-        entrada_tras_login?: DestinoEntradaLoginAlumno | null;
-        mostrar_boton_preferencias_16?: boolean | null;
+        formatos_multimedia_permitidos?: FormatoMultimediaAlumno[] | null;
+        vista_agenda?: "diaria" | "semanal" | null;
+        nivel_permisos_preferencias?: "ninguno" | "parcial" | "total" | null;
         actualizado_en?: string | null;
       };
       const reconstruido: PermisosAlumno26d = {
         alumnoId: fila.alumno_id,
         nombreAlumno:
-          fila.nombre_alumno?.trim() ||
-          nombreAlumno?.trim() ||
-          NOMBRES_ALUMNOS_CONOCIDOS[idLimpio.toLowerCase()] ||
-          "Alejandro",
+          nombreAlumno?.trim() || NOMBRES_ALUMNOS_CONOCIDOS[idLimpio.toLowerCase()] || "Alejandro",
         formatosPermitidos: validarFormatosPermitidos(
-          fila.formatos_permitidos && fila.formatos_permitidos.length > 0
-            ? fila.formatos_permitidos
+          fila.formatos_multimedia_permitidos && fila.formatos_multimedia_permitidos.length > 0
+            ? fila.formatos_multimedia_permitidos
             : ORDEN_FORMATOS_MULTIMEDIA,
         ),
-        entradaTrasLogin: fila.entrada_tras_login === "06" ? "06" : "06b",
-        mostrarBotonPreferencias16:
-          typeof fila.mostrar_boton_preferencias_16 === "boolean"
-            ? fila.mostrar_boton_preferencias_16
-            : true,
+        entradaTrasLogin: fila.vista_agenda === "diaria" ? "06" : "06b",
+        mostrarBotonPreferencias16: fila.nivel_permisos_preferencias !== "ninguno",
         actualizadoEn: fila.actualizado_en ?? new Date().toISOString(),
       };
       almacenPermisosMemoria.set(idLimpio, reconstruido);
@@ -312,7 +306,7 @@ export async function obtenerPermisosAlumno26d(
       };
     }
   } catch {
-    // Fallback seguro a memoria local cuando se ejecuta sin tabla remota o sin red
+    // Fallback a valores por defecto si no existe fila remota o no hay conexión
   }
 
   const porDefecto = crearPermisosAlumnoPorDefecto(idLimpio, nombreAlumno);
@@ -364,23 +358,24 @@ export async function guardarPermisosAlumno26d(
     actualizadoEn: new Date().toISOString(),
   };
 
-  almacenPermisosMemoria.set(idLimpio, actualizado);
+  const resultado = await supabase.from("preferencias_alumnos").upsert(
+    {
+      alumno_id: actualizado.alumnoId,
+      formatos_multimedia_permitidos: actualizado.formatosPermitidos,
+      vista_agenda: actualizado.entradaTrasLogin === "06" ? "diaria" : "semanal",
+      nivel_permisos_preferencias: actualizado.mostrarBotonPreferencias16 ? "total" : "ninguno",
+      actualizado_en: actualizado.actualizadoEn,
+    },
+    { onConflict: "alumno_id" },
+  );
 
-  try {
-    await supabase.from("permisos_alumno_26d").upsert(
-      {
-        alumno_id: actualizado.alumnoId,
-        nombre_alumno: actualizado.nombreAlumno,
-        formatos_permitidos: actualizado.formatosPermitidos,
-        entrada_tras_login: actualizado.entradaTrasLogin,
-        mostrar_boton_preferencias_16: actualizado.mostrarBotonPreferencias16,
-        actualizado_en: actualizado.actualizadoEn,
-      },
-      { onConflict: "alumno_id" },
+  if (resultado?.error) {
+    throw new Error(
+      `No se pudieron guardar los permisos del alumno en Supabase: ${resultado.error.message}`,
     );
-  } catch {
-    // Conserva la actualización en memoria si la sesión es local/offline
   }
+
+  almacenPermisosMemoria.set(idLimpio, actualizado);
 
   return {
     ...actualizado,
