@@ -9,9 +9,10 @@ import {
 import { isSessionExpired } from "./sessionGuard";
 
 /**
- * Normaliza y valida el rol recibido de la metadata o base de datos.
+ * Valida el rol leído de la tabla perfiles. Si no es uno de los roles de la app devuelve null,
+ * para que el acceso se deniegue (SCRUM-280: antes se ponía tutor_docente por defecto).
  */
-export function normalizeRole(roleCandidate?: string | null): UserRole {
+export function normalizeRole(roleCandidate?: string | null): UserRole | null {
   const validRoles: UserRole[] = [
     "tutor_docente",
     "familiar",
@@ -22,7 +23,38 @@ export function normalizeRole(roleCandidate?: string | null): UserRole {
   if (roleCandidate && validRoles.includes(roleCandidate as UserRole)) {
     return roleCandidate as UserRole;
   }
-  return "tutor_docente";
+  return null;
+}
+
+/** Datos del usuario que la sesión toma de su fila en public.perfiles. */
+interface PerfilSesion {
+  role: UserRole;
+  fullName: string;
+  centroId?: string;
+}
+
+/**
+ * Lee el rol, el nombre y el centro del usuario en la tabla perfiles (SCRUM-280).
+ * Es la misma fuente que usan las políticas RLS de la base de datos. No se usa user_metadata
+ * porque el propio usuario puede cambiarlo con supabase.auth.updateUser y darse otro rol.
+ * Devuelve null, y entonces no hay sesión, si no hay perfil, está desactivado o el rol no es válido.
+ */
+async function leerPerfil(userId: string): Promise<PerfilSesion | null> {
+  const { data, error } = await supabase
+    .from("perfiles")
+    .select("rol, nombre_completo, centro_id, activo")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data || data.activo !== true) return null;
+
+  const role = normalizeRole(data.rol);
+  if (!role) return null;
+  return { role, fullName: data.nombre_completo, centroId: data.centro_id ?? undefined };
+}
+
+/** Cierra en este dispositivo la sesión que Supabase acaba de abrir a un usuario sin perfil válido. */
+async function cerrarSesionLocal(): Promise<void> {
+  await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
 }
 
 /**
@@ -71,31 +103,23 @@ export async function signInSupervisor(email: string, password: string): Promise
       };
     }
 
-    const rawRole = data.user.user_metadata?.role;
-    const role: UserRole = normalizeRole(rawRole);
-
-    const userProfile: SupervisorProfile = {
-      id: data.user.id,
-      email: data.user.email ?? sanitizedEmail,
-      fullName:
-        data.user.user_metadata?.full_name ||
-        data.user.user_metadata?.name ||
-        "Supervisor Purísima",
-      role,
-      centroId: data.user.user_metadata?.centro_id,
-      createdAt: data.user.created_at,
-    };
-
-    const session: AuthSession = {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresAt: data.session.expires_at,
-      user: userProfile,
-    };
+    // El rol sale de perfiles, no de user_metadata (SCRUM-280)
+    const perfil = await leerPerfil(data.user.id);
+    if (!perfil) {
+      await cerrarSesionLocal();
+      return {
+        success: false,
+        error: AUTH_GENERIC_ERROR_MESSAGE,
+      };
+    }
 
     return {
       success: true,
-      session,
+      session: construirSesion(
+        { ...data.session, user: data.user },
+        perfil,
+        data.user.email ?? sanitizedEmail,
+      ),
     };
   } catch {
     return {
@@ -138,23 +162,19 @@ export async function signInEstudianteConDibujos(
       };
     }
 
-    const userProfile: SupervisorProfile = {
-      id: data.user.id,
-      email: emailTecnico,
-      fullName: data.user.user_metadata?.full_name || `Estudiante ${alumnoId}`,
-      role: "estudiante",
-      centroId: data.user.user_metadata?.centro_id,
-      createdAt: data.user.created_at,
-    };
+    // Solo entra por aquí quien tiene perfil de estudiante en la tabla perfiles (SCRUM-280)
+    const perfil = await leerPerfil(data.user.id);
+    if (perfil?.role !== "estudiante") {
+      await cerrarSesionLocal();
+      return {
+        success: false,
+        error: "La secuencia de dibujos no coincide. Inténtalo de nuevo.",
+      };
+    }
 
     return {
       success: true,
-      session: {
-        accessToken: data.session.access_token,
-        refreshToken: data.session.refresh_token,
-        expiresAt: data.session.expires_at,
-        user: userProfile,
-      },
+      session: construirSesion({ ...data.session, user: data.user }, perfil, emailTecnico),
     };
   } catch {
     return {
@@ -191,31 +211,41 @@ type SupabaseSessionLike = {
     id: string;
     email?: string;
     created_at?: string;
-    user_metadata?: Record<string, any>;
   };
 };
 
-function mapSupabaseSession(raw: SupabaseSessionLike): AuthSession {
-  const { user } = raw;
+/** Junta los tokens de Supabase Auth con los datos del perfil del usuario. */
+function construirSesion(
+  raw: SupabaseSessionLike,
+  perfil: PerfilSesion,
+  email: string = raw.user.email ?? "",
+): AuthSession {
+  const user: SupervisorProfile = {
+    id: raw.user.id,
+    email,
+    fullName: perfil.fullName,
+    role: perfil.role,
+    centroId: perfil.centroId,
+    createdAt: raw.user.created_at,
+  };
   return {
     accessToken: raw.access_token,
     refreshToken: raw.refresh_token,
     expiresAt: raw.expires_at,
-    user: {
-      id: user.id,
-      email: user.email ?? "",
-      fullName: user.user_metadata?.full_name || user.user_metadata?.name || "Usuario Purísima",
-      role: normalizeRole(user.user_metadata?.role),
-      centroId: user.user_metadata?.centro_id,
-      createdAt: user.created_at,
-    },
+    user,
   };
+}
+
+/** Comprueba la caducidad del token tal como lo devuelve Supabase, antes de leer el perfil. */
+function tokenCaducado(raw: SupabaseSessionLike, nowMs: number): boolean {
+  return isSessionExpired({ accessToken: raw.access_token, expiresAt: raw.expires_at }, nowMs);
 }
 
 /**
  * Recupera la sesión actual activa de Supabase (SCRUM-57).
  * Si el token JWT ha expirado intenta renovarlo con el refresh token;
  * si no es posible, cierra la sesión localmente y devuelve null (fail-closed).
+ * El rol se lee cada vez de la tabla perfiles (SCRUM-280): sin perfil válido devuelve null.
  */
 export async function getCurrentSession(nowMs: number = Date.now()): Promise<AuthSession | null> {
   try {
@@ -224,21 +254,22 @@ export async function getCurrentSession(nowMs: number = Date.now()): Promise<Aut
       return null;
     }
 
-    const session = mapSupabaseSession(data.session);
-    if (!isSessionExpired(session, nowMs)) {
-      return session;
-    }
-
-    const refreshed = await supabase.auth.refreshSession();
-    if (!refreshed.error && refreshed.data?.session) {
-      const renewed = mapSupabaseSession(refreshed.data.session);
-      if (!isSessionExpired(renewed, nowMs)) {
-        return renewed;
+    let actual: SupabaseSessionLike = data.session;
+    if (tokenCaducado(actual, nowMs)) {
+      const refreshed = await supabase.auth.refreshSession();
+      if (
+        refreshed.error ||
+        !refreshed.data?.session ||
+        tokenCaducado(refreshed.data.session, nowMs)
+      ) {
+        await cerrarSesionLocal();
+        return null;
       }
+      actual = refreshed.data.session;
     }
 
-    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-    return null;
+    const perfil = await leerPerfil(actual.user.id);
+    return perfil ? construirSesion(actual, perfil) : null;
   } catch {
     return null;
   }

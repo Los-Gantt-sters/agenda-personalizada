@@ -419,10 +419,14 @@ $$;
 REVOKE ALL ON FUNCTION public.pasos_de_tarea(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.pasos_de_tarea(UUID) TO authenticated;
 
--- La misma secuencia_dia de SCRUM-71 y SCRUM-265 (20261123100000_auto_pendiente.sql, con el motivo
--- de las tareas pendientes); solo cambian los pasos y se añaden los formatos permitidos. Devuelve
--- las mismas columnas, así que basta con reemplazarla.
-CREATE OR REPLACE FUNCTION public.secuencia_dia(p_estudiante UUID, p_fecha DATE)
+-- La misma secuencia_dia de 20261124230000_requiere_inicio_fin.sql (SCRUM-71, SCRUM-265 y
+-- SCRUM-225: motivo de pendiente, «Empezar» obligatorio y horas reales de ejecuciones). Solo cambia
+-- lo de HU-10 dentro de «tarea»: los pasos completos (pasos_de_tarea) y formatos_permitidos.
+-- DROP antes de crear: CREATE OR REPLACE no deja cambiar lo que devuelve una función (revisión de
+-- Jaime).
+DROP FUNCTION IF EXISTS public.secuencia_dia(UUID, DATE);
+
+CREATE FUNCTION public.secuencia_dia(p_estudiante UUID, p_fecha DATE)
 RETURNS TABLE (
     id UUID,
     estudiante_id UUID,
@@ -433,7 +437,10 @@ RETURNS TABLE (
     orden INTEGER,
     estado TEXT,
     tarea JSONB,
-    pendiente_motivo TEXT
+    pendiente_motivo TEXT,
+    requiere_inicio_fin BOOLEAN,
+    inicio_real TIMESTAMPTZ,
+    fin_real TIMESTAMPTZ
 )
 LANGUAGE sql
 STABLE
@@ -445,10 +452,13 @@ AS $$
         a.estudiante_id,
         a.tarea_id,
         a.fecha,
+        -- La hora de la asignación manda; si no tiene, la de la tarea
         COALESCE(a.hora_inicio, t.hora_inicio) AS hora_inicio,
+        -- Si la asignación fija inicio y fin, la duración sale de ahí; si no, la estimada de la tarea
         public.duracion_asignacion_min(a.hora_inicio, a.hora_fin, t.duracion_estimada_minutos)
             AS duracion_prevista_min,
         a.orden,
+        -- Estados del esquema → estados de la agenda (pendiente, en_curso, hecha, bloqueada)
         CASE a.estado
             WHEN 'hecho' THEN 'hecha'
             WHEN 'completada' THEN 'hecha'
@@ -459,18 +469,31 @@ AS $$
             'titulo', t.titulo,
             'pictograma_url', t.pictograma_url,
             'descripcion', t.descripcion,
+            -- HU-10: formatos que puede elegir el alumno y pasos con título, texto y multimedia
             'formatos_permitidos', to_jsonb(t.formatos_permitidos),
             'pasos', public.pasos_de_tarea(t.id)
         ) AS tarea,
-        a.pendiente_motivo::TEXT AS pendiente_motivo
+        a.pendiente_motivo::TEXT AS pendiente_motivo,
+        a.requiere_inicio_fin,
+        -- RI6.1: horas reales de «Empezar» y «Terminar». ejecuciones.asignacion_id es UNIQUE, así que
+        -- el LEFT JOIN no repite filas; si la tarea no se ha empezado, salen NULL.
+        e.inicio AS inicio_real,
+        e.fin AS fin_real
     FROM public.asignaciones a
     JOIN public.tareas t ON t.id = a.tarea_id
+    LEFT JOIN public.ejecuciones e ON e.asignacion_id = a.id
     WHERE a.estudiante_id = p_estudiante
       AND a.fecha = p_fecha
       AND a.estado <> 'cancelada'
       AND t.activo
     ORDER BY COALESCE(a.hora_inicio, t.hora_inicio) NULLS LAST, a.orden, a.id;
 $$;
+
+COMMENT ON FUNCTION public.secuencia_dia(UUID, DATE) IS
+    'SCRUM-71 (RF4.1), SCRUM-265, SCRUM-225 y SCRUM-94 (HU-10): tareas del día de un estudiante en orden cronológico, con sus pasos multimedia y el formato EntradaAgenda de la agenda.';
+
+REVOKE ALL ON FUNCTION public.secuencia_dia(UUID, DATE) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.secuencia_dia(UUID, DATE) TO authenticated;
 
 -- Realtime (RF4.7): si el tutor cambia la foto o el vídeo de un paso, la tableta se entera.
 DO $$

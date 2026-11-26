@@ -14,10 +14,18 @@ jest.mock("../../lib/supabaseClient", () => ({
       getSession: jest.fn(),
       refreshSession: jest.fn(),
     },
+    from: jest.fn(),
   },
 }));
 
 const auth = supabase.auth as unknown as Record<string, jest.Mock>;
+const mockFrom = supabase.from as jest.Mock;
+
+/** Fila de public.perfiles que devuelve la consulta de authService (SCRUM-280). */
+function perfilEnBD(perfil: Record<string, unknown> | null) {
+  const maybeSingle = jest.fn().mockResolvedValue({ data: perfil, error: null });
+  mockFrom.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }));
+}
 
 // Instante fijo de referencia: 2026-11-05T10:00:00Z
 const NOW_MS = Date.UTC(2026, 10, 5, 10, 0, 0);
@@ -52,6 +60,12 @@ function rawSupabaseSession(expiresAt: number, token = "jwt", role = "tutor_doce
 beforeEach(() => {
   jest.clearAllMocks();
   auth.signOut.mockResolvedValue({ error: null });
+  perfilEnBD({
+    rol: "tutor_docente",
+    nombre_completo: "Ana Docente",
+    centro_id: null,
+    activo: true,
+  });
 });
 
 describe("SCRUM-57 · Expiración de sesión", () => {
@@ -283,10 +297,11 @@ describe("SCRUM-57 · Seguridad de acceso", () => {
   });
 
   describe("Login seguro (RF1.8)", () => {
-    it("no permite escalar privilegios con un rol inventado en la metadata", async () => {
+    // SCRUM-280: user_metadata lo cambia el propio usuario con supabase.auth.updateUser
+    it("no permite escalar privilegios poniéndose admin en user_metadata", async () => {
       auth.signInWithPassword.mockResolvedValueOnce({
         data: {
-          user: { id: "u", email: "x@purisima.es", user_metadata: { role: "superadmin" } },
+          user: { id: "u", email: "x@purisima.es", user_metadata: { role: "admin" } },
           session: { access_token: "jwt", refresh_token: "r", expires_at: NOW_S + 3600 },
         },
         error: null,
@@ -298,6 +313,30 @@ describe("SCRUM-57 · Seguridad de acceso", () => {
       expect(checkRouteAccess(result.session, "/admin/dashboard", NOW_MS)).toMatchObject({
         allowed: false,
       });
+    });
+
+    it("tampoco escala privilegios al recuperar la sesión guardada con la metadata cambiada", async () => {
+      auth.getSession.mockResolvedValueOnce({
+        data: { session: rawSupabaseSession(NOW_S + 3600, "jwt", "admin") },
+        error: null,
+      });
+
+      const session = await getCurrentSession(NOW_MS);
+
+      expect(session?.user.role).toBe("tutor_docente");
+      expect(checkRouteAccess(session, "/admin/dashboard", NOW_MS)).toMatchObject({
+        allowed: false,
+      });
+    });
+
+    it("no da sesión a un usuario sin perfil aunque Supabase Auth lo autentique", async () => {
+      perfilEnBD(null);
+      auth.getSession.mockResolvedValueOnce({
+        data: { session: rawSupabaseSession(NOW_S + 3600, "jwt", "admin") },
+        error: null,
+      });
+
+      expect(await getCurrentSession(NOW_MS)).toBeNull();
     });
 
     it("devuelve el mismo mensaje genérico para usuario inexistente y contraseña errónea (anti-enumeración)", async () => {
