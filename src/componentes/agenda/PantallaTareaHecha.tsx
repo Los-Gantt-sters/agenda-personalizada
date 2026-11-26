@@ -2,7 +2,7 @@
 // Enseña únicamente el tick verde grande, el pictograma, «Tarea hecha» y el nombre de la tarea: sin
 // descripción, pasos, horas ni valoración. «Atrás» vuelve a la agenda.
 // Sin scroll: si la pantalla es baja, el tick y el dibujo se ponen al lado del texto.
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
 import type { Tarea } from "./tipos";
 import { PictogramaTarea } from "./PictogramaTarea";
@@ -23,10 +23,13 @@ export function PantallaTareaHecha({
   tarea,
   alAtras,
   conSonido = false,
+  derecha,
 }: {
   tarea: Pick<Tarea, "titulo" | "pictograma_url" | "emoji">;
   alAtras: () => void;
   conSonido?: boolean;
+  /** Arriba a la derecha: el nombre del alumno (como en los bocetos). */
+  derecha?: ReactNode;
 }) {
   const { colores, canal, escalaLetra: L } = useApariencia();
   const e = useEstilos(crearEstilos);
@@ -62,6 +65,7 @@ export function PantallaTareaHecha({
   return (
     <Pantalla
       titulo={tarea.titulo}
+      derecha={derecha}
       alAtras={alAtras}
       etiquetaAtras="Atrás: volver a la agenda"
       conSonido={conSonido}

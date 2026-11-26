@@ -57,6 +57,8 @@ export interface MarcoAgenda {
   alAtras?: (() => void) | null;
   /** Sonido suave en los botones de la barra (pantallas del alumno). */
   conSonido?: boolean;
+  /** Etiqueta del alumno arriba a la derecha en 08, 08b, 10 y 10b (p. ej. <ChipAlumno />). */
+  alumno?: ReactNode;
 }
 
 const MARCO_POR_DEFECTO: MarcoAgenda = { titulo: "Mi agenda", alAtras: null };
@@ -240,6 +242,7 @@ export function AgendaDelDia({
         onSi={() => terminar(aConfirmar.id)}
         onNo={() => setConfirmandoId(null)}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
       />
     );
   }
@@ -253,6 +256,7 @@ export function AgendaDelDia({
         preferencias={preferenciasAviso}
         onCerrar={cerrarAviso}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
       />
     );
   }
@@ -265,6 +269,7 @@ export function AgendaDelDia({
         tarea={abierta.tarea}
         alAtras={cerrarDetalle}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
       />
     );
   }
@@ -296,6 +301,7 @@ export function AgendaDelDia({
         }
         alAtras={cerrarDetalle}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
       />
     );
   }

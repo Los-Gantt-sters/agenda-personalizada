@@ -34,8 +34,11 @@ import { useFormatosPermitidos } from "../src/componentes/permisos-alumno";
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
 import { TAREAS_VISIBLES, usePreferenciasOpcional } from "../src/preferencias";
 import { useSesionOpcional } from "../src/sesion";
-import { PictogramaInterfaz, Texto, fechaDeHoy, useApariencia } from "../src/ui";
+import { ChipAlumno, PictogramaInterfaz, Texto, fechaDeHoy, useApariencia } from "../src/ui";
 import type { UserRole } from "../src/tipos/auth";
+
+/** Alumno de la demo (sin ?estudiante=), el mismo de los bocetos. */
+const NOMBRE_ALUMNO_DEMO = "Alejandro";
 
 /** Panel al que vuelve cada adulto con «Atrás» si no hay pantalla anterior (p. ej. tras recargar). */
 const PANEL_DE: Partial<Record<UserRole, Href>> = {
@@ -94,11 +97,20 @@ export default function PantallaAgenda() {
   );
 
   // Permisos según quién mira la agenda (sin sesión de adulto, es el alumno).
-  const rol = useSesionOpcional()?.sesion?.user.role ?? "estudiante";
+  const sesion = useSesionOpcional()?.sesion;
+  const rol = sesion?.user.role ?? "estudiante";
   const esAlumno = rol === "estudiante";
   const soloMirar = rol === "familiar";
   // Lo que el tutor deja ver al alumno en sus tareas (pantalla 26d). A los adultos, todo.
   const formatosPermitidos = useFormatosPermitidos(esAlumno ? estudiante : null);
+  // Arriba a la derecha en 08, 08b, 10 y 10b: de quién es la agenda (solo en la del alumno).
+  const nombreAlumno = !esAlumno
+    ? ""
+    : sesion
+      ? sesion.user.fullName.trim().split(/\s+/)[0]
+      : estudiante
+        ? ""
+        : NOMBRE_ALUMNO_DEMO;
 
   return (
     <>
@@ -130,6 +142,7 @@ export default function PantallaAgenda() {
                 else router.replace(PANEL_DE[rol] ?? "/");
               },
           conSonido: esAlumno,
+          alumno: nombreAlumno ? <ChipAlumno nombre={nombreAlumno} /> : undefined,
         }}
       />
     </>
