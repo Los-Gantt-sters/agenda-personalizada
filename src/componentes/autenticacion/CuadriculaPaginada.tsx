@@ -3,7 +3,7 @@
 // «Más alumnos») lleva a la página siguiente, y en las páginas siguientes otro a la izquierda
 // («Pág. 1») vuelve a la anterior. Los botones van a los lados, no debajo, para que la barra de
 // abajo (Atrás / Adelante) siga sirviendo solo para moverse entre pantallas.
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 
 import { reproducirSonido } from "../../servicios/sonidos";
@@ -55,6 +55,10 @@ export function CuadriculaPaginada<T>({
   const [paginaElegida, setPagina] = useState(paginaInicial);
   // Si la lista se acorta (p. ej. el admin quita aulas), no se queda en una página que ya no existe
   const pagina = Math.min(paginaElegida, paginas.length - 1);
+  // Y avisa al padre, para que su «Página N» no se quede desfasada
+  useEffect(() => {
+    if (pagina !== paginaElegida) alCambiarPagina?.(pagina);
+  }, [pagina, paginaElegida, alCambiarPagina]);
   const hayAnterior = pagina > 0;
   const haySiguiente = pagina < paginas.length - 1;
 

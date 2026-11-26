@@ -5,11 +5,13 @@
 //      (pantallas 01 y 01b: 9 clases por página y «Más aulas», MOD HU-01 · SCRUM-247)
 //   2. Clase Triángulo     → busca tu foto o dibujo y tócalo.
 //      (pantallas 02 y 02b: 9 alumnos por página y «Más alumnos»)
+//   Las clases y los alumnos salen de la base de datos (lo que configura el administrador en la 48b,
+//   SCRUM-249). Sin Supabase configurado, o si falla, se usan los datos de prueba (CLASES).
 //   3. ¿Eres Alejandro?    → toca tus 3 dibujos y pulsa «Entrar».
 // «Atrás» y «Adelante» van siempre en la barra de abajo (componente Pantalla).
 // Sin «Ayuda» en estos tres pasos (petición de la profesora): el hueco de la izquierda se queda
 // vacío para que las flechas no se muevan de sitio.
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 
@@ -26,6 +28,14 @@ import {
   CuadriculaEstudiantes,
   CuadriculaPaginada,
 } from "../src/componentes/autenticacion";
+import { IconoAula } from "../src/componentes/administracion/IconoAula";
+import {
+  obtenerAlumnosAcceso,
+  obtenerAulasAcceso,
+  usaBaseDatos,
+  type AlumnoAcceso,
+  type AulaAcceso,
+} from "../src/servicios/accesoAlumnosService";
 import { signInEstudianteConDibujos } from "../src/servicios/authService";
 import { destinoTrasLoginAlumno } from "../src/servicios/destinoAgendaAlumno";
 import { reproducirSonido } from "../src/servicios/sonidos";
@@ -46,6 +56,38 @@ import {
   useApariencia,
   useEstilos,
 } from "../src/ui";
+
+/** Nombre de la clase en pantalla: el del administrador o, en las de prueba, «Clase <nombre>». */
+const nombreDeClase = (c: Clase) => c.nombreVisible ?? `Clase ${c.nombre}`;
+
+const aulaAClase = (a: AulaAcceso): Clase => ({
+  id: a.id,
+  nombre: a.nombre,
+  nombreVisible: a.nombre,
+  simbolo: "",
+  iconoForma: a.iconoForma,
+  iconoUrl: a.iconoUrl,
+});
+
+const alumnoAEstudiante = (a: AlumnoAcceso, aulaId: string): Estudiante => ({
+  id: a.id,
+  nombre: a.nombre,
+  nombreCompleto: a.nombre,
+  claseId: aulaId,
+  icono: a.icono ?? "⭐",
+  color: a.color ?? "",
+});
+
+/** Datos que llegan de la base de datos: mientras llegan, si fallan o ya están. */
+type Carga<T> = { estado: "cargando" } | { estado: "error" } | { estado: "ok"; datos: T };
+
+/** Forma o dibujo de la clase: el que configuró el administrador o, en las de prueba, su forma. */
+function SimboloClase({ clase, tam }: { clase: Clase; tam: number }) {
+  if (clase.nombreVisible !== undefined) {
+    return <IconoAula iconoForma={clase.iconoForma} iconoUrl={clase.iconoUrl} tam={tam} />;
+  }
+  return <FormaClase claseId={clase.id} simbolo={clase.simbolo} tam={tam} />;
+}
 
 // Mensaje del prototipo (pantalla 04): amable y sin decir si el alumno existe (RF1.8)
 const MENSAJE_SECUENCIA_INCORRECTA = "No es esa. Prueba otra vez";
@@ -84,27 +126,128 @@ export default function LoginEstudiantesScreen({
   const [paginaClases, setPaginaClases] = useState(0);
   const [paginaAlumnos, setPaginaAlumnos] = useState(0);
 
-  const alumnosDeClase = clase ? ESTUDIANTES_MOCK.filter((s) => s.claseId === clase.id) : [];
+  // SCRUM-249: aulas de la base de datos. Sin Supabase (pruebas, demos) se usan las de prueba; con
+  // Supabase, nunca: si fallan, se avisa y se deja volver a probar.
+  const [aulasBD, setAulasBD] = useState<Carga<Clase[]> | null>(() =>
+    usaBaseDatos() ? { estado: "cargando" } : null,
+  );
+  // Alumnos de la base de datos del aula abierta. aulaPedida evita que la respuesta de un aula que
+  // ya se ha dejado (el alumno volvió y tocó otra) pise la del aula abierta.
+  const [alumnosBD, setAlumnosBD] = useState<({ aulaId: string } & Carga<Estudiante[]>) | null>(
+    null,
+  );
+  const aulaPedida = useRef<string | null>(null);
 
-  // Modo tableta personal: si la tableta recuerda a un alumno, se abre directamente su contraseña
-  useEffect(() => {
-    if (!modoTabletaPersonal) return;
-    let montado = true;
-    obtenerAlumnoTableta().then((alumnoId) => {
-      const recordado = ESTUDIANTES_MOCK.find((x) => x.id === alumnoId);
-      if (!montado || !recordado) return;
-      setClase(Object.values(CLASES).find((c) => c.id === recordado.claseId) ?? null);
-      setAlumno(recordado);
+  const clases = aulasBD?.estado === "ok" ? aulasBD.datos : Object.values(CLASES);
+  // Con la base de datos y sin aulas en el curso activo (p. ej. el curso acaba de empezar)
+  const sinClases = aulasBD?.estado === "ok" && aulasBD.datos.length === 0;
+  const esDeBaseDatos = (c: Clase) => c.nombreVisible !== undefined;
+  const cargaAlumnos =
+    clase && esDeBaseDatos(clase) && alumnosBD?.aulaId === clase.id ? alumnosBD : null;
+  const alumnosDeClase = !clase
+    ? []
+    : esDeBaseDatos(clase)
+      ? cargaAlumnos?.estado === "ok"
+        ? cargaAlumnos.datos
+        : []
+      : ESTUDIANTES_MOCK.filter((s) => s.claseId === clase.id);
+
+  // Pantalla 01: las aulas que ha configurado el administrador (48b), en su orden
+  const montado = useRef(true);
+  useEffect(
+    () => () => {
+      montado.current = false;
+    },
+    [],
+  );
+  // Pide las aulas; el estado «cargando» lo pone quien la llama (al abrir, ya empieza así)
+  const pedirAulas = useCallback(() => {
+    if (!usaBaseDatos()) return;
+    obtenerAulasAcceso().then((r) => {
+      if (!montado.current) return;
+      if (r.estado === "ok") setAulasBD({ estado: "ok", datos: r.datos.map(aulaAClase) });
+      else if (r.estado === "error") setAulasBD({ estado: "error" });
+      else setAulasBD(null); // sin Supabase: datos de prueba
     });
-    return () => {
-      montado = false;
-    };
-  }, [modoTabletaPersonal]);
+  }, []);
+  useEffect(pedirAulas, [pedirAulas]);
+  const volverAPedirAulas = () => {
+    setAulasBD({ estado: "cargando" });
+    pedirAulas();
+  };
+
+  /** Pide los alumnos de un aula de la base de datos (pantalla 02). Los errores no se guardan. */
+  const cargarAlumnos = (c: Clase) => {
+    aulaPedida.current = c.id;
+    setAlumnosBD({ aulaId: c.id, estado: "cargando" });
+    obtenerAlumnosAcceso(c.id).then((r) => {
+      if (!montado.current || aulaPedida.current !== c.id) return; // ya se abrió otra aula
+      setAlumnosBD(
+        r.estado === "ok"
+          ? { aulaId: c.id, estado: "ok", datos: r.datos.map((a) => alumnoAEstudiante(a, c.id)) }
+          : { aulaId: c.id, estado: "error" },
+      );
+    });
+  };
+
+  // Modo tableta personal: si la tableta recuerda a un alumno, se abre directamente su contraseña.
+  // Con la base de datos (SCRUM-249) se espera a tener las aulas y se busca al alumno entre los de
+  // su aula (la tableta guarda las dos cosas); sin ella, entre los datos de prueba. Solo una vez.
+  const tabletaRevisada = useRef(false);
+  useEffect(() => {
+    if (!modoTabletaPersonal || tabletaRevisada.current) return;
+    // Aún no se sabe qué aulas hay (o fallaron: se revisa cuando el alumno vuelva a probar)
+    if (aulasBD?.estado === "cargando" || aulasBD?.estado === "error") return;
+    tabletaRevisada.current = true;
+    const aulas = aulasBD?.estado === "ok" ? aulasBD.datos : null;
+
+    obtenerAlumnoTableta().then(async (recordado) => {
+      if (!montado.current || !recordado) return;
+      if (!aulas) {
+        const deprueba = ESTUDIANTES_MOCK.find((x) => x.id === recordado.alumnoId);
+        if (!deprueba) return;
+        setClase(Object.values(CLASES).find((c) => c.id === deprueba.claseId) ?? null);
+        setAlumno(deprueba);
+        return;
+      }
+      const aula = aulas.find((c) => c.id === recordado.aulaId);
+      // Aula que ya no existe (o guardado de antes de SCRUM-249): se olvida y sigue el flujo normal
+      if (!aula) return void olvidarAlumnoTableta();
+      aulaPedida.current = aula.id;
+      const r = await obtenerAlumnosAcceso(aula.id);
+      // Si mientras tanto el alumno ha tocado un aula, manda lo que ha tocado
+      if (!montado.current || aulaPedida.current !== aula.id || r.estado !== "ok") return;
+      const alumnos = r.datos.map((a) => alumnoAEstudiante(a, aula.id));
+      const encontrado = alumnos.find((x) => x.id === recordado.alumnoId);
+      // Ya no está en esa aula (cambio de aula, baja…): se olvida. Si la petición falló, no se
+      // sabe, y por eso arriba se sale sin olvidar.
+      if (!encontrado) return void olvidarAlumnoTableta();
+      setAlumnosBD({ aulaId: aula.id, estado: "ok", datos: alumnos });
+      setClase(aula);
+      setAlumno(encontrado);
+    });
+  }, [modoTabletaPersonal, aulasBD]);
+
+  /**
+   * Abre las fotos de una clase; si es de la base de datos, pide sus alumnos (pantalla 02).
+   * Al tocar una clase se empieza en su página 1; con «Adelante» se vuelve a la página en la que
+   * se estaba (mantenerPagina), como al volver de la contraseña.
+   */
+  const abrirClase = (c: Clase, mantenerPagina = false) => {
+    if (!mantenerPagina) setPaginaAlumnos(0);
+    setClase(c);
+    if (!esDeBaseDatos(c)) return;
+    // Si ya estaban (se vuelve a la misma aula), no se piden otra vez
+    if (alumnosBD?.aulaId === c.id && alumnosBD.estado === "ok") {
+      aulaPedida.current = c.id;
+      return;
+    }
+    cargarAlumnos(c);
+  };
 
   const elegirClase = (c: Clase) => {
     reproducirSonido("toque"); // T-01.3: feedback sonoro al pulsar
-    setPaginaAlumnos(0);
-    setClase(c);
+    abrirClase(c);
   };
 
   // La tarjeta de la foto ya suena al tocarla (TarjetaEstudiante)
@@ -140,7 +283,7 @@ export default function LoginEstudiantesScreen({
     const dibujos = secuencia;
 
     if (alCompletarCredencialVisual) {
-      if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id);
+      if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id, alumno.claseId);
       await alCompletarCredencialVisual(alumno.id, dibujos);
       return;
     }
@@ -164,7 +307,7 @@ export default function LoginEstudiantesScreen({
 
     setMensajeError(null);
     // La tableta solo recuerda al alumno cuando ha entrado de verdad
-    if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id);
+    if (modoTabletaPersonal) await recordarAlumnoTableta(alumno.id, alumno.claseId);
     // SCRUM-227: a SU agenda con sus datos, semanal o diaria según su preferencia (HU-01 → HU-06).
     // replace: con «atrás» no se vuelve a la pantalla de acceso
     router.replace((await destinoTrasLoginAlumno(alumno.id)) as Href);
@@ -200,8 +343,8 @@ export default function LoginEstudiantesScreen({
   if (clase) {
     return (
       <Pantalla
-        titulo={`Clase ${clase.nombre}`}
-        simbolo={<FormaClase claseId={clase.id} simbolo={clase.simbolo} tam={40} />}
+        titulo={nombreDeClase(clase)}
+        simbolo={<SimboloClase clase={clase} tam={40} />}
         alAtras={volverAClases}
         etiquetaAtras="Atrás: elegir otra clase"
         conSonido
@@ -210,13 +353,23 @@ export default function LoginEstudiantesScreen({
         <View style={e.paso}>
           {/* Instrucción: texto con dibujo, sin borde ni fondo para que no parezca un botón */}
           <Instruccion texto="Busca tu foto o tu dibujo y tócalo" pagina={paginaAlumnos} />
-          <CuadriculaEstudiantes
-            key={clase.id}
-            estudiantes={alumnosDeClase}
-            alSeleccionarEstudiante={elegirAlumno}
-            paginaInicial={paginaAlumnos}
-            alCambiarPagina={setPaginaAlumnos}
-          />
+          {cargaAlumnos?.estado === "cargando" ? (
+            <AvisoCarga tipo="cargando" />
+          ) : cargaAlumnos?.estado === "error" ? (
+            <AvisoCarga
+              tipo="error"
+              texto="No se han podido cargar los alumnos de esta clase."
+              alVolverAProbar={() => cargarAlumnos(clase)}
+            />
+          ) : (
+            <CuadriculaEstudiantes
+              key={clase.id}
+              estudiantes={alumnosDeClase}
+              alSeleccionarEstudiante={elegirAlumno}
+              paginaInicial={paginaAlumnos}
+              alCambiarPagina={setPaginaAlumnos}
+            />
+          )}
         </View>
       </Pantalla>
     );
@@ -229,34 +382,52 @@ export default function LoginEstudiantesScreen({
       simbolo={<PictogramaInterfaz nombre="colegio" etiqueta="colegio" tam={48} />}
       derecha={<LogoColegio ancho={190} />}
       alAtras={null}
-      alAdelante={claseAnterior ? () => setClase(claseAnterior) : null}
-      etiquetaAdelante={claseAnterior ? `Adelante: clase ${claseAnterior.nombre}` : undefined}
+      alAdelante={claseAnterior ? () => abrirClase(claseAnterior, true) : null}
+      etiquetaAdelante={claseAnterior ? `Adelante: ${nombreDeClase(claseAnterior)}` : undefined}
       conSonido
       sinAyuda
     >
       <View style={e.paso}>
-        <Instruccion texto="Toca la forma de tu clase" pagina={paginaClases} />
+        {/* Sin clases no hay nada que tocar: no se pide */}
+        {!sinClases && <Instruccion texto="Toca la forma de tu clase" pagina={paginaClases} />}
 
-        <CuadriculaPaginada
-          elementos={Object.values(CLASES)}
-          clave={(c) => c.id}
-          queHayMas="aulas"
-          paginaInicial={paginaClases}
-          alCambiarPagina={setPaginaClases}
-          testID="selector-clases-estudiante"
-          pintar={(c) => (
-            <TouchableOpacity
-              style={e.tarjetaClase}
-              accessibilityRole="button"
-              accessibilityLabel={`Clase ${c.nombre}`}
-              testID={`tarjeta-clase-${c.id}`}
-              onPress={() => elegirClase(c)}
-            >
-              <FormaClase claseId={c.id} simbolo={c.simbolo} tam={52} />
-              <Texto style={e.nombreClase}>Clase {c.nombre}</Texto>
-            </TouchableOpacity>
-          )}
-        />
+        {aulasBD?.estado === "cargando" ? (
+          <AvisoCarga tipo="cargando" />
+        ) : aulasBD?.estado === "error" ? (
+          <AvisoCarga
+            tipo="error"
+            texto="No se han podido cargar las clases."
+            alVolverAProbar={volverAPedirAulas}
+          />
+        ) : sinClases ? (
+          // Curso recién empezado sin aulas todavía (la 01 solo enseña las del curso activo)
+          <AvisoCarga
+            tipo="vacio"
+            texto="Todavía no hay clases"
+            alVolverAProbar={volverAPedirAulas}
+          />
+        ) : (
+          <CuadriculaPaginada
+            elementos={clases}
+            clave={(c) => c.id}
+            queHayMas="aulas"
+            paginaInicial={paginaClases}
+            alCambiarPagina={setPaginaClases}
+            testID="selector-clases-estudiante"
+            pintar={(c) => (
+              <TouchableOpacity
+                style={e.tarjetaClase}
+                accessibilityRole="button"
+                accessibilityLabel={nombreDeClase(c)}
+                testID={`tarjeta-clase-${c.id}`}
+                onPress={() => elegirClase(c)}
+              >
+                <SimboloClase clase={c} tam={52} />
+                <Texto style={e.nombreClase}>{nombreDeClase(c)}</Texto>
+              </TouchableOpacity>
+            )}
+          />
+        )}
 
         {/* Los adultos (tutores, familias, administración y cocina) entran desde aquí */}
         <TouchableOpacity
@@ -294,6 +465,72 @@ function Instruccion({ texto, pagina }: { texto: string; pagina: number }) {
           <Texto style={e.textoMarcaPagina}>{`Página ${pagina + 1}`}</Texto>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * Mientras llegan las clases o los alumnos de la base de datos, si no han llegado o si no hay
+ * ninguna (SCRUM-249). El error y el «no hay» se explican con dibujo o icono y texto, y se puede
+ * volver a probar con un botón grande.
+ */
+function AvisoCarga({
+  tipo,
+  texto,
+  alVolverAProbar,
+}: {
+  tipo: "cargando" | "error" | "vacio";
+  texto?: string;
+  alVolverAProbar?: () => void;
+}) {
+  const { colores } = useApariencia();
+  const e = useEstilos(crearEstilos);
+  if (tipo === "cargando") {
+    return (
+      <View style={e.aviso} testID="aviso-cargando" accessibilityLiveRegion="polite">
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <PictogramaInterfaz nombre="esperar" etiqueta="esperar" tam={72} />
+        </View>
+        <Texto style={e.textoAviso}>Cargando…</Texto>
+      </View>
+    );
+  }
+  const vacio = tipo === "vacio";
+  return (
+    <View
+      style={e.aviso}
+      testID={vacio ? "aviso-sin-clases" : "aviso-error-carga"}
+      // «No hay» no es un error: se anuncia sin interrumpir
+      {...(vacio
+        ? { accessibilityLiveRegion: "polite" as const }
+        : { accessibilityRole: "alert" as const })}
+    >
+      {vacio ? (
+        <>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <PictogramaInterfaz nombre="colegio" etiqueta="colegio" tam={72} />
+          </View>
+          <Texto style={e.textoAviso}>{texto}</Texto>
+        </>
+      ) : (
+        <View style={e.filaAviso}>
+          <Icono nombre="alerta" color={colores.peligro} tam={32} grosor={2.8} />
+          <Texto style={[e.textoAviso, { color: colores.peligro }]}>{texto}</Texto>
+        </View>
+      )}
+      <TouchableOpacity
+        style={e.botonVolverAProbar}
+        accessibilityRole="button"
+        accessibilityLabel="Volver a probar"
+        testID="btn-volver-a-probar"
+        onPress={() => {
+          reproducirSonido("toque");
+          alVolverAProbar?.();
+        }}
+      >
+        <Icono nombre="adelante" color={colores.textoSobrePrimario} tam={30} grosor={3} />
+        <Texto style={e.textoVolverAProbar}>Volver a probar</Texto>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -347,4 +584,20 @@ const crearEstilos = (c: Paleta) =>
       backgroundColor: c.superficie,
     },
     textoAdultos: { fontSize: 17, fontWeight: "700", color: c.texto },
+    aviso: { minHeight: 240, alignItems: "center", justifyContent: "center", gap: 20 },
+    filaAviso: { flexDirection: "row", alignItems: "center", gap: 12 },
+    textoAviso: { fontSize: 24, fontWeight: "700", color: c.texto, textAlign: "center" },
+    botonVolverAProbar: {
+      minWidth: 280,
+      minHeight: 120,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      paddingHorizontal: 24,
+      borderRadius: 16,
+      backgroundColor: c.primario,
+      ...Platform.select({ web: { cursor: "pointer" }, default: {} }),
+    },
+    textoVolverAProbar: { fontSize: 26, fontWeight: "700", color: c.textoSobrePrimario },
   });

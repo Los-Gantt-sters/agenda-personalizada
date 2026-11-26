@@ -55,12 +55,25 @@ export interface Aula {
   tutorTitularId?: string;
   /** Posición del aula en las pantallas 01 y 35, de menor a mayor (SCRUM-259). */
   orden?: number;
+  /** Curso lectivo del aula: la pantalla 01 solo enseña las del curso activo (SCRUM-249). */
+  cursoLectivoId?: string | null;
   creadoEn?: string;
+}
+
+/** Curso lectivo que se puede elegir al crear un aula (los no cerrados, SCRUM-249). */
+export interface CursoLectivo {
+  id: string;
+  /** Por ejemplo «2026-2027». */
+  anioEscolar: string;
+  /** El curso actual (solo hay uno activo a la vez). */
+  activo: boolean;
 }
 
 /** Datos para crear un aula desde la pantalla 48b (SCRUM-259). */
 export interface CrearAulaInput {
   nombre: string;
+  /** Curso lectivo del aula (obligatorio: no puede haber aulas sin curso, SCRUM-249). */
+  cursoLectivoId: string;
   iconoForma?: string;
   iconoUrl?: string | null;
   centroId?: string;

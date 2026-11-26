@@ -4,19 +4,44 @@
 // Se sigue pidiendo la credencial: recordar al alumno no es iniciar sesión sin ella.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// SCRUM-249: además del alumno se guarda su aula, porque con la base de datos los alumnos se piden
+// aula a aula (alumnos_acceso) y la pantalla tiene que saber en cuál buscarlo.
 const CLAVE = "tuagendita:tableta-personal:alumnoId";
 
-export async function obtenerAlumnoTableta(): Promise<string | null> {
+export interface AlumnoRecordado {
+  alumnoId: string;
+  /** Aula del alumno; null en lo guardado antes de SCRUM-249 (solo el id, datos de prueba). */
+  aulaId: string | null;
+}
+
+/** Lee lo guardado: el JSON de ahora o, si es de antes de SCRUM-249, el id del alumno sin más. */
+function leer(valor: string): AlumnoRecordado | null {
   try {
-    return await AsyncStorage.getItem(CLAVE);
+    const datos = JSON.parse(valor);
+    if (datos && typeof datos.alumnoId === "string") {
+      return {
+        alumnoId: datos.alumnoId,
+        aulaId: typeof datos.aulaId === "string" ? datos.aulaId : null,
+      };
+    }
+  } catch {
+    // No es JSON: es el id guardado por la versión anterior
+  }
+  return typeof valor === "string" && valor ? { alumnoId: valor, aulaId: null } : null;
+}
+
+export async function obtenerAlumnoTableta(): Promise<AlumnoRecordado | null> {
+  try {
+    const valor = await AsyncStorage.getItem(CLAVE);
+    return valor ? leer(valor) : null;
   } catch {
     return null; // Sin almacenamiento disponible: se usa el flujo normal de tableta compartida
   }
 }
 
-export async function recordarAlumnoTableta(alumnoId: string): Promise<void> {
+export async function recordarAlumnoTableta(alumnoId: string, aulaId: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(CLAVE, alumnoId);
+    await AsyncStorage.setItem(CLAVE, JSON.stringify({ alumnoId, aulaId }));
   } catch {
     // No recordar no impide entrar
   }

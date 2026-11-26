@@ -98,4 +98,29 @@ describe("CuadriculaPaginada", () => {
     expect(screen.getByText("e1")).toBeTruthy();
     expect(screen.getByTestId("cuadricula-pagina-1")).toBeTruthy();
   });
+
+  it("si la página se recorta, avisa al padre para que «Página N» no quede desfasada", async () => {
+    const alCambiarPagina = jest.fn();
+    const props = { clave: (x: string) => x, pintar: (x: string) => <Text>{x}</Text> };
+    const { rerender } = await render(
+      <CuadriculaPaginada
+        {...props}
+        elementos={numeros(12)}
+        queHayMas="aulas"
+        paginaInicial={1}
+        alCambiarPagina={alCambiarPagina}
+      />,
+    );
+    expect(alCambiarPagina).not.toHaveBeenCalled();
+    await rerender(
+      <CuadriculaPaginada
+        {...props}
+        elementos={numeros(5)}
+        queHayMas="aulas"
+        paginaInicial={1}
+        alCambiarPagina={alCambiarPagina}
+      />,
+    );
+    expect(alCambiarPagina).toHaveBeenLastCalledWith(0);
+  });
 });

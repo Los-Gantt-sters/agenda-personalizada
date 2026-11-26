@@ -4,6 +4,8 @@ import {
   actualizarAula,
   guardarConfiguracionAulas,
   eliminarAula,
+  obtenerCursosAbiertos,
+  ERROR_CURSO_AULA_OBLIGATORIO,
   ERROR_NOMBRE_AULA_OBLIGATORIO,
   ERROR_AULA_CON_ALUMNOS,
 } from "../aulasService";
@@ -81,9 +83,46 @@ describe("aulasService - SCRUM-259 (aulas configurables, pantalla 48b)", () => {
     });
   });
 
+  describe("obtenerCursosAbiertos (SCRUM-249)", () => {
+    it("pide los cursos no cerrados, del más antiguo al más nuevo", async () => {
+      const c = cadena({
+        data: [
+          { id: "c26", anio_escolar: "2026-2027", activo: true },
+          { id: "c27", anio_escolar: "2027-2028", activo: false },
+        ],
+        error: null,
+      });
+      mockFrom.mockReturnValue(c);
+
+      const r = await obtenerCursosAbiertos();
+
+      expect(mockFrom).toHaveBeenCalledWith("cursos_lectivos");
+      expect(c.eq).toHaveBeenCalledWith("cerrado", false);
+      expect(c.order).toHaveBeenCalledWith("fecha_inicio", { ascending: true });
+      expect(r).toEqual({
+        success: true,
+        data: [
+          { id: "c26", anioEscolar: "2026-2027", activo: true },
+          { id: "c27", anioEscolar: "2027-2028", activo: false },
+        ],
+      });
+    });
+
+    it("devuelve el error de Supabase", async () => {
+      mockFrom.mockReturnValue(cadena({ data: null, error: { message: "sin permiso" } }));
+      expect(await obtenerCursosAbiertos()).toEqual({ success: false, error: "sin permiso" });
+    });
+  });
+
   describe("crearAula", () => {
+    it("rechaza un aula sin curso sin llamar a Supabase (SCRUM-249)", async () => {
+      const r = await crearAula({ nombre: "Clase Luna", cursoLectivoId: "" });
+      expect(r).toEqual({ success: false, error: ERROR_CURSO_AULA_OBLIGATORIO });
+      expect(mockFrom).not.toHaveBeenCalled();
+    });
+
     it("rechaza un nombre vacío sin llamar a Supabase", async () => {
-      const r = await crearAula({ nombre: "   " });
+      const r = await crearAula({ nombre: "   ", cursoLectivoId: "curso-1" });
       expect(r).toEqual({ success: false, error: ERROR_NOMBRE_AULA_OBLIGATORIO });
       expect(mockFrom).not.toHaveBeenCalled();
     });
@@ -96,10 +135,15 @@ describe("aulasService - SCRUM-259 (aulas configurables, pantalla 48b)", () => {
       });
       mockFrom.mockReturnValueOnce(ultima).mockReturnValueOnce(insercion);
 
-      const r = await crearAula({ nombre: "  Clase Luna " });
+      const r = await crearAula({ nombre: "  Clase Luna ", cursoLectivoId: "curso-1" });
 
       expect(insercion.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ nombre: "Clase Luna", icono_forma: "tri", orden: 9 }),
+        expect.objectContaining({
+          nombre: "Clase Luna",
+          icono_forma: "tri",
+          orden: 9,
+          curso_lectivo_id: "curso-1",
+        }),
       );
       expect(r.success).toBe(true);
       expect(r.data?.orden).toBe(9);
@@ -112,6 +156,7 @@ describe("aulasService - SCRUM-259 (aulas configurables, pantalla 48b)", () => {
 
       await crearAula({
         nombre: "Clase Sol",
+        cursoLectivoId: "curso-1",
         iconoForma: "estrella",
         iconoUrl: "https://x/sol.png",
       });
@@ -129,7 +174,7 @@ describe("aulasService - SCRUM-259 (aulas configurables, pantalla 48b)", () => {
       mockFrom
         .mockReturnValueOnce(cadena({ data: [], error: null }))
         .mockReturnValueOnce(cadena({ data: null, error: { message: "solo administradores" } }));
-      const r = await crearAula({ nombre: "Clase Luna" });
+      const r = await crearAula({ nombre: "Clase Luna", cursoLectivoId: "curso-1" });
       expect(r).toEqual({ success: false, error: "solo administradores" });
     });
   });
