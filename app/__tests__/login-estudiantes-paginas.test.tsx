@@ -34,4 +34,17 @@ describe("LoginEstudiantesScreen - páginas de alumnos (SCRUM-247)", () => {
     expect(screen.getByText("Extra 10")).toBeTruthy();
     expect(screen.getByTestId("marca-pagina")).toHaveTextContent("Página 2");
   });
+
+  it("al volver a la clase con «Adelante» desde la 01 sigue en la página 2", async () => {
+    const user = userEvent.setup();
+    await render(<LoginEstudiantesScreen />);
+
+    await user.press(screen.getByTestId("tarjeta-clase-tri"));
+    await user.press(screen.getByLabelText("Más alumnos: ver la página 2"));
+    await user.press(screen.getByTestId("btn-barra-atras")); // a la 01
+    await user.press(screen.getByTestId("btn-barra-adelante")); // otra vez a Triángulo
+
+    expect(screen.getByTestId("cuadricula-estudiantes-pagina-2")).toBeTruthy();
+    expect(screen.getByTestId("marca-pagina")).toHaveTextContent("Página 2");
+  });
 });
