@@ -36,8 +36,16 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
   enBarra,
 }) => {
   const dimension = Math.max(tamanio, 48);
+  // En la barra, pictograma y texto van en fila (boceto 14): así «Ayuda» cabe a 19 px en 72 px.
   const estiloPosicion: ViewStyle = enBarra
-    ? { position: "relative", zIndex: 0, width: enBarra.ancho, height: enBarra.alto }
+    ? {
+        position: "relative",
+        zIndex: 0,
+        width: enBarra.ancho,
+        height: enBarra.alto,
+        flexDirection: "row",
+        gap: 10,
+      }
     : getEstiloPosicion(posicion);
 
   // Rojo suavizado del boceto definitivo; con la variante «alto-contraste» se fuerza el rojo claro
@@ -47,7 +55,9 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
 
   const verDibujo = canal !== "soloTexto";
   const verTexto = canal !== "soloPictograma";
-  const ladoDibujo = verTexto ? Math.round(dimension * 0.5) : Math.round(dimension * 0.72);
+  const ladoDibujo = verTexto
+    ? Math.round(dimension * (enBarra ? 0.56 : 0.5))
+    : Math.round(dimension * 0.72);
 
   return (
     <TouchableOpacity

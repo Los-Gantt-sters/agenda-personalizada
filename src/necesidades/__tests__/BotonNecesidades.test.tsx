@@ -94,6 +94,11 @@ describe("BotonNecesidades (SCRUM-86: T-18.1 Botón flotante accesible fijado)",
   });
 
   describe("MOD HU-18 (SCRUM-267): rojo suavizado y texto grande", () => {
+    it("en la barra pone el pictograma a la izquierda del texto, para que quepa a 19 px (boceto 14)", async () => {
+      await render(<BotonNecesidades onPress={jest.fn()} enBarra={{ ancho: 160, alto: 72 }} />);
+      expect(StyleSheet.flatten(screen.getByRole("button").props.style).flexDirection).toBe("row");
+    });
+
     it("en los temas normales el fondo es #C95A54", async () => {
       await render(<BotonNecesidades onPress={jest.fn()} />);
       const estilo = StyleSheet.flatten(screen.getByRole("button").props.style);
