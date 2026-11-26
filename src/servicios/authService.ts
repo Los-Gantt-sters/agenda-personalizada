@@ -69,7 +69,9 @@ export function getRoleHomeRoute(role: UserRole): string {
     case "especialista":
       return "/especialista/terapias";
     case "estudiante":
-      return "/estudiante/agenda";
+      // No hay ruta /estudiante/agenda: la agenda del alumno es /agenda (SCRUM-280, revisión de
+      // Álvaro). Tras el acceso con dibujos se le lleva a /agenda?estudiante=<id> (destinoAgendaAlumno).
+      return "/agenda";
     case "tutor_docente":
     default:
       return "/docente/agenda";
