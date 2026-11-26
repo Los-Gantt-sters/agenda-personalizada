@@ -1,7 +1,7 @@
 import React from "react";
 import { TouchableOpacity, StyleSheet, ViewStyle, Platform, View } from "react-native";
 import { BotonNecesidadesProps, PosicionBotonNecesidades } from "./tipos";
-import { PictogramaInterfaz, Texto, colorSobre, useApariencia } from "../ui";
+import { PictogramaInterfaz, Texto, colorSobre } from "../ui";
 
 export const getEstiloPosicion = (posicion: PosicionBotonNecesidades): ViewStyle => {
   switch (posicion) {
@@ -18,7 +18,13 @@ export const getEstiloPosicion = (posicion: PosicionBotonNecesidades): ViewStyle
   }
 };
 
-/** Blanco o negro, el que más contraste dé sobre el fondo del botón. */
+/**
+ * Rojo suavizado de «Ayuda» (MOD HU-18, SCRUM-267): el colegio dijo que el botón era «demasiado
+ * grande y vistoso» y daba ganas de tocarlo. Con blanco da ~4,1:1, así que el texto va en negrita
+ * y a 19 px (texto grande en WCAG, basta 3:1).
+ */
+export const COLOR_AYUDA_SUAVE = "#C95A54";
+
 export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
   onPress,
   posicion = "inferior-izquierda",
@@ -29,16 +35,15 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
   testID = "btn-necesidades-flotante",
   enBarra,
 }) => {
-  const { colores } = useApariencia();
   const dimension = Math.max(tamanio, 48);
   const estiloPosicion: ViewStyle = enBarra
     ? { position: "relative", zIndex: 0, width: enBarra.ancho, height: enBarra.alto }
     : getEstiloPosicion(posicion);
 
-  // El botón usa el color de alerta del tema activo para que se encuentre enseguida. Con la
-  // variante «alto-contraste» se fuerza el rojo claro del prototipo, con borde blanco.
-  const colorFondo = variante === "alto-contraste" ? "#FF5A5A" : colores.peligro;
-  const colorTexto = colorSobre(colorFondo);
+  // Rojo suavizado del boceto definitivo; con la variante «alto-contraste» se fuerza el rojo claro
+  // del prototipo, con borde blanco. El texto va en blanco sobre el rojo suave (como en el boceto).
+  const colorFondo = variante === "alto-contraste" ? "#FF5A5A" : COLOR_AYUDA_SUAVE;
+  const colorTexto = variante === "alto-contraste" ? colorSobre(colorFondo) : "#FFFFFF";
 
   const verDibujo = canal !== "soloTexto";
   const verTexto = canal !== "soloPictograma";
@@ -74,7 +79,7 @@ export const BotonNecesidades: React.FC<BotonNecesidadesProps> = ({
           style={[
             estilos.textoEtiqueta,
             { color: colorTexto },
-            canal === "soloTexto" && { fontSize: 18 },
+            canal === "soloTexto" && { fontSize: 21 },
           ]}
           numberOfLines={1}
         >
@@ -104,7 +109,7 @@ const estilos = StyleSheet.create({
     }),
   },
   textoEtiqueta: {
-    fontSize: 15,
+    fontSize: 19,
     fontWeight: "700",
     textAlign: "center",
   },

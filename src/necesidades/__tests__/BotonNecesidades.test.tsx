@@ -1,6 +1,8 @@
 import React from "react";
 import { render, screen, userEvent } from "@testing-library/react-native";
-import { BotonNecesidades, getEstiloPosicion } from "../BotonNecesidades";
+import { StyleSheet } from "react-native";
+import { ratioContraste } from "../../temas";
+import { BotonNecesidades, COLOR_AYUDA_SUAVE, getEstiloPosicion } from "../BotonNecesidades";
 
 describe("BotonNecesidades (SCRUM-86: T-18.1 Botón flotante accesible fijado)", () => {
   it("renderiza el botón con el pictograma de ayuda y el texto", async () => {
@@ -89,5 +91,31 @@ describe("BotonNecesidades (SCRUM-86: T-18.1 Botón flotante accesible fijado)",
     await rerender(<BotonNecesidades onPress={jest.fn()} canal="soloTexto" />);
     expect(screen.queryByLabelText("Dibujo de ayuda", { includeHiddenElements: true })).toBeNull();
     expect(screen.getByText("Ayuda")).toBeTruthy();
+  });
+
+  describe("MOD HU-18 (SCRUM-267): rojo suavizado y texto grande", () => {
+    it("en los temas normales el fondo es #C95A54", async () => {
+      await render(<BotonNecesidades onPress={jest.fn()} />);
+      const estilo = StyleSheet.flatten(screen.getByRole("button").props.style);
+      expect(COLOR_AYUDA_SUAVE).toBe("#C95A54");
+      expect(estilo.backgroundColor).toBe("#C95A54");
+    });
+
+    it("en alto contraste conserva su rojo claro", async () => {
+      await render(<BotonNecesidades onPress={jest.fn()} variante="alto-contraste" />);
+      expect(StyleSheet.flatten(screen.getByRole("button").props.style).backgroundColor).toBe(
+        "#FF5A5A",
+      );
+    });
+
+    it("«Ayuda» va en blanco, negrita y a 19 px o más (texto grande: basta 3:1)", async () => {
+      await render(<BotonNecesidades onPress={jest.fn()} />);
+      const texto = StyleSheet.flatten(screen.getByText("Ayuda").props.style);
+      expect(texto.color).toBe("#FFFFFF");
+      // Texto convierte la negrita en la familia «…_700Bold» del tipo de letra elegido.
+      expect(texto.fontWeight === "700" || /700Bold$/.test(String(texto.fontFamily))).toBe(true);
+      expect(texto.fontSize).toBeGreaterThanOrEqual(19);
+      expect(ratioContraste(texto.color, COLOR_AYUDA_SUAVE)).toBeGreaterThanOrEqual(3);
+    });
   });
 });
