@@ -6,10 +6,16 @@ import { StyleSheet } from "react-native";
 import { TemaProvider } from "../temas";
 import { PanelPreferencias } from "./PanelPreferencias";
 import { PreferenciasProvider } from "./PreferenciasProvider";
+import { guardarVistaAgendaDeSesion } from "../servicios/destinoAgendaAlumno";
 
 // El panel es una pantalla con barra de abajo (Atrás / Adelante): necesita el router.
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+}));
+
+// MOD HU-17: la «Pantalla al entrar» se guarda en Supabase si la cambia el alumno con su sesión.
+jest.mock("../servicios/destinoAgendaAlumno", () => ({
+  guardarVistaAgendaDeSesion: jest.fn(() => Promise.resolve(false)),
 }));
 
 const montar = () =>
@@ -231,6 +237,17 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     ).toBeTruthy();
   });
 
+  it("«Pantalla al entrar» se guarda para el alumno que tiene la sesión (MOD HU-17)", async () => {
+    const user = userEvent.setup();
+    await montar();
+    await abrir(user, "Pantalla al entrar");
+    await user.press(screen.getByTestId("vista-agenda-semanal"));
+    expect(elegida("Pantalla al entrar")).toEqual([
+      "Semana completa: Entra a la semana de lunes a domingo (06b) y puede ir a cada día.",
+    ]);
+    expect(guardarVistaAgendaDeSesion).toHaveBeenCalledWith("semanal");
+  });
+
   it("«Volver a lo de siempre» restablece todo", async () => {
     const user = userEvent.setup();
     await montar();
@@ -244,5 +261,7 @@ describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
     await user.press(screen.getByRole("button", { name: "Volver a lo de siempre" }));
     expect(screen.getByRole("button", { name: "Fondo y colores: Claro" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Forma de los botones: Redondeados" })).toBeTruthy();
+    // También la «Pantalla al entrar» vuelve a «Hoy» en Supabase (revisión de Jaime).
+    expect(guardarVistaAgendaDeSesion).toHaveBeenCalledWith("diaria");
   });
 });
