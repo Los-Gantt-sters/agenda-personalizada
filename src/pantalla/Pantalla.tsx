@@ -5,7 +5,8 @@
 //   y quien tiene dificultades motoras los encuentra siempre a la misma distancia.
 // - En medio, el contenido: cabe en una sola pantalla, sin scroll.
 // - SCRUM-230: «Ayuda» y «Preferencias» SOLO salen con un alumno con sesión iniciada (nunca en
-//   01-05 ni con tutor, familia, administración o cocina; ver useBotonesAlumno). «Ayuda» la pinta
+//   01-05 ni con tutor, familia, administración o cocina; ver useBotonesAlumno). «Preferencias»
+//   lleva siempre al menú 16 (/preferencias), si su tutor se lo permite en 26d. «Ayuda» la pinta
 //   ProveedorNecesidades como pantalla completa encima de todo.
 // - sinAyuda y sinAccesibilidad quitan además esos botones en pantallas concretas (las de entrar y
 //   el propio menú 16). Los huecos se quedan vacíos.
@@ -13,16 +14,18 @@
 //   queda vacío para que las flechas sigan en el centro.
 // - En el navegador, la pestaña lleva el nombre de la pantalla («Mi agenda · Agensible»), no el de
 //   la ruta («index»).
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 import { Platform, View, type LayoutChangeEvent } from "react-native";
 import { useRouter } from "expo-router";
 
 import { BotonNecesidades } from "../necesidades/BotonNecesidades";
 import { useNecesidadesOpcional } from "../necesidades/ProveedorNecesidades";
-import { PantallaVistaAccesible } from "../preferencias/PantallaVistaAccesible";
 import { usePreferenciasOpcional } from "../preferencias/PreferenciasProvider";
 import { ALTO_BOTON_BARRA, ANCHO_BOTON_LADO, BotonBarra, MarcoPantalla } from "./MarcoPantalla";
 import { useBotonesAlumno } from "./useBotonesAlumno";
+
+/** Menú de Preferencias (16). */
+export const RUTA_PREFERENCIAS = "/preferencias";
 
 export { ALTO_BOTON_BARRA } from "./MarcoPantalla";
 
@@ -97,7 +100,6 @@ export function Pantalla({
   const necesidades = useNecesidadesOpcional();
   const prefs = usePreferenciasOpcional();
   const { conAyuda, conPreferencias } = useBotonesAlumno();
-  const [vistaAbierta, setVistaAbierta] = useState(false);
   const canal = prefs?.preferencias.canal ?? "ambos";
   const alMedir = useTituloPestana(titulo);
 
@@ -107,8 +109,7 @@ export function Pantalla({
 
   return (
     <View style={{ flex: 1 }} onLayout={alMedir}>
-      {/* Con la pantalla de Preferencias encima, la de debajo no se lee con el lector de pantalla. */}
-      <View style={{ flex: 1 }} aria-hidden={vistaAbierta}>
+      <View style={{ flex: 1 }}>
         <MarcoPantalla
           titulo={titulo}
           simbolo={simbolo}
@@ -133,13 +134,13 @@ export function Pantalla({
             ) : null
           }
           barraDerecha={
-            prefs && conPreferencias && !sinAccesibilidad ? (
+            conPreferencias && !sinAccesibilidad ? (
               <BotonBarra
                 icono="accesibilidad"
                 texto="Preferencias"
                 etiqueta="Preferencias: cómo se ve la app"
                 canal={canal}
-                alPulsar={() => setVistaAbierta(true)}
+                alPulsar={() => router.push(RUTA_PREFERENCIAS)}
                 ancho={ANCHO_BOTON_LADO}
                 textoPequeno
                 testID="btn-barra-preferencias"
@@ -150,10 +151,6 @@ export function Pantalla({
           {children}
         </MarcoPantalla>
       </View>
-
-      {prefs ? (
-        <PantallaVistaAccesible visible={vistaAbierta} alCerrar={() => setVistaAbierta(false)} />
-      ) : null}
     </View>
   );
 }

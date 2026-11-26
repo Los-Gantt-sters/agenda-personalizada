@@ -157,6 +157,8 @@ export function PanelPreferencias() {
       <Pantalla
         titulo="Preferencias"
         simbolo={<Icono nombre="paleta" color={colores.primario} tam={36} />}
+        // SCRUM-230: ya estamos en el menú 16; «Atrás» vuelve a la pantalla de antes.
+        sinAccesibilidad
       >
         <View style={e.menu}>
           <Text accessibilityRole="header" style={e.pregunta}>
@@ -213,6 +215,7 @@ export function PanelPreferencias() {
       simbolo={<Icono nombre={actual.icono} color={colores.primario} tam={36} />}
       alAtras={() => setAbierto(null)}
       etiquetaAtras="Atrás: volver a las preferencias"
+      sinAccesibilidad
       alAdelante={siguiente ? () => setAbierto(siguiente.clave) : null}
       etiquetaAdelante={siguiente ? `Adelante: ${siguiente.titulo}` : undefined}
     >

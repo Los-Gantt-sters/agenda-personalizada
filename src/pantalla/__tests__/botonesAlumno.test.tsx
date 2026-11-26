@@ -1,25 +1,14 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import { Pantalla } from "..";
+import { activarAlumnoDemo } from "../useBotonesAlumno";
+import { obtenerPermisoPreferencias } from "../../servicios/permisoPreferencias";
 import type { AuthSession, UserRole } from "../../tipos/auth";
 
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    back: jest.fn(),
-    canGoBack: () => true,
-  }),
-}));
-jest.mock("../../preferencias/PreferenciasProvider", () => ({
-  usePreferenciasOpcional: () => ({
-    preferencias: { canal: "ambos", caja: "normal" },
-    estilos: { fuenteNormal: "System", fuenteNegrita: "System" },
-  }),
-}));
-jest.mock("../../preferencias/PantallaVistaAccesible", () => ({
-  PantallaVistaAccesible: () => null,
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
 }));
 
 // «Ayuda» solo se pinta si existe su proveedor: aquí lo damos por hecho.
@@ -36,6 +25,12 @@ let mockSesion: AuthSession | null = null;
 jest.mock("../../sesion/SesionProvider", () => ({
   useSesionOpcional: () => ({ sesion: mockSesion, cargando: false, cerrarSesion: jest.fn() }),
 }));
+
+jest.mock("../../servicios/permisoPreferencias", () => ({
+  ...jest.requireActual("../../servicios/permisoPreferencias"),
+  obtenerPermisoPreferencias: jest.fn(async () => true),
+}));
+const permiso = obtenerPermisoPreferencias as jest.Mock;
 
 const ALUMNO = "3f2b8c1e-7d4a-4e9b-9c55-0a1b2c3d4e5f";
 const sesionDe = (role: UserRole, email: string): AuthSession => ({
@@ -72,12 +67,45 @@ describe("SCRUM-230: Ayuda y Preferencias solo con alumno con sesión iniciada",
     },
   );
 
-  it("con sesión de alumno salen «Ayuda» y «Preferencias»", async () => {
+  it("con sesión de alumno salen «Ayuda» y «Preferencias», y «Preferencias» abre el menú 16", async () => {
     mockSesion = sesionDe("estudiante", `alu-${ALUMNO}@alumnos.agensible`);
     await pintar();
     expect(screen.getByTestId("btn-necesidades")).toBeTruthy();
-    expect(screen.getByTestId("btn-barra-preferencias").props.accessibilityLabel).toBe(
-      "Preferencias: cómo se ve la app",
-    );
+    const boton = await screen.findByTestId("btn-barra-preferencias");
+    expect(boton.props.accessibilityLabel).toBe("Preferencias: cómo se ve la app");
+    expect(permiso).toHaveBeenCalledWith(ALUMNO);
+
+    await fireEvent.press(boton);
+    expect(mockPush).toHaveBeenCalledWith("/preferencias");
+  });
+
+  it("si en Permisos (26d) no tiene permiso, sale «Ayuda» pero no «Preferencias»", async () => {
+    permiso.mockResolvedValueOnce(false);
+    mockSesion = sesionDe("estudiante", `alu-${ALUMNO}@alumnos.agensible`);
+    await pintar();
+    await waitFor(() => expect(permiso).toHaveBeenCalled());
+    expect(screen.getByTestId("btn-necesidades")).toBeTruthy();
+    expect(screen.queryByTestId("btn-barra-preferencias")).toBeNull();
+  });
+});
+
+describe("SCRUM-230: modo demo (/agenda?alumnoDemo=1)", () => {
+  afterEach(() => {
+    activarAlumnoDemo(false);
+    mockSesion = null;
+  });
+
+  it("sin sesión, el alumno de demostración ve «Ayuda» y «Preferencias»", async () => {
+    activarAlumnoDemo();
+    await pintar();
+    expect(screen.getByTestId("btn-necesidades")).toBeTruthy();
+    expect(screen.getByTestId("btn-barra-preferencias")).toBeTruthy();
+  });
+
+  it("no cambia nada si ha entrado un adulto", async () => {
+    activarAlumnoDemo();
+    mockSesion = sesionDe("tutor_docente", "tutor@colegio.es");
+    await pintar();
+    expect(screen.queryByTestId("btn-barra-preferencias")).toBeNull();
   });
 });

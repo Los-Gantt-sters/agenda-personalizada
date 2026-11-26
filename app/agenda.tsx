@@ -16,6 +16,7 @@
 // de un minuto; con ?aviso=visual el aviso es solo visual, sin sonido ni vibración (RNF4.3). Se
 // pueden juntar: ?aviso=prueba,visual.
 // T-08.6: con ?pendiente=tiempo o ?pendiente=profesor la demo trae una tarea a medias (pantalla 10b).
+// SCRUM-230: con ?alumnoDemo=1 hace como si hubiera un alumno con sesión (Ayuda y Preferencias).
 import { useEffect, useMemo } from "react";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -33,6 +34,7 @@ import { AVISO_POR_DEFECTO, type PreferenciasAviso } from "../src/componentes/av
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
 import { TAREAS_VISIBLES, usePreferenciasOpcional } from "../src/preferencias";
 import { useSesionOpcional } from "../src/sesion";
+import { activarAlumnoDemo } from "../src/pantalla/useBotonesAlumno";
 import { PictogramaInterfaz, Texto, fechaDeHoy, useApariencia } from "../src/ui";
 import type { UserRole } from "../src/tipos/auth";
 
@@ -45,11 +47,16 @@ const PANEL_DE: Partial<Record<UserRole, Href>> = {
 };
 
 export default function PantallaAgenda() {
-  const { estudiante, aviso, pendiente } = useLocalSearchParams<{
+  const { estudiante, aviso, pendiente, alumnoDemo } = useLocalSearchParams<{
     estudiante?: string;
     aviso?: string;
     pendiente?: string;
+    alumnoDemo?: string;
   }>();
+  // SCRUM-230: ?alumnoDemo=1 hace como si hubiera un alumno con sesión (salen Ayuda y Preferencias).
+  useEffect(() => {
+    if (alumnoDemo === "1") activarAlumnoDemo();
+  }, [alumnoDemo]);
   const opcionesAviso = (aviso ?? "").split(",");
   const avisoPrueba = opcionesAviso.includes("prueba");
   const avisoVisual = opcionesAviso.includes("visual");
