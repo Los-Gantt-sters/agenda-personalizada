@@ -86,6 +86,21 @@ export async function firmarMultimediaPasos(pasos: PasoTarea[]): Promise<PasoTar
   });
 }
 
+/**
+ * URL firmada nueva para un archivo del bucket (la de la agenda caduca a la hora y la tableta puede
+ * estar abierta toda la mañana). null si no se puede firmar.
+ */
+export async function firmarRuta(ruta: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(BUCKET_MULTIMEDIA_PASOS)
+      .createSignedUrl(ruta, SEGUNDOS_URL_FIRMADA);
+    return error ? null : (data?.signedUrl ?? null);
+  } catch {
+    return null;
+  }
+}
+
 /** Lo que espera guardar_pasos de cada paso (ver la migración de T-10.1). */
 export function pasoParaGuardar(p: PasoTarea): Record<string, unknown> {
   const recurso = (r: RecursoPaso | null | undefined) =>

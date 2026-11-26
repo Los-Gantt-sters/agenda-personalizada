@@ -100,6 +100,7 @@ export function AgendaTresBloques({
   maxTareas = 3,
   soloMirar = false,
   verReloj = true,
+  onMostrarPasos,
 }: {
   bloques: BloquesAgenda;
   /** Cuántas tareas enseñar en «Hecho» y en «Después» (preferencia «Tareas que se ven»). */
@@ -112,6 +113,8 @@ export function AgendaTresBloques({
   onAbrir: (entrada: EntradaAgenda) => void;
   /** Preferencia «Reloj»: si se ve el reloj de la tarea en curso. */
   verReloj?: boolean;
+  /** HU-10: «Mostrar pasos» junto a «Empezar» (→ 07f), si la tarea de «Ahora» tiene pasos. */
+  onMostrarPasos?: (entrada: EntradaAgenda) => void;
 }) {
   const ventana = useWindowDimensions();
   // Se mide el hueco real (puede no ser toda la ventana: márgenes seguros, etc.).
@@ -154,6 +157,7 @@ export function AgendaTresBloques({
         onConfirmarFin={onConfirmarFin}
         soloMirar={soloMirar}
         verReloj={verReloj}
+        onMostrarPasos={onMostrarPasos}
       />
       <Bloque
         tipo="despues"
@@ -362,6 +366,7 @@ function BloqueAhora({
   onConfirmarFin,
   soloMirar,
   verReloj,
+  onMostrarPasos,
 }: {
   bloques: BloquesAgenda;
   escala: number;
@@ -371,6 +376,7 @@ function BloqueAhora({
   onConfirmarFin: (id: string) => void;
   soloMirar: boolean;
   verReloj: boolean;
+  onMostrarPasos?: (entrada: EntradaAgenda) => void;
 }) {
   const ahora = bloques.ahora;
   const estilos = useEstilos(crearEstilos);
@@ -475,14 +481,31 @@ function BloqueAhora({
                 </Texto>
               </View>
             ) : (
-              /* key: al cambiar de tarea o de acción, el botón vuelve a esperar un momento. */
-              <BotonAccionTarea
-                key={`${ahora.id}-${accion}`}
-                accion={accion}
-                onConfirmar={() =>
-                  accion === "empezar" ? onEmpezar(ahora.id) : onConfirmarFin(ahora.id)
-                }
-              />
+              <View style={estilos.filaAcciones}>
+                {/* key: al cambiar de tarea o de acción, el botón vuelve a esperar un momento. */}
+                <BotonAccionTarea
+                  key={`${ahora.id}-${accion}`}
+                  accion={accion}
+                  onConfirmar={() =>
+                    accion === "empezar" ? onEmpezar(ahora.id) : onConfirmarFin(ahora.id)
+                  }
+                />
+                {/* HU-10 (06): con pasos, al lado de «Empezar» se pueden ver todos (07f). */}
+                {onMostrarPasos && accion === "empezar" && (ahora.tarea.pasos?.length ?? 0) > 0 ? (
+                  <Pressable
+                    testID="btn-mostrar-pasos"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Mostrar los pasos de ${ahora.tarea.titulo}`}
+                    onPress={() => onMostrarPasos(ahora)}
+                    style={({ pressed }) => [estilos.botonPasos, pressed && estilos.pulsado]}
+                  >
+                    <Icono nombre="lista" color={colores.primario} tam={26} />
+                    <Texto style={[estilos.textoBotonPasos, { fontSize: 20 * escala }]}>
+                      Mostrar pasos
+                    </Texto>
+                  </Pressable>
+                ) : null}
+              </View>
             )}
           </>
         ) : (
@@ -584,4 +607,23 @@ const crearEstilos = (c: Paleta) =>
       borderColor: c.borde,
     },
     pulsado: { opacity: 0.85 },
+    filaAcciones: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+    },
+    botonPasos: {
+      minHeight: 72,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: 20,
+      borderRadius: 16,
+      borderWidth: 3,
+      borderColor: c.primario,
+      backgroundColor: c.superficie,
+    },
+    textoBotonPasos: { fontWeight: "700", color: c.primario },
   });
