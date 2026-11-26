@@ -150,6 +150,12 @@ BEGIN
        OR (r.tarea->'formatos_permitidos') <> '["pictograma", "texto", "foto", "video", "audio"]'::jsonb THEN
         RAISE EXCEPTION 'FALLA secuencia_dia con pasos: %', r.tarea;
     END IF;
+    -- ...sin perder lo de SCRUM-265 y SCRUM-225 (HU-08): motivo, «Empezar» obligatorio y horas reales.
+    SELECT s.requiere_inicio_fin, s.inicio_real, s.pendiente_motivo INTO r
+    FROM public.secuencia_dia('00000000-0000-0000-0000-000000000001', '2026-11-12') s;
+    IF r.requiere_inicio_fin IS DISTINCT FROM true THEN
+        RAISE EXCEPTION 'FALLA secuencia_dia ha perdido las columnas de la HU-08';
+    END IF;
 
     -- 8. Carmen no puede tocar los pasos de una tarea de casa.
     BEGIN
