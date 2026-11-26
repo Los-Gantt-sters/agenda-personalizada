@@ -7,6 +7,7 @@ import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import type { FormatoPaso, PasoTarea, RecursoPaso } from "../agenda/tipos";
 import { FORMATOS_PASO } from "./formatosPaso";
 import { urlImagenPictograma } from "../../arasaac/urls";
+import { firmarRuta } from "../../servicios/pasosService";
 import { detenerVoz, leer } from "../../servicios/voz";
 import type { Paleta } from "../../temas";
 import { Icono, Texto, useApariencia, useEstilos } from "../../ui";
@@ -79,6 +80,51 @@ export function BotonesFormato({
   );
 }
 
+/**
+ * URL con la que se enseña una foto o un vídeo del bucket. Las URLs firmadas caducan a la hora
+ * (revisión de Jaime: la tableta se queda abierta toda la mañana): si la URL falla o no se pudo
+ * firmar al cargar, se pide otra una vez a partir de la ruta. Si tampoco sirve, `fallo`.
+ */
+function useUrlRecurso(recurso: RecursoPaso) {
+  type Estado = { de: string | null; url: string | null; pedida: boolean; fallo: boolean };
+  const nuevo = (): Estado => ({
+    de: recurso.url ?? null,
+    url: recurso.url ?? null,
+    pedida: false,
+    fallo: false,
+  });
+  const [estado, setEstado] = useState<Estado>(nuevo);
+  // Otro paso u otra URL: se empieza de cero sin esperar a un efecto.
+  const actual = estado.de === (recurso.url ?? null) ? estado : nuevo();
+  const ruta = recurso.ruta ?? null;
+
+  const pedirOtra = () => {
+    if (actual.pedida || !ruta) {
+      setEstado({ ...actual, fallo: true });
+      return;
+    }
+    setEstado({ ...actual, pedida: true });
+    void firmarRuta(ruta).then((url) =>
+      setEstado((e) => (e.de === actual.de ? { ...e, url, fallo: !url } : e)),
+    );
+  };
+
+  // Sin URL al cargar (no se pudo firmar), se intenta una vez más.
+  const sinUrl = !actual.url && !!ruta && !actual.pedida;
+  useEffect(() => {
+    if (!sinUrl || !ruta) return;
+    let vivo = true;
+    void firmarRuta(ruta).then((url) => {
+      if (vivo) setEstado({ de: recurso.url ?? null, url, pedida: true, fallo: !url });
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [sinUrl, ruta, recurso.url]);
+
+  return { url: actual.url, fallo: actual.fallo || (!actual.url && !ruta), alFallar: pedirOtra };
+}
+
 /** Foto real del paso (07c), sobre placa blanca como los pictogramas. */
 export function FotoPaso({
   recurso,
@@ -89,14 +135,15 @@ export function FotoPaso({
   ancho: number;
   alto: number;
 }) {
-  const [fallo, setFallo] = useState(false);
+  const { url, fallo, alFallar } = useUrlRecurso(recurso);
   const e = useEstilos(crearEstilos);
-  if (!recurso.url || fallo) return <SinMedio texto="No se puede ver la foto" />;
+  if (fallo) return <SinMedio texto="No se puede ver la foto" />;
+  if (!url) return <SinMedio texto="Cargando la foto…" />;
   return (
     <Image
       testID="foto-paso"
-      source={{ uri: recurso.url }}
-      onError={() => setFallo(true)}
+      source={{ uri: url }}
+      onError={alFallar}
       resizeMode="contain"
       accessibilityLabel={recurso.descripcion ?? "Foto del paso"}
       style={[e.marcoMedio, { width: ancho, height: alto }]}
@@ -107,7 +154,8 @@ export function FotoPaso({
 /**
  * Vídeo corto del paso (07d). En el navegador es el reproductor del propio navegador (con sus
  * controles, sin sonido al empezar y en bucle, para que el alumno lo vea las veces que quiera). En la
- * app nativa haría falta expo-video: de momento se avisa.
+ * app nativa haría falta expo-video: de momento se avisa. Si el vídeo no carga, sale un aviso como
+ * el de la foto en vez de un recuadro negro.
  */
 export function VideoPaso({
   recurso,
@@ -119,16 +167,22 @@ export function VideoPaso({
   alto: number;
 }) {
   const e = useEstilos(crearEstilos);
-  if (!recurso.url) return <SinMedio texto="No se puede ver el vídeo" />;
+  const { url, fallo, alFallar } = useUrlRecurso(recurso);
+  if (fallo) return <SinMedio texto="No se puede ver el vídeo" />;
+  if (!url) return <SinMedio texto="Cargando el vídeo…" />;
   if (Platform.OS !== "web") return <SinMedio texto="El vídeo se ve en el navegador" />;
   return (
     <View style={[e.marcoMedio, { width: ancho, height: alto }]} testID="video-paso">
       {createElement("video", {
-        src: recurso.url,
+        src: url,
         controls: true,
         loop: true,
+        // Sin sonido: así no se mezcla con el audio del paso (revisión de Jaime).
+        muted: true,
         playsInline: true,
         preload: "metadata",
+        onError: alFallar,
+        "data-video-paso": true,
         "aria-label": recurso.descripcion ?? "Vídeo del paso",
         style: { width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#000" },
       })}
@@ -148,45 +202,89 @@ export function SinMedio({ texto }: { texto: string }) {
   );
 }
 
+/** Si la grabación no ha empezado a sonar en este tiempo, se da por perdida. */
+export const ESPERA_AUDIO_MS = 4000;
+
+/** Para los vídeos de los pasos que estén sonando, para que no se mezclen con el audio. */
+function pausarVideosPasos() {
+  if (Platform.OS !== "web" || typeof document === "undefined") return;
+  document.querySelectorAll<HTMLVideoElement>("video[data-video-paso]").forEach((v) => v.pause());
+}
+
 /**
  * Audio del paso: suena la voz grabada por el tutor si la hay y, si no, la voz de la tableta lee el
  * paso. No cambia lo que se ve (cambios 17-11: «reproducir sin sustituir imagen»). Se calla al
  * cambiar de paso o al salir.
+ * Revisión de Jaime: si la grabación no carga (URL caducada, sin red, archivo roto), el alumno no se
+ * queda en «Escuchando…» en silencio: la lee la voz de la tableta.
  */
 export function useAudioPaso() {
   const [sonando, setSonando] = useState(false);
   const reproductor = useRef<AudioPlayer | null>(null);
+  const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cada reproducción tiene su número: lo que llegue tarde de una anterior se ignora.
+  const turno = useRef(0);
 
-  const parar = () => {
-    detenerVoz();
+  const soltarReproductor = () => {
+    if (espera.current) clearTimeout(espera.current);
+    espera.current = null;
     try {
       reproductor.current?.remove();
     } catch {
       // Ya estaba parado
     }
     reproductor.current = null;
+  };
+
+  const parar = () => {
+    turno.current += 1;
+    detenerVoz();
+    soltarReproductor();
     setSonando(false);
   };
 
-  useEffect(() => parar, []);
+  useEffect(() => parar, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reproducir = (paso: Pick<PasoTarea, "audio">, textoVoz: string) => {
     parar();
+    const mio = turno.current;
     setSonando(true);
-    if (paso.audio?.url) {
+    pausarVideosPasos();
+    const conVoz = () => {
+      if (turno.current !== mio) return;
+      soltarReproductor();
+      leer(textoVoz, { alTerminar: () => turno.current === mio && setSonando(false) });
+    };
+    const grabacion = paso.audio;
+    if (!grabacion?.url && !grabacion?.ruta) {
+      conVoz();
+      return;
+    }
+    // La URL firmada puede haber caducado: si hay ruta, se pide una nueva antes de sonar.
+    const urlLista = grabacion.ruta
+      ? firmarRuta(grabacion.ruta).then((u) => u ?? grabacion.url ?? null)
+      : Promise.resolve(grabacion.url ?? null);
+    void urlLista.then((url) => {
+      if (turno.current !== mio) return;
+      if (!url) return conVoz();
       try {
-        const p = createAudioPlayer({ uri: paso.audio.url });
+        const p = createAudioPlayer({ uri: url });
         reproductor.current = p;
+        espera.current = setTimeout(conVoz, ESPERA_AUDIO_MS);
         p.addListener("playbackStatusUpdate", (estado) => {
-          if (estado.didJustFinish) setSonando(false);
+          if (turno.current !== mio) return;
+          if (estado.playing && espera.current) {
+            clearTimeout(espera.current);
+            espera.current = null;
+          }
+          if (estado.playbackState === "failed" || estado.playbackState === "error") conVoz();
+          else if (estado.didJustFinish) setSonando(false);
         });
         p.play();
-        return;
       } catch {
-        // Si no se puede reproducir la grabación, lo lee la voz de la tableta
+        conVoz();
       }
-    }
-    leer(textoVoz, { alTerminar: () => setSonando(false) });
+    });
   };
 
   return { sonando, reproducir, parar };

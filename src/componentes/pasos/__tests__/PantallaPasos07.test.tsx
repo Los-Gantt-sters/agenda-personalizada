@@ -1,13 +1,19 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { createAudioPlayer } from "expo-audio";
 import { PantallaPasos07 } from "../PantallaPasos07";
 import { PantallaTodosPasos07f, pasosPorPagina } from "../PantallaTodosPasos07f";
 import { formatoInicial, formatosPermitidos } from "../formatosPaso";
 import type { EntradaAgenda, PasoTarea } from "../../agenda/tipos";
-import { leer } from "../../../servicios/voz";
+import { detenerVoz, leer } from "../../../servicios/voz";
+import { firmarRuta } from "../../../servicios/pasosService";
+import { ESPERA_AUDIO_MS, FotoPaso } from "../MultimediaPaso";
 import { PreferenciasProvider } from "../../../preferencias";
 import { TemaProvider } from "../../../temas";
 
 jest.mock("../../../servicios/sonidos", () => ({ reproducirSonido: jest.fn() }));
+jest.mock("../../../servicios/pasosService", () => ({
+  firmarRuta: jest.fn(async (ruta: string) => `https://nueva/${ruta}`),
+}));
 jest.mock("../../../servicios/voz", () => ({
   leer: jest.fn(),
   detenerVoz: jest.fn(),
@@ -217,5 +223,116 @@ describe("Pantalla 07f: todos los pasos (SCRUM-95: T-10.2)", () => {
     expect(pasosPorPagina(980)).toBe(5);
     expect(pasosPorPagina(400)).toBe(2);
     expect(pasosPorPagina(100)).toBe(1);
+  });
+});
+
+describe("Multimedia de los pasos cuando algo falla (revisión de Jaime)", () => {
+  type Oyente = (estado: Record<string, unknown>) => void;
+  let oyente: Oyente | null;
+  let reproductor: { play: jest.Mock; remove: jest.Mock; addListener: jest.Mock };
+
+  beforeEach(() => {
+    oyente = null;
+    reproductor = {
+      play: jest.fn(),
+      remove: jest.fn(),
+      addListener: jest.fn((_evento: string, f: Oyente) => {
+        oyente = f;
+      }),
+    };
+    (createAudioPlayer as jest.Mock).mockImplementation(() => reproductor);
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+  });
+
+  const pasoConAudio = (): EntradaAgenda =>
+    entrada({
+      pasos: [
+        {
+          orden: 1,
+          titulo: "Sécate",
+          texto: "Coge la toalla.",
+          audio: { ruta: "t2/audio/a.m4a", url: "https://caducada/a.m4a" },
+        },
+        { orden: 2, titulo: "Cuelga la toalla", texto: "En su gancho." },
+      ],
+    });
+
+  it("la grabación suena con una URL recién firmada (la de la mañana puede haber caducado)", async () => {
+    await render(<PantallaPasos07 entrada={pasoConAudio()} alSalir={() => {}} />);
+    await fireEvent.press(screen.getByTestId("btn-formato-audio"));
+    expect(firmarRuta).toHaveBeenCalledWith("t2/audio/a.m4a");
+    expect(createAudioPlayer).toHaveBeenCalledWith({ uri: "https://nueva/t2/audio/a.m4a" });
+    expect(leer).not.toHaveBeenCalled();
+  });
+
+  it("si la grabación falla, la lee la voz de la tableta (no se queda en silencio)", async () => {
+    await render(<PantallaPasos07 entrada={pasoConAudio()} alSalir={() => {}} />);
+    await fireEvent.press(screen.getByTestId("btn-formato-audio"));
+    await act(async () => oyente?.({ playbackState: "failed", playing: false }));
+    expect(leer).toHaveBeenCalledWith("Paso 1. Sécate. Coge la toalla.", expect.any(Object));
+    expect(reproductor.remove).toHaveBeenCalled();
+  });
+
+  it("si la grabación no empieza a sonar en unos segundos, también la lee la tableta", async () => {
+    jest.useFakeTimers();
+    await render(<PantallaPasos07 entrada={pasoConAudio()} alSalir={() => {}} />);
+    await fireEvent.press(screen.getByTestId("btn-formato-audio"));
+    expect(leer).not.toHaveBeenCalled();
+    await act(async () => {
+      jest.advanceTimersByTime(ESPERA_AUDIO_MS);
+    });
+    expect(leer).toHaveBeenCalledTimes(1);
+  });
+
+  it("si la grabación suena bien, no se lee encima", async () => {
+    jest.useFakeTimers();
+    await render(<PantallaPasos07 entrada={pasoConAudio()} alSalir={() => {}} />);
+    await fireEvent.press(screen.getByTestId("btn-formato-audio"));
+    await act(async () => oyente?.({ playing: true, playbackState: "playing" }));
+    await act(async () => {
+      jest.advanceTimersByTime(ESPERA_AUDIO_MS * 2);
+    });
+    expect(leer).not.toHaveBeenCalled();
+  });
+
+  it("se calla al cambiar de paso", async () => {
+    await render(<PantallaPasos07 entrada={pasoConAudio()} alSalir={() => {}} />);
+    await fireEvent.press(screen.getByTestId("btn-formato-audio"));
+    expect(screen.getByText("Escuchando el paso…")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Siguiente: paso 2" }));
+    expect(reproductor.remove).toHaveBeenCalled();
+    expect(detenerVoz).toHaveBeenCalled();
+    expect(screen.queryByText("Escuchando el paso…")).toBeNull();
+  });
+
+  it("la foto con la URL caducada pide otra una vez y, si tampoco carga, avisa", async () => {
+    await render(
+      <FotoPaso
+        recurso={{ ruta: "t2/foto/g.jpg", url: "https://caducada/g.jpg" }}
+        ancho={200}
+        alto={200}
+      />,
+    );
+    await fireEvent(screen.getByTestId("foto-paso"), "error");
+    expect(firmarRuta).toHaveBeenCalledWith("t2/foto/g.jpg");
+    expect(screen.getByTestId("foto-paso").props.source).toEqual({
+      uri: "https://nueva/t2/foto/g.jpg",
+    });
+    await fireEvent(screen.getByTestId("foto-paso"), "error");
+    expect(screen.getByText("No se puede ver la foto")).toBeTruthy();
+    expect(firmarRuta).toHaveBeenCalledTimes(1);
+  });
+
+  it("la foto que no se pudo firmar al abrir la tarea se vuelve a pedir", async () => {
+    await render(
+      <FotoPaso recurso={{ ruta: "t2/foto/g.jpg", url: null }} ancho={200} alto={200} />,
+    );
+    expect(await screen.findByTestId("foto-paso")).toBeTruthy();
+    expect(screen.getByTestId("foto-paso").props.source).toEqual({
+      uri: "https://nueva/t2/foto/g.jpg",
+    });
   });
 });
