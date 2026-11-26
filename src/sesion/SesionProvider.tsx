@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 import { supabase } from "../lib/supabaseClient";
 import { getCurrentSession, signOutSupervisor } from "../servicios/authService";
+import { olvidarPermisosPreferencias } from "../servicios/permisoPreferencias";
 import type { AuthSession } from "../tipos/auth";
 
 interface ValorSesion {
@@ -32,7 +33,9 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
     void actualizar();
     // Supabase recomienda no llamar a sus funciones dentro de este aviso: se hace justo después
-    const { data } = supabase.auth.onAuthStateChange(() => {
+    const { data } = supabase.auth.onAuthStateChange((evento) => {
+      // SCRUM-246: el permiso de Preferencias de un alumno no puede pasar al siguiente que entre.
+      if (evento === "SIGNED_OUT") olvidarPermisosPreferencias();
       setTimeout(() => void actualizar(), 0);
     });
 
@@ -44,6 +47,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
   async function cerrarSesion() {
     await signOutSupervisor();
+    olvidarPermisosPreferencias();
     setSesion(null);
   }
 

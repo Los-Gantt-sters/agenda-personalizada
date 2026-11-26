@@ -16,7 +16,8 @@
 // de un minuto; con ?aviso=visual el aviso es solo visual, sin sonido ni vibración (RNF4.3). Se
 // pueden juntar: ?aviso=prueba,visual.
 // T-08.6: con ?pendiente=tiempo o ?pendiente=profesor la demo trae una tarea a medias (pantalla 10b).
-// SCRUM-230: con ?alumnoDemo=1 hace como si hubiera un alumno con sesión (Ayuda y Preferencias).
+// SCRUM-230: con ?alumnoDemo=1 hace como si hubiera un alumno con sesión (Ayuda y Preferencias),
+// solo en desarrollo (__DEV__).
 import { useEffect, useMemo } from "react";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -54,8 +55,9 @@ export default function PantallaAgenda() {
     alumnoDemo?: string;
   }>();
   // SCRUM-230: ?alumnoDemo=1 hace como si hubiera un alumno con sesión (salen Ayuda y Preferencias).
+  // Solo en desarrollo: en la app publicada nadie puede saltarse así el inicio de sesión.
   useEffect(() => {
-    if (alumnoDemo === "1") activarAlumnoDemo();
+    if (__DEV__ && alumnoDemo === "1") activarAlumnoDemo();
   }, [alumnoDemo]);
   const opcionesAviso = (aviso ?? "").split(",");
   const avisoPrueba = opcionesAviso.includes("prueba");

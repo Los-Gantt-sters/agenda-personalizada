@@ -16,6 +16,8 @@ export function alumnoDeCorreo(correo: string | null | undefined): string | null
 }
 
 // Una consulta por alumno mientras la app está abierta: la barra de abajo sale en cada pantalla.
+// Solo se guardan las respuestas de Supabase; si la consulta falla, se vuelve a preguntar la próxima
+// vez. Se vacía al cerrar la sesión (SesionProvider), para que el siguiente que entre no herede nada.
 const cache = new Map<string, Promise<boolean>>();
 
 /** Vacía la caché (al cerrar sesión y en las pruebas). */
@@ -31,17 +33,24 @@ export function obtenerPermisoPreferencias(alumnoId: string): Promise<boolean> {
   if (!ES_UUID.test(alumnoId)) return Promise.resolve(true);
   const guardado = cache.get(alumnoId);
   if (guardado) return guardado;
-  const consulta = (async () => {
+  const sinRespuesta = () => {
+    // No se guarda el fallo: con conexión, la próxima vez se lee el permiso de verdad.
+    if (cache.get(alumnoId) === consulta) cache.delete(alumnoId);
+    return true;
+  };
+  const consulta: Promise<boolean> = (async () => {
     try {
       const { data, error } = await supabase
         .from("preferencias_alumnos")
         .select("nivel_permisos_preferencias")
         .eq("alumno_id", alumnoId)
         .maybeSingle();
-      if (error || !data) return true;
+      if (error) return sinRespuesta();
+      // Sin fila de preferencias, el alumno aún no tiene restricciones: puede entrar.
+      if (!data) return true;
       return data.nivel_permisos_preferencias !== "ninguno";
     } catch {
-      return true;
+      return sinRespuesta();
     }
   })();
   cache.set(alumnoId, consulta);

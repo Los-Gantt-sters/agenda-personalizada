@@ -3,15 +3,16 @@ import { Pressable, Text } from "react-native";
 
 import { SesionProvider, useSesion } from "../SesionProvider";
 import { getCurrentSession, signOutSupervisor } from "../../servicios/authService";
+import { olvidarPermisosPreferencias } from "../../servicios/permisoPreferencias";
 import type { AuthSession } from "../../tipos/auth";
 
 // Supabase falso: guarda la función que escucha los cambios para poder «avisar» desde el test
-const mockAvisos: (() => void)[] = [];
+const mockAvisos: ((evento?: string) => void)[] = [];
 const mockDesuscribir = jest.fn();
 jest.mock("../../lib/supabaseClient", () => ({
   supabase: {
     auth: {
-      onAuthStateChange: jest.fn((escuchar: () => void) => {
+      onAuthStateChange: jest.fn((escuchar: (evento?: string) => void) => {
         mockAvisos.push(escuchar);
         return { data: { subscription: { unsubscribe: mockDesuscribir } } };
       }),
@@ -22,6 +23,9 @@ jest.mock("../../lib/supabaseClient", () => ({
 jest.mock("../../servicios/authService", () => ({
   getCurrentSession: jest.fn(),
   signOutSupervisor: jest.fn(),
+}));
+jest.mock("../../servicios/permisoPreferencias", () => ({
+  olvidarPermisosPreferencias: jest.fn(),
 }));
 const mockSesionActual = getCurrentSession as jest.Mock;
 const mockCerrar = signOutSupervisor as jest.Mock;
@@ -96,6 +100,24 @@ describe("SesionProvider - HUT-03 (T-T03.1, estado global de la sesión)", () =>
 
     expect(mockCerrar).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.getByText("sin sesión")).toBeTruthy());
+  });
+
+  it("al cerrar la sesión olvida el permiso de Preferencias del alumno (SCRUM-246)", async () => {
+    mockSesionActual.mockResolvedValue(ADMIN);
+    mockCerrar.mockResolvedValue({ success: true });
+    const user = userEvent.setup();
+    await pintar();
+    await screen.findByText("rol: admin");
+
+    await user.press(screen.getByRole("button", { name: "Salir" }));
+    expect(olvidarPermisosPreferencias).toHaveBeenCalledTimes(1);
+
+    // También si la sesión se cierra por otro camino (caduca o se cierra en otra pestaña)
+    mockSesionActual.mockResolvedValue(null);
+    await act(async () => {
+      mockAvisos[0]("SIGNED_OUT");
+    });
+    expect(olvidarPermisosPreferencias).toHaveBeenCalledTimes(2);
   });
 
   it("deja de escuchar a Supabase al desmontarse", async () => {

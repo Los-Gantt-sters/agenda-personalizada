@@ -4,7 +4,8 @@
 // una familia, administración o cocina. «Preferencias» sale además solo si su tutor lo permite en
 // Permisos del alumno (26d).
 // Modo demo: con /agenda?alumnoDemo=1 se hace como si hubiera un alumno con sesión iniciada, para
-// probar la barra sin una cuenta de alumno en Supabase. Solo sirve sin sesión de nadie.
+// probar la barra sin una cuenta de alumno en Supabase. Solo sirve sin sesión de nadie y solo en
+// desarrollo (__DEV__): en la app publicada no se activa.
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { useSesionOpcional } from "../sesion/SesionProvider";

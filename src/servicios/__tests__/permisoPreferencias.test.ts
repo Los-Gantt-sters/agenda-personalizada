@@ -56,4 +56,15 @@ describe("permisoPreferencias (SCRUM-246: T-ACC.2, permiso de 26d)", () => {
     await expect(obtenerPermisoPreferencias(ALUMNO)).resolves.toBe(true);
     await expect(obtenerPermisoPreferencias("ale")).resolves.toBe(true);
   });
+
+  it("no guarda los fallos: con conexión vuelve a preguntar y respeta «ninguno»", async () => {
+    consulta(new Error("sin red"));
+    await expect(obtenerPermisoPreferencias(ALUMNO)).resolves.toBe(true);
+    consulta({ data: null, error: { message: "fallo" } });
+    await expect(obtenerPermisoPreferencias(ALUMNO)).resolves.toBe(true);
+
+    consulta({ data: { nivel_permisos_preferencias: "ninguno" }, error: null });
+    await expect(obtenerPermisoPreferencias(ALUMNO)).resolves.toBe(false);
+    expect(sb.from).toHaveBeenCalledTimes(3);
+  });
 });
