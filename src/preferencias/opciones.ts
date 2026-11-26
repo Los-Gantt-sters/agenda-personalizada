@@ -106,11 +106,15 @@ export const CAJAS_LETRA: Record<CajaLetra, { etiqueta: string; descripcion: str
 
 // ---- Tareas que se ven en «Hecho» y en «Después» (concepto de tiempo de cada alumno) ----
 // Hay quien se orienta mejor con pocas tareas a la vista y quien quiere ver el día entero.
-export type TareasVisibles = "una" | "tres" | "todas";
+// SCRUM-251 (MOD HU-06, boceto 24): se elige con «−» y «+» de 1 a 5 y, después de 5, «Todas».
+export type TareasVisibles = "una" | "dos" | "tres" | "cuatro" | "cinco" | "todas";
 
 export const TAREAS_VISIBLES: Record<TareasVisibles, { etiqueta: string; maximo: number }> = {
   una: { etiqueta: "Solo 1", maximo: 1 },
+  dos: { etiqueta: "Hasta 2", maximo: 2 },
   tres: { etiqueta: "Hasta 3", maximo: 3 },
+  cuatro: { etiqueta: "Hasta 4", maximo: 4 },
+  cinco: { etiqueta: "Hasta 5", maximo: 5 },
   // Sin límite: si no caben todas, las tarjetas se hacen más pequeñas y se cuentan las que faltan.
   todas: { etiqueta: "Todas", maximo: 99 },
 };
@@ -139,7 +143,21 @@ export const ORDEN_TAMANOS_BOTON: TamanoBoton[] = ["M", "L", "XL"];
 export const ORDEN_FORMAS: FormaBoton[] = ["round", "square", "pill"];
 export const ORDEN_MODOS_CANAL: ModoCanal[] = ["ambos", "soloPictograma", "soloTexto"];
 export const ORDEN_CAJAS_LETRA: CajaLetra[] = ["normal", "mayusculas"];
-export const ORDEN_TAREAS_VISIBLES: TareasVisibles[] = ["una", "tres", "todas"];
+export const ORDEN_TAREAS_VISIBLES: TareasVisibles[] = [
+  "una",
+  "dos",
+  "tres",
+  "cuatro",
+  "cinco",
+  "todas",
+];
+
+/** Contador «−» / «+» de «Tareas que se ven»: el valor anterior o siguiente (se queda en los bordes). */
+export function moverTareasVisibles(actual: TareasVisibles, delta: -1 | 1): TareasVisibles {
+  const i = ORDEN_TAREAS_VISIBLES.indexOf(actual);
+  const j = Math.min(ORDEN_TAREAS_VISIBLES.length - 1, Math.max(0, i + delta));
+  return ORDEN_TAREAS_VISIBLES[j];
+}
 export const ORDEN_VER_RELOJ: VerReloj[] = ["si", "no"];
 export const ORDEN_NECESIDADES_AYUDA: ClaveNecesidadBasica[] = ["bano", "agua", "descanso"];
 
