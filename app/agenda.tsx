@@ -30,6 +30,7 @@ import {
   useModoSinDistracciones,
 } from "../src/componentes/agenda";
 import { AVISO_POR_DEFECTO, type PreferenciasAviso } from "../src/componentes/aviso-anticipado";
+import { useFormatosPermitidos } from "../src/componentes/permisos-alumno";
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
 import { TAREAS_VISIBLES, usePreferenciasOpcional } from "../src/preferencias";
 import { useSesionOpcional } from "../src/sesion";
@@ -96,6 +97,8 @@ export default function PantallaAgenda() {
   const rol = useSesionOpcional()?.sesion?.user.role ?? "estudiante";
   const esAlumno = rol === "estudiante";
   const soloMirar = rol === "familiar";
+  // Lo que el tutor deja ver al alumno en sus tareas (pantalla 26d). A los adultos, todo.
+  const formatosPermitidos = useFormatosPermitidos(esAlumno ? estudiante : null);
 
   return (
     <>
@@ -110,6 +113,7 @@ export default function PantallaAgenda() {
         verReloj={verReloj}
         // El alumno entra directo a su tarea empezada; los adultos ven la agenda entera.
         abrirTareaEnCurso={esAlumno}
+        formatosPermitidos={formatosPermitidos}
         marco={{
           titulo: esAlumno ? "Mi agenda" : "Agenda del alumno",
           simbolo: <PictogramaInterfaz nombre="agenda" etiqueta="agenda" tam={44} />,

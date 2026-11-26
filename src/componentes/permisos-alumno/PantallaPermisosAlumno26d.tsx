@@ -108,6 +108,7 @@ export function PantallaPermisosAlumno26d({
   );
   const [avisoMinimoFormato, setAvisoMinimoFormato] = useState<boolean>(false);
   const [guardadoOk, setGuardadoOk] = useState<boolean>(false);
+  const [errorGuardado, setErrorGuardado] = useState<boolean>(false);
 
   const notificarCambio = (
     nuevosFormatos: FormatoMultimediaAlumno[],
@@ -147,15 +148,22 @@ export function PantallaPermisosAlumno26d({
   };
 
   const manejarGuardar = async () => {
-    const guardado = await guardarPermisosAlumno26d({
-      alumnoId,
-      nombreAlumno,
-      formatosPermitidos,
-      entradaTrasLogin,
-      mostrarBotonPreferencias16,
-    });
-    setGuardadoOk(true);
-    alGuardar?.(guardado);
+    setErrorGuardado(false);
+    try {
+      const guardado = await guardarPermisosAlumno26d({
+        alumnoId,
+        nombreAlumno,
+        formatosPermitidos,
+        entradaTrasLogin,
+        mostrarBotonPreferencias16,
+      });
+      setGuardadoOk(true);
+      alGuardar?.(guardado);
+    } catch {
+      // Sin conexión o sin permiso (solo el tutor del alumno puede cambiarlos): se avisa en pantalla.
+      setGuardadoOk(false);
+      setErrorGuardado(true);
+    }
   };
 
   const derecha = (
@@ -328,8 +336,13 @@ export function PantallaPermisosAlumno26d({
         </View>
 
         {/* Barra inferior de estado / vista previa de 07e si se solicita */}
-        {(guardadoOk || alAbrirVistaPrevia07e) && (
+        {(guardadoOk || errorGuardado || alAbrirVistaPrevia07e) && (
           <View style={estilos.filaAccionesExtra}>
+            {errorGuardado ? (
+              <Texto style={estilos.textoErrorGuardado} testID="mensaje-error-permisos-26d">
+                No se han podido guardar los permisos. Inténtalo otra vez.
+              </Texto>
+            ) : null}
             {guardadoOk ? (
               <Texto style={estilos.textoGuardadoOk} testID="mensaje-permisos-guardados-26d">
                 ✓ Permisos guardados para {nombreAlumno}
@@ -515,6 +528,11 @@ const crearEstilos = (c: Paleta) =>
       fontSize: 15,
       fontWeight: "700",
       color: c.exito,
+    },
+    textoErrorGuardado: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: c.peligro,
     },
     botonVistaPrevia: {
       minHeight: 42,

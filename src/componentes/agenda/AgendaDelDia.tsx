@@ -46,6 +46,7 @@ import {
   type EventoAviso,
   type PreferenciasAviso,
 } from "../aviso-anticipado/tipos";
+import type { FormatoMultimediaAlumno } from "../../tipos/permisosAlumno";
 
 /** Cabecera y «Atrás» de la pantalla de la agenda (cambian según quién la mira). */
 export interface MarcoAgenda {
@@ -74,6 +75,7 @@ export function AgendaDelDia({
   verReloj = true,
   abrirTareaEnCurso = true,
   marco = MARCO_POR_DEFECTO,
+  formatosPermitidos,
 }: {
   repo: RepositorioAgenda;
   estudianteId: string;
@@ -100,6 +102,8 @@ export function AgendaDelDia({
   abrirTareaEnCurso?: boolean;
   /** Cabecera y «Atrás» de la agenda. */
   marco?: MarcoAgenda;
+  /** Formatos que el tutor deja ver en las tareas (pantalla 26d). Sin ellos se ve todo. */
+  formatosPermitidos?: readonly FormatoMultimediaAlumno[] | null;
 }) {
   // Se piden las que quiere ver el alumno; la vista enseña las que quepan en la pantalla.
   const {
@@ -312,6 +316,7 @@ export function AgendaDelDia({
         pie={pieError}
         vistaInicial={vistaDetalle}
         onCambioVista={setVistaDetalle}
+        formatosPermitidos={formatosPermitidos}
       />
     );
   }
@@ -338,6 +343,7 @@ export function AgendaDelDia({
         pie={pieError}
         vistaInicial={vistas[enCurso.id]}
         onCambioVista={(vista) => setVistas((v) => ({ ...v, [enCurso.id]: vista }))}
+        formatosPermitidos={formatosPermitidos}
       />
     );
   }
