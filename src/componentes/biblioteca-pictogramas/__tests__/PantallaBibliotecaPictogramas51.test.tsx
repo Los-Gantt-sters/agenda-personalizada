@@ -1,23 +1,27 @@
 /**
  * Pruebas unitarias de la fusión de las pantallas 51 y 51b en una única Pantalla 51
  * («Mi biblioteca · Mis pictogramas propios») con aislamiento estricto entre Tutor y Familia
- * (SCRUM-241 / SCRUM-275 · T-51.1).
+ * y subida directa al pulsar el recuadro punteado «+» sin botón «Subir archivo propio»
+ * (SCRUM-241 / SCRUM-275 · T-51.1 / SCRUM-279 · T-51.2).
  */
 
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import {
   CATALOGO_INICIAL_PICTOGRAMAS_51,
+  MENSAJE_EXITO_SUBIDA_51,
+  MENSAJE_INICIAL_SUBIDA_51,
   convertirPictogramasPropiosABuscador28p,
   editarPictogramaPropio51,
   eliminarPictogramaPropio51,
   filtrarPictogramasPorRol51,
   obtenerPictogramasPropiosPorRol51,
   reiniciarBibliotecaPictogramas51,
+  subirPictogramaPropioAlPulsarMas,
 } from "../../../servicios/bibliotecaPictogramasService";
 import { PantallaBibliotecaPictogramas51 } from "../PantallaBibliotecaPictogramas51";
 
-describe("PantallaBibliotecaPictogramas51 (SCRUM-241 · SCRUM-275 · Fusión 51/51b y aislamiento por rol)", () => {
+describe("PantallaBibliotecaPictogramas51 (SCRUM-241 · SCRUM-275 y SCRUM-279)", () => {
   beforeEach(() => {
     reiniciarBibliotecaPictogramas51();
   });
@@ -139,5 +143,64 @@ describe("PantallaBibliotecaPictogramas51 (SCRUM-241 · SCRUM-275 · Fusión 51/
         expect.objectContaining({ palabraClave: "Grifo adaptado Clase Triángulo" }),
       ]),
     );
+  });
+
+  it("elimina cualquier botón separado «Subir archivo propio» y activa la subida directamente al pulsar el recuadro punteado «+» (SCRUM-279)", async () => {
+    const alSubir = jest.fn();
+    const alCambiar = jest.fn();
+    await render(
+      <PantallaBibliotecaPictogramas51
+        rol="tutor"
+        alSubirPictograma={alSubir}
+        alCambiarBiblioteca={alCambiar}
+      />,
+    );
+
+    // Verifica que NO existe ningún botón independiente «Subir archivo propio»
+    expect(screen.queryByText(/Subir archivo propio/i)).toBeNull();
+    expect(screen.getByText(MENSAJE_INICIAL_SUBIDA_51)).toBeTruthy();
+
+    // Rellenar palabra clave y texto alternativo y pulsar el recuadro punteado '+'
+    await fireEvent.changeText(
+      screen.getByTestId("input-palabra-clave-51"),
+      "Pizarra visual del aula",
+    );
+    await fireEvent.changeText(
+      screen.getByTestId("input-texto-alternativo-51"),
+      "Fotografía real de la pizarra magnética de Clase Triángulo",
+    );
+    await fireEvent.press(screen.getByTestId("recuadro-subir-mas-51"));
+
+    // Se muestra el estado de éxito en verde y el nuevo pictograma aparece en la tabla del Tutor
+    expect(screen.getByText(MENSAJE_EXITO_SUBIDA_51)).toBeTruthy();
+    expect(screen.getByText("Pizarra visual del aula")).toBeTruthy();
+    expect(
+      screen.getByText("Fotografía real de la pizarra magnética de Clase Triángulo"),
+    ).toBeTruthy();
+
+    expect(alSubir).toHaveBeenCalledWith(
+      expect.objectContaining({
+        owner: "tutor",
+        palabraClave: "Pizarra visual del aula",
+      }),
+    );
+    expect(alCambiar).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          owner: "tutor",
+          palabraClave: "Pizarra visual del aula",
+        }),
+      ]),
+    );
+
+    // El nuevo pictograma subido por Tutor NO aparece en la biblioteca de Familia
+    const deFamilia = obtenerPictogramasPropiosPorRol51("familia");
+    expect(deFamilia.some((p) => p.palabraClave === "Pizarra visual del aula")).toBe(false);
+
+    // Subida directa por defecto para Familia desde el servicio
+    const nuevoFamilia = await subirPictogramaPropioAlPulsarMas({ owner: "familia" });
+    expect(nuevoFamilia.owner).toBe("familia");
+    expect(nuevoFamilia.palabraClave).toContain("casa");
+    expect(obtenerPictogramasPropiosPorRol51("familia")).toHaveLength(4);
   });
 });
