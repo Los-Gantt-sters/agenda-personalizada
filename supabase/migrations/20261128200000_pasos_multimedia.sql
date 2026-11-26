@@ -6,7 +6,7 @@
 --   - título corto («Abre el grifo») y texto en Lectura Fácil («Gira el grifo despacio...», 07b);
 --   - pictograma ARASAAC o propio (07);
 --   - foto real, vídeo y audio (07c, 07d y el botón Audio), guardados como recursos_multimedia en
---     el bucket privado de T-10.3 (20261124100000_storage_multimedia_pasos.sql).
+--     el bucket privado de T-10.3 (20261128300000_storage_multimedia_pasos.sql).
 -- La tarea guarda qué formatos puede elegir el alumno (cambios 17-11: «se mostrarán los que el
 -- profesor le dé permiso»).
 --
@@ -15,7 +15,8 @@
 --   2. recursos_multimedia: ruta en Storage, tipo MIME, tamaño y duración; un recurso por tipo y paso.
 --   3. tareas.formatos_permitidos.
 --   4. Permisos: los pasos se ven si se ve la tarea y se editan con las mismas reglas que la tarea
---      (tutor → ámbito centro, familia → ámbito hogar, admin → todo).
+--      (tutor → ámbito centro, familia → ámbito hogar, admin → todo); se ven como la agenda
+--      completa de SCRUM-144 (supervisa_tarea, 20261128100000_agenda_compartida_y_franjas.sql).
 --   5. guardar_pasos(): guarda de una vez todo lo del editor 28s («Guardar» → 28ok).
 --   6. secuencia_dia(): los pasos llegan a la agenda con título, texto y multimedia.
 -- ==============================================================================
@@ -169,8 +170,9 @@ AS $$
           AND (
               public.is_admin()
               OR (t.alumno_id IS NULL AND public.auth_user_role() IN ('tutor_docente', 'admin'))
-              OR (public.is_tutor_docente_of_student(t.alumno_id) AND t.ambito = 'centro')
-              OR (public.is_familiar_of_student(t.alumno_id) AND t.ambito = 'hogar')
+              -- SCRUM-144 (20261128100000): tutor y familia ven las tareas (y sus pasos) de clase y
+              -- de casa, igual que la agenda completa.
+              OR public.supervisa_tarea(t.id, t.alumno_id)
               OR (
                   public.alumno_de_sesion() IS NOT NULL
                   AND (

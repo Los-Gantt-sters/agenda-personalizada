@@ -1,4 +1,4 @@
--- Pruebas de la migración 20261125000000_pasos_multimedia.sql (SCRUM-94 · T-10.1, HU-10).
+-- Pruebas de la migración 20261128200000_pasos_multimedia.sql (SCRUM-94 · T-10.1, HU-10).
 -- Se ejecutan dentro de una transacción que se deshace al final: no dejan datos.
 -- Si una comprobación falla, se para con un error que dice cuál.
 -- Cómo ejecutarlas: ver supabase/tests/README.md.
@@ -181,6 +181,11 @@ BEGIN
     SELECT count(*) INTO n FROM public.pasos_tarea WHERE tarea_id = merendar;
     IF n <> 1 THEN RAISE EXCEPTION 'FALLA familia en tarea de casa: % pasos', n; END IF;
 
+    -- 10b. SCRUM-144: la familia ve la agenda completa, así que también los pasos de la tarea del
+    -- colegio (aunque no los pueda cambiar).
+    SELECT count(*) INTO n FROM public.pasos_tarea WHERE tarea_id = lavarse;
+    IF n = 0 THEN RAISE EXCEPTION 'FALLA agenda completa: la familia no ve los pasos del colegio'; END IF;
+
     -- 11. RGPD: Alejandro ve los pasos de sus tareas (también la de casa, que es suya)...
     PERFORM set_config('request.jwt.claim.sub', ale, true);
     SELECT count(*) INTO n FROM public.pasos_tarea;
@@ -217,7 +222,7 @@ BEGIN
     END IF;
 
     RESET ROLE;
-    RAISE NOTICE 'pasos_multimedia: las 13 comprobaciones pasan';
+    RAISE NOTICE 'pasos_multimedia: las 14 comprobaciones pasan';
 END $$;
 
 ROLLBACK;
