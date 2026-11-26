@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import { render, screen, userEvent, within } from "@testing-library/react-native";
+import { render, screen, userEvent } from "@testing-library/react-native";
 import React from "react";
 import { StyleSheet } from "react-native";
 
@@ -7,7 +7,6 @@ import { TemaProvider } from "../temas";
 import { PanelPreferencias } from "./PanelPreferencias";
 import { PreferenciasProvider } from "./PreferenciasProvider";
 
-// El panel es una pantalla con barra de abajo (Atrás / Adelante): necesita el router.
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
@@ -21,225 +20,188 @@ const montar = () =>
     </TemaProvider>,
   );
 
-const APARTADOS = [
-  "Qué se ve (Dibujos y palabras)",
+const APARTADOS_16 = [
+  "Qué se ve en tareas",
   "Fondo y colores",
-  "Tipo de letra",
-  "Mayúsculas o minúsculas",
-  "Tamaño de letra",
-  "Tamaño de los botones",
-  "Forma de los botones",
-  "Tareas que se ven",
+  "Texto y tipografía",
+  "Botones (tamaño y forma)",
+  "Agenda (día / semana)",
   "Reloj en la tarea",
-  "Qué puede pedir en Ayuda",
+  "Ayuda (máximo 3)",
+  "Barrido por pulsadores",
 ];
 
-const grupo = (nombre: string) => within(screen.getByLabelText(nombre));
-const elegida = (nombreGrupo: string) =>
-  grupo(nombreGrupo)
-    .getAllByRole("radio")
-    .filter((o) => o.props.accessibilityState?.checked)
-    .map((o) => o.props.accessibilityLabel);
-
-/** Abre un apartado desde el menú. */
+const escapar = (t: string) => t.replace(/[()]/g, "\\$&");
 const abrir = async (user: ReturnType<typeof userEvent.setup>, titulo: string) => {
   await user.press(screen.getByRole("button", { name: new RegExp(`^${escapar(titulo)}:`) }));
 };
-const escapar = (t: string) => t.replace(/[()]/g, "\\$&");
-const volverAlMenu = (user: ReturnType<typeof userEvent.setup>) =>
+const pulsarAtrasSinGuardar = (user: ReturnType<typeof userEvent.setup>) =>
   user.press(screen.getByTestId("btn-barra-atras"));
+const pulsarGuardarCambios = (user: ReturnType<typeof userEvent.setup>) =>
+  user.press(screen.getByTestId("btn-barra-adelante"));
 
-describe("PanelPreferencias (T-04.3 y mejoras de la profesora)", () => {
-  it("primero pregunta qué quieres cambiar, con los 10 apartados y su valor actual (sin scroll)", async () => {
+describe("PanelPreferencias (SCRUM-240 · Bocetos 16, 16b, 17, 18, 19, 22, 24, 25 y 26)", () => {
+  it("muestra el menú 16 con los apartados agrupados de los bocetos nuevos (sin scroll)", async () => {
     await montar();
-    expect(screen.getByRole("header", { name: "¿Qué quieres cambiar?" })).toBeTruthy();
-    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Preferencias");
-    for (const a of APARTADOS) {
+    expect(screen.getByRole("header", { name: "¿Qué quieres configurar?" })).toBeTruthy();
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Preferencias · Alejandro");
+    for (const a of APARTADOS_16) {
       expect(screen.getByRole("button", { name: new RegExp(`^${escapar(a)}:`) })).toBeTruthy();
     }
-    expect(screen.getByRole("button", { name: "Fondo y colores: Claro" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Tipo de letra: Lexend" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Tareas que se ven: Hasta 3" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Reloj en la tarea: Con reloj" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Qué puede pedir en Ayuda: Baño, Agua, Descanso" }),
+      screen.getByRole("button", { name: "Qué se ve en tareas: Picto con etiqueta" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Fondo y colores: Claro · Sin contraste" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Botones (tamaño y forma): Grande · Redondeados" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Agenda (día / semana): Día y semana · Hasta 3" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Reloj en la tarea: Con reloj · Aviso 5m" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Ayuda (máximo 3): 3 ayudas (máx. 3)" }),
     ).toBeTruthy();
     expect(JSON.stringify(screen.toJSON())).not.toContain("RCTScrollView");
   });
 
-  it("cada apartado se abre en su pantalla con sus opciones", async () => {
+  it("«Atrás» vuelve al menú 16 SIN guardar los cambios y «Guardar cambios» los confirma", async () => {
     const user = userEvent.setup();
     await montar();
-    const cuantas: [string, number][] = [
-      ["Qué se ve (Dibujos y palabras)", 3],
-      ["Fondo y colores", 5],
-      ["Tipo de letra", 3],
-      ["Mayúsculas o minúsculas", 2],
-      ["Tamaño de letra", 3],
-      ["Tamaño de los botones", 3],
-      ["Forma de los botones", 3],
-      ["Tareas que se ven", 3],
-      ["Reloj en la tarea", 2],
-    ];
-    for (const [titulo, n] of cuantas) {
-      await abrir(user, titulo);
-      expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent(titulo);
-      expect(grupo(titulo).getAllByRole("radio")).toHaveLength(n);
-      await volverAlMenu(user);
-    }
-  });
 
-  it("al abrir están elegidos los valores por defecto", async () => {
-    const user = userEvent.setup();
-    await montar();
+    // 1. Abrimos "Fondo y colores" (18), elegimos "Pastel", pero pulsamos "Atrás" (no debe guardar)
     await abrir(user, "Fondo y colores");
-    expect(elegida("Fondo y colores")).toEqual(["Claro"]);
-    await volverAlMenu(user);
-    await abrir(user, "Mayúsculas o minúsculas");
-    expect(elegida("Mayúsculas o minúsculas")).toEqual(["Minúsculas"]);
-  });
-
-  it("elegir una opción la marca (solo una) y el menú enseña lo elegido", async () => {
-    const user = userEvent.setup();
-    await montar();
-    await abrir(user, "Fondo y colores");
-    await user.press(grupo("Fondo y colores").getByRole("radio", { name: "Pastel" }));
-    expect(elegida("Fondo y colores")).toEqual(["Pastel"]);
-    // La elección no depende solo del color: lleva una marca (RNF14.4)
+    expect(screen.getByTestId("btn-barra-adelante")).toHaveTextContent("Guardar cambios");
+    await user.press(screen.getByTestId("opcion-tema-pastel"));
+    await pulsarAtrasSinGuardar(user);
     expect(
-      within(screen.getByLabelText("Fondo y colores")).getAllByTestId("icono-check", {
-        includeHiddenElements: true,
-      }),
-    ).toHaveLength(1);
+      screen.getByRole("button", { name: "Fondo y colores: Claro · Sin contraste" }),
+    ).toBeTruthy();
 
-    await volverAlMenu(user);
-    expect(screen.getByRole("button", { name: "Fondo y colores: Pastel" })).toBeTruthy();
+    // 2. Volvemos a abrir "Fondo y colores", elegimos "Pastel" y pulsamos "Guardar cambios"
+    await abrir(user, "Fondo y colores");
+    await user.press(screen.getByTestId("opcion-tema-pastel"));
+    await pulsarGuardarCambios(user);
+    expect(
+      screen.getByRole("button", { name: "Fondo y colores: Pastel · Sin contraste" }),
+    ).toBeTruthy();
   });
 
-  it("«Adelante» pasa al apartado siguiente y en el último está apagado", async () => {
+  it("Pantalla 17 (Qué se ve en las tareas): cambia formato visual y locución en la vista previa", async () => {
     const user = userEvent.setup();
     await montar();
-    await abrir(user, "Forma de los botones");
-    await user.press(screen.getByTestId("btn-barra-adelante"));
-    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Tareas que se ven");
-    await user.press(screen.getByTestId("btn-barra-adelante"));
-    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Reloj en la tarea");
-    await user.press(screen.getByTestId("btn-barra-adelante"));
-    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Qué puede pedir en Ayuda");
-    expect(screen.getByTestId("btn-barra-adelante").props.accessibilityState).toMatchObject({
-      disabled: true,
-    });
-  });
-
-  it("al elegir solo pictograma oculta el texto y al elegir solo texto oculta el pictograma", async () => {
-    const user = userEvent.setup();
-    await montar();
-    await abrir(user, "Qué se ve (Dibujos y palabras)");
-    const canal = "Qué se ve (Dibujos y palabras)";
+    await abrir(user, "Qué se ve en tareas");
 
     expect(screen.getByTestId("preview-pictograma")).toBeTruthy();
     expect(screen.getByTestId("preview-titulo-texto")).toBeTruthy();
 
-    await user.press(grupo(canal).getByRole("radio", { name: "Solo pictograma" }));
+    await user.press(screen.getByTestId("opcion-formato17-soloPictograma"));
     expect(screen.getByTestId("preview-pictograma")).toBeTruthy();
     expect(screen.queryByTestId("preview-titulo-texto")).toBeNull();
 
-    await user.press(grupo(canal).getByRole("radio", { name: "Solo texto" }));
+    await user.press(screen.getByTestId("opcion-formato17-textoFacil"));
     expect(screen.queryByTestId("preview-pictograma")).toBeNull();
     expect(screen.getByTestId("preview-titulo-texto")).toBeTruthy();
+
+    await pulsarGuardarCambios(user);
+    expect(screen.getByRole("button", { name: "Qué se ve en tareas: Texto fácil" })).toBeTruthy();
   });
 
-  it("la vista previa cambia de tamaño y de forma al momento (RF3.15)", async () => {
+  it("Pantalla 19 (Texto y tipografía) y 16b: aplica MAYÚSCULAS en vista previa y en menú al guardar", async () => {
     const user = userEvent.setup();
     await montar();
-    const alto = () => {
+    await abrir(user, "Texto y tipografía");
+    await user.press(screen.getByTestId("opcion-caja-mayusculas"));
+
+    const tituloPrevia = StyleSheet.flatten(screen.getByTestId("preview-titulo-texto").props.style);
+    expect(tituloPrevia.textTransform).toBe("uppercase");
+
+    await pulsarGuardarCambios(user);
+    expect(
+      screen.getByRole("button", { name: "Texto y tipografía: Lexend · Normal · MAYÚS." }),
+    ).toBeTruthy();
+  });
+
+  it("Pantalla 22 (Botones tamaño y forma): actualiza la vista previa al momento y guarda al confirmar", async () => {
+    const user = userEvent.setup();
+    await montar();
+    await abrir(user, "Botones (tamaño y forma)");
+
+    const medidasBoton = () => {
       const boton = screen.getByRole("button", { name: "Empezar" });
       const estilo = Object.assign({}, ...[boton.props.style].flat(3).filter(Boolean));
       return { minHeight: estilo.minHeight, borderRadius: estilo.borderRadius };
     };
-    await abrir(user, "Tamaño de los botones");
-    expect(alto()).toEqual({ minHeight: 73.6, borderRadius: 16 });
 
-    await user.press(grupo("Tamaño de los botones").getByRole("radio", { name: "Mediano" }));
-    await user.press(screen.getByTestId("btn-barra-adelante")); // → Forma de los botones
-    await user.press(grupo("Forma de los botones").getByRole("radio", { name: "Cuadrados" }));
-    expect(alto()).toEqual({ minHeight: 64, borderRadius: 4 });
-  });
+    expect(medidasBoton()).toEqual({ minHeight: 73.6, borderRadius: 16 });
+    await user.press(screen.getByTestId("opcion-tamanoBoton-M"));
+    await user.press(screen.getByTestId("opcion-forma-square"));
+    expect(medidasBoton()).toEqual({ minHeight: 64, borderRadius: 4 });
 
-  it("con «MAYÚSCULAS» el texto de la app sale en mayúsculas; las etiquetas se ven tal cual", async () => {
-    const user = userEvent.setup();
-    await montar();
-    await abrir(user, "Mayúsculas o minúsculas");
-    await user.press(grupo("Mayúsculas o minúsculas").getByRole("radio", { name: "MAYÚSCULAS" }));
-
-    const titulo = StyleSheet.flatten(screen.getByTestId("preview-titulo-texto").props.style);
-    expect(titulo.textTransform).toBe("uppercase");
-    const etiqueta = StyleSheet.flatten(screen.getByText("Minúsculas").props.style);
-    expect(etiqueta.textTransform).toBe("none");
-  });
-
-  it("«Tareas que se ven» enseña 1, 3 o muchas tarjetas en la muestra", async () => {
-    const user = userEvent.setup();
-    await montar();
-    await abrir(user, "Tareas que se ven");
-    const tareas = "Tareas que se ven";
-    expect(screen.getAllByTestId(/^muestra-Después-/)).toHaveLength(3);
-    await user.press(grupo(tareas).getByRole("radio", { name: "Solo 1" }));
-    expect(screen.getAllByTestId(/^muestra-Después-/)).toHaveLength(1);
-    await user.press(grupo(tareas).getByRole("radio", { name: "Todas" }));
-    expect(screen.getAllByTestId(/^muestra-Después-/).length).toBeGreaterThan(3);
-  });
-
-  it("«Reloj en la tarea»: se elige con o sin reloj y la muestra cambia al momento", async () => {
-    const user = userEvent.setup();
-    await montar();
-    await abrir(user, "Reloj en la tarea");
-    expect(elegida("Reloj en la tarea")).toEqual(["Con reloj"]);
-    expect(screen.getByTestId("muestra-reloj")).toBeTruthy();
-    await user.press(grupo("Reloj en la tarea").getByRole("radio", { name: "Sin reloj" }));
-    expect(screen.queryByTestId("muestra-reloj")).toBeNull();
-    await volverAlMenu(user);
-    expect(screen.getByRole("button", { name: "Reloj en la tarea: Sin reloj" })).toBeTruthy();
-  });
-
-  it("«Qué puede pedir en Ayuda»: varias a la vez y nunca ninguna", async () => {
-    const user = userEvent.setup();
-    await montar();
-    await abrir(user, "Qué puede pedir en Ayuda");
-    const casillas = grupo("Qué puede pedir en Ayuda").getAllByRole("checkbox");
-    expect(casillas).toHaveLength(3);
-    expect(casillas.every((c) => c.props.accessibilityState?.checked)).toBe(true);
-
-    await user.press(screen.getByTestId("necesidad-agua"));
-    await user.press(screen.getByTestId("necesidad-descanso"));
-    expect(screen.queryByTestId("muestra-necesidad-agua")).toBeNull();
-    expect(screen.getByTestId("muestra-necesidad-bano")).toBeTruthy();
-
-    // La última no se puede quitar: «Ayuda» no puede quedarse sin opciones.
-    await user.press(screen.getByTestId("necesidad-bano"));
-    expect(screen.getByTestId("necesidad-bano").props.accessibilityState).toMatchObject({
-      checked: true,
-    });
-
-    await user.press(screen.getByTestId("necesidad-agua"));
-    await volverAlMenu(user);
+    await pulsarGuardarCambios(user);
     expect(
-      screen.getByRole("button", { name: "Qué puede pedir en Ayuda: Baño, Agua" }),
+      screen.getByRole("button", { name: "Botones (tamaño y forma): Normal · Cuadrados" }),
     ).toBeTruthy();
   });
 
-  it("«Volver a lo de siempre» restablece todo", async () => {
+  it("Pantalla 24 (Agenda): stepper + y − recorre de 1 a 5 tareas y después «Todas»", async () => {
     const user = userEvent.setup();
     await montar();
-    await abrir(user, "Fondo y colores");
-    await user.press(grupo("Fondo y colores").getByRole("radio", { name: "Oscuro" }));
-    await volverAlMenu(user);
-    await abrir(user, "Forma de los botones");
-    await user.press(grupo("Forma de los botones").getByRole("radio", { name: "Circulares" }));
-    await volverAlMenu(user);
+    await abrir(user, "Agenda (día / semana)");
 
-    await user.press(screen.getByRole("button", { name: "Volver a lo de siempre" }));
-    expect(screen.getByRole("button", { name: "Fondo y colores: Claro" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Forma de los botones: Redondeados" })).toBeTruthy();
+    expect(screen.getByTestId("valor-tareas-visibles-24")).toHaveTextContent("3 tareas");
+    expect(screen.getAllByTestId(/^muestra-Después-/)).toHaveLength(3);
+
+    // Bajamos con − hasta 1 tarea
+    await user.press(screen.getByTestId("btn-tareas-visibles-dec"));
+    expect(screen.getByTestId("valor-tareas-visibles-24")).toHaveTextContent("2 tareas");
+    await user.press(screen.getByTestId("btn-tareas-visibles-dec"));
+    expect(screen.getByTestId("valor-tareas-visibles-24")).toHaveTextContent("1 tarea");
+    expect(screen.getAllByTestId(/^muestra-Después-/)).toHaveLength(1);
+
+    // Subimos con + pasando por 2, 3, 4, 5 y Todas
+    for (let i = 0; i < 5; i++) {
+      await user.press(screen.getByTestId("btn-tareas-visibles-inc"));
+    }
+    expect(screen.getByTestId("valor-tareas-visibles-24")).toHaveTextContent("Todas");
+    expect(screen.getAllByTestId(/^muestra-Después-/).length).toBeGreaterThan(5);
+
+    await pulsarGuardarCambios(user);
+    expect(
+      screen.getByRole("button", { name: "Agenda (día / semana): Día y semana · Todas" }),
+    ).toBeTruthy();
+  });
+
+  it("Pantalla 25 (Reloj en la tarea) y Pantalla 26 (Ayuda máx. 3): configuran reloj, aviso 5m y hasta 3 ayudas", async () => {
+    const user = userEvent.setup();
+    await montar();
+
+    // Pantalla 25
+    await abrir(user, "Reloj en la tarea");
+    expect(screen.getByTestId("muestra-reloj")).toBeTruthy();
+    await user.press(screen.getByTestId("opcion-reloj25-no"));
+    expect(screen.queryByTestId("muestra-reloj")).toBeNull();
+    await pulsarGuardarCambios(user);
+    expect(
+      screen.getByRole("button", { name: "Reloj en la tarea: Sin reloj · Aviso 5m" }),
+    ).toBeTruthy();
+
+    // Pantalla 26
+    await abrir(user, "Ayuda (máximo 3)");
+    expect(screen.getByTestId("contador-ayudas-26")).toHaveTextContent(
+      "3 de 3 seleccionados (máx. 3)",
+    );
+    await user.press(screen.getByTestId("necesidad-agua"));
+    expect(screen.getByTestId("contador-ayudas-26")).toHaveTextContent(
+      "2 de 3 seleccionados (máx. 3)",
+    );
+    await pulsarGuardarCambios(user);
+    expect(
+      screen.getByRole("button", { name: "Ayuda (máximo 3): 2 ayudas (máx. 3)" }),
+    ).toBeTruthy();
   });
 });
