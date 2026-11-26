@@ -1,7 +1,10 @@
 // Preferencias de apariencia del estudiante activo (RI3.1). El tema vive en TemaProvider (T-04.1);
-// aquí se guarda lo demás (letra, botones, forma) y se ofrece todo junto con usePreferencias().
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+// aquí se guarda todo lo demás (letra, botones, forma, formato 17, locución, vistaAgenda 24,
+// tareasVisibles 24, reloj y avisoPrevio 25, ayudas 26 y barrido por pulsadores) y se sincroniza
+// también con MotorBarridoProvider cuando está montado.
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+import { useMotorBarridoOpcional } from "../componentes/barrido-pulsadores/MotorBarridoProvider";
 import { useTema } from "../temas";
 import { EstilosApariencia, estilosApariencia } from "./estilos";
 import {
@@ -14,7 +17,7 @@ interface ValorPreferencias {
   preferencias: PreferenciasApariencia;
   /** Medidas ya calculadas (tamaños de texto y botones, radios, fuente). */
   estilos: EstilosApariencia;
-  /** Cambia una o varias preferencias. Los cambios se aplican al momento (RF3.15). */
+  /** Cambia una o varias preferencias. Los cambios se aplican y persisten en el proveedor (RF3.15). */
   cambiar: (cambios: Partial<PreferenciasApariencia>) => void;
   /** Vuelve a los valores por defecto (los de la variante A del prototipo). */
   restablecer: () => void;
@@ -32,6 +35,9 @@ interface Props {
 
 export function PreferenciasProvider({ preferenciasIniciales, children }: Props) {
   const { nombre: tema, cambiarTema } = useTema();
+  const motorBarrido = useMotorBarridoOpcional();
+  const actualizarMotorBarrido = motorBarrido?.actualizarConfiguracion;
+
   const [resto, setResto] = useState<SinTema>(() => {
     const { tema: _tema, ...sinTema } = normalizarPreferencias(preferenciasIniciales);
     return sinTema;
@@ -39,12 +45,20 @@ export function PreferenciasProvider({ preferenciasIniciales, children }: Props)
 
   const preferencias = useMemo<PreferenciasApariencia>(() => ({ ...resto, tema }), [resto, tema]);
 
+  // Sincroniza el modo y la velocidad de barrido con MotorBarridoProvider cuando está activo
+  useEffect(() => {
+    if (!actualizarMotorBarrido) return;
+    actualizarMotorBarrido({
+      modo: resto.modoBarrido,
+      intervaloMs: resto.intervaloBarridoMs,
+    });
+  }, [actualizarMotorBarrido, resto.intervaloBarridoMs, resto.modoBarrido]);
+
   const cambiar = useCallback(
     (cambios: Partial<PreferenciasApariencia>) => {
       const { tema: nuevoTema, ...demas } = cambios;
       if (nuevoTema !== undefined) cambiarTema(nuevoTema);
       if (Object.keys(demas).length > 0) {
-        // Se normaliza para ignorar valores que no existan
         setResto((actual) => {
           const { tema: _t, ...limpio } = normalizarPreferencias({ ...actual, ...demas });
           return limpio;
@@ -55,7 +69,7 @@ export function PreferenciasProvider({ preferenciasIniciales, children }: Props)
   );
 
   const restablecer = useCallback(() => {
-    const { tema: temaPorDefecto, ...sinTema } = PREFERENCIAS_POR_DEFECTO;
+    const { tema: temaPorDefecto, ...sinTema } = normalizarPreferencias(PREFERENCIAS_POR_DEFECTO);
     cambiarTema(temaPorDefecto);
     setResto(sinTema);
   }, [cambiarTema]);

@@ -3,6 +3,8 @@
 // - Menú 16 (y 16b en mayúsculas) con las tarjetas agrupadas («Qué se ve en tareas», «Fondo y colores»,
 //   «Texto y tipografía», «Botones (tamaño y forma)», «Agenda (día / semana)», «Reloj en la tarea»,
 //   «Ayuda (máximo 3)» y «Barrido por pulsadores») + botón «Volver a lo de siempre».
+// - Todas las opciones (incluidas 17, 24, 25, 26 y Barrido) viven en PreferenciasProvider (y
+//   MotorBarridoProvider), por lo que persisten al salir de la pantalla y se aplican en la app.
 // - Al entrar en cada apartado, los cambios se previsualizan al momento en «Así se ve» sobre un
 //   borrador temporal:
 //   * El botón inferior «Atrás» vuelve al menú 16 SIN guardar los cambios del borrador.
@@ -16,7 +18,6 @@ import { PictogramaTarea } from "../componentes/agenda/PictogramaTarea";
 import {
   ETIQUETAS_MODO_BARRIDO,
   VELOCIDADES_BARRIDO_MS,
-  type IntervaloBarridoMs,
   type ModoBarridoPulsador,
 } from "../componentes/barrido-pulsadores/tiposBarrido";
 import { RelojVisual } from "../componentes/reloj-visual/RelojVisual";
@@ -32,7 +33,6 @@ import {
   AVISO_PREVIO_25,
   CAJAS_LETRA,
   CATALOGO_AYUDAS_26,
-  DESTINOS_LOGIN_AGENDA_24,
   FORMAS_BOTON,
   FORMATOS_VISUALES_17,
   FUENTES,
@@ -44,12 +44,14 @@ import {
   ORDEN_TAMANOS_LETRA,
   ORDEN_TAREAS_VISIBLES,
   ORDEN_VER_RELOJ,
+  ORDEN_VISTAS_AGENDA,
   TAMANOS_BOTON,
   TAMANOS_LETRA,
   TAREAS_VISIBLES,
   VER_RELOJ,
+  VISTAS_AGENDA,
+  moverTareasVisibles,
   type AvisoPrevio25,
-  type DestinoLoginAgenda24,
   type FormatoVisualTarea17,
   type LocucionAudio17,
   type PreferenciasApariencia,
@@ -64,31 +66,6 @@ export type ApartadoPreferencias16 =
   | "reloj25"
   | "ayuda26"
   | "barridoPulsadores";
-
-interface EstadoExtendidoPreferencias {
-  formato17: FormatoVisualTarea17;
-  locucion17: LocucionAudio17;
-  destinoLogin24: DestinoLoginAgenda24;
-  avisoPrevio25: AvisoPrevio25;
-  ayudas26: string[];
-  modoBarrido: ModoBarridoPulsador;
-  intervaloBarridoMs: IntervaloBarridoMs;
-}
-
-interface BorradorSubpantalla {
-  base: PreferenciasApariencia;
-  ext: EstadoExtendidoPreferencias;
-}
-
-const ESTADO_EXTENDIDO_POR_DEFECTO: EstadoExtendidoPreferencias = {
-  formato17: "pictograma",
-  locucion17: "automatica",
-  destinoLogin24: "semana",
-  avisoPrevio25: "si",
-  ayudas26: ["bano", "agua", "descanso"],
-  modoBarrido: "desactivado",
-  intervaloBarridoMs: 1600,
-};
 
 const APARTADOS_MENU_16: {
   clave: ApartadoPreferencias16;
@@ -164,14 +141,10 @@ const APARTADOS_MENU_16: {
   },
 ];
 
-function resumenApartado16(
-  clave: ApartadoPreferencias16,
-  p: PreferenciasApariencia,
-  ext: EstadoExtendidoPreferencias,
-): string {
+function resumenApartado16(clave: ApartadoPreferencias16, p: PreferenciasApariencia): string {
   switch (clave) {
     case "queSeVe17":
-      return FORMATOS_VISUALES_17[ext.formato17].resumenMenu;
+      return FORMATOS_VISUALES_17[p.formatoTarea].resumenMenu;
     case "fondoColores18": {
       if (p.tema === "altoContrasteClaro") return "Contraste claro";
       if (p.tema === "altoContrasteOscuro") return "Contraste oscuro";
@@ -184,13 +157,13 @@ function resumenApartado16(
     case "botones22":
       return `${TAMANOS_BOTON[p.tamanoBoton].etiquetaBoceto} · ${FORMAS_BOTON[p.forma].etiqueta}`;
     case "agenda24":
-      return `${DESTINOS_LOGIN_AGENDA_24[ext.destinoLogin24].resumenMenu} · ${TAREAS_VISIBLES[p.tareasVisibles].resumenMenu}`;
+      return `${VISTAS_AGENDA[p.vistaAgenda].resumenMenu} · ${TAREAS_VISIBLES[p.tareasVisibles].resumenMenu}`;
     case "reloj25":
-      return `${VER_RELOJ[p.reloj].etiqueta} · ${AVISO_PREVIO_25[ext.avisoPrevio25].resumenMenu}`;
+      return `${VER_RELOJ[p.reloj].etiqueta} · ${AVISO_PREVIO_25[p.avisoPrevio].resumenMenu}`;
     case "ayuda26":
-      return `${ext.ayudas26.length} ayudas (máx. 3)`;
+      return `${p.ayudas.length} ayudas (máx. 3)`;
     case "barridoPulsadores":
-      return ETIQUETAS_MODO_BARRIDO[ext.modoBarrido].titulo;
+      return ETIQUETAS_MODO_BARRIDO[p.modoBarrido].titulo;
   }
 }
 
@@ -201,17 +174,15 @@ export function PanelPreferencias() {
   const e = useEstilos(crearEstilos);
   const { preferencias, cambiar, restablecer } = usePreferencias();
 
-  const [extConfirmado, setExtConfirmado] = useState<EstadoExtendidoPreferencias>(
-    ESTADO_EXTENDIDO_POR_DEFECTO,
-  );
   const [abierto, setAbierto] = useState<ApartadoPreferencias16 | null>(null);
-  const [borrador, setBorrador] = useState<BorradorSubpantalla | null>(null);
+  const [borrador, setBorrador] = useState<PreferenciasApariencia | null>(null);
   const [busquedaAyuda26, setBusquedaAyuda26] = useState<string>("");
 
   const abrirApartado = (clave: ApartadoPreferencias16) => {
     setBorrador({
-      base: { ...preferencias, necesidades: [...preferencias.necesidades] },
-      ext: { ...extConfirmado, ayudas26: [...extConfirmado.ayudas26] },
+      ...preferencias,
+      necesidades: [...preferencias.necesidades],
+      ayudas: [...preferencias.ayudas],
     });
     setBusquedaAyuda26("");
     setAbierto(clave);
@@ -226,16 +197,10 @@ export function PanelPreferencias() {
   // «Guardar cambios»: confirma y guarda el borrador en PreferenciasProvider y vuelve al menú 16
   const guardarCambiosYVolverAlMenu16 = () => {
     if (borrador) {
-      cambiar(borrador.base);
-      setExtConfirmado(borrador.ext);
+      cambiar(borrador);
     }
     setBorrador(null);
     setAbierto(null);
-  };
-
-  const restablecerTodo = () => {
-    restablecer();
-    setExtConfirmado(ESTADO_EXTENDIDO_POR_DEFECTO);
   };
 
   // ---- Pantalla 16 / 16b: Menú principal de Preferencias ----
@@ -255,7 +220,7 @@ export function PanelPreferencias() {
 
           <View style={e.rejilla} testID="menu-preferencias">
             {APARTADOS_MENU_16.map((a) => {
-              const valor = resumenApartado16(a.clave, preferencias, extConfirmado);
+              const valor = resumenApartado16(a.clave, preferencias);
               return (
                 <Pressable
                   key={a.clave}
@@ -286,7 +251,7 @@ export function PanelPreferencias() {
             testID="btn-restablecer-preferencias"
             accessibilityRole="button"
             accessibilityLabel="Volver a lo de siempre"
-            onPress={restablecerTodo}
+            onPress={restablecer}
             style={({ pressed }) => [e.botonVolverSiempre, pressed && e.pulsado]}
           >
             <Text style={e.textoVolverSiempre}>↺ Volver a lo de siempre</Text>
@@ -299,12 +264,8 @@ export function PanelPreferencias() {
   // ---- Subpantallas 17, 18, 19, 22, 24, 25, 26 y Barrido ----
   const actual = APARTADOS_MENU_16.find((a) => a.clave === abierto)!;
 
-  const actualizarBase = (cambios: Partial<PreferenciasApariencia>) => {
-    setBorrador((prev) => (prev ? { ...prev, base: { ...prev.base, ...cambios } } : prev));
-  };
-
-  const actualizarExt = (cambios: Partial<EstadoExtendidoPreferencias>) => {
-    setBorrador((prev) => (prev ? { ...prev, ext: { ...prev.ext, ...cambios } } : prev));
+  const actualizarBorrador = (cambios: Partial<PreferenciasApariencia>) => {
+    setBorrador((prev) => (prev ? { ...prev, ...cambios } : prev));
   };
 
   return (
@@ -322,8 +283,7 @@ export function PanelPreferencias() {
           borrador={borrador}
           busqueda={busquedaAyuda26}
           onChangeBusqueda={setBusquedaAyuda26}
-          actualizarBase={actualizarBase}
-          actualizarExt={actualizarExt}
+          actualizarBorrador={actualizarBorrador}
           alGuardar={guardarCambiosYVolverAlMenu16}
         />
       ) : (
@@ -333,8 +293,7 @@ export function PanelPreferencias() {
             <TarjetasCategoriasSubpantalla
               apartado={abierto}
               borrador={borrador}
-              actualizarBase={actualizarBase}
-              actualizarExt={actualizarExt}
+              actualizarBorrador={actualizarBorrador}
             />
           </View>
           <VistaPreviaEnVivo apartado={abierto} borrador={borrador} />
@@ -347,17 +306,14 @@ export function PanelPreferencias() {
 /** Tarjetas de opciones de las subpantallas 17, 18, 19, 22, 24, 25 y Barrido (sin etiquetas "Categoría"). */
 function TarjetasCategoriasSubpantalla({
   apartado,
-  borrador,
-  actualizarBase,
-  actualizarExt,
+  borrador: p,
+  actualizarBorrador,
 }: {
   apartado: ApartadoPreferencias16;
-  borrador: BorradorSubpantalla;
-  actualizarBase: (c: Partial<PreferenciasApariencia>) => void;
-  actualizarExt: (c: Partial<EstadoExtendidoPreferencias>) => void;
+  borrador: PreferenciasApariencia;
+  actualizarBorrador: (c: Partial<PreferenciasApariencia>) => void;
 }) {
   const e = useEstilos(crearEstilos);
-  const { base: p, ext } = borrador;
 
   switch (apartado) {
     // ---- Pantalla 17: Qué se ve en las tareas (17.html) ----
@@ -383,17 +339,19 @@ function TarjetasCategoriasSubpantalla({
               accessibilityLabel="Formato visual por defecto"
             >
               {formatos.map((fmt) => {
-                const activo = ext.formato17 === fmt;
+                const activo = p.formatoTarea === fmt;
                 return (
                   <BotonOpcionBoceto
                     key={fmt}
                     testID={`opcion-formato17-${fmt}`}
                     etiqueta={FORMATOS_VISUALES_17[fmt].etiqueta}
                     activo={activo}
-                    onPress={() => {
-                      actualizarExt({ formato17: fmt });
-                      actualizarBase({ canal: FORMATOS_VISUALES_17[fmt].canalAsociado });
-                    }}
+                    onPress={() =>
+                      actualizarBorrador({
+                        formatoTarea: fmt,
+                        canal: FORMATOS_VISUALES_17[fmt].canalAsociado,
+                      })
+                    }
                   />
                 );
               })}
@@ -415,8 +373,8 @@ function TarjetasCategoriasSubpantalla({
                   key={loc}
                   testID={`opcion-locucion17-${loc}`}
                   etiqueta={LOCUCIONES_AUDIO_17[loc].etiqueta}
-                  activo={ext.locucion17 === loc}
-                  onPress={() => actualizarExt({ locucion17: loc })}
+                  activo={p.locucion === loc}
+                  onPress={() => actualizarBorrador({ locucion: loc })}
                 />
               ))}
             </View>
@@ -452,7 +410,7 @@ function TarjetasCategoriasSubpantalla({
                   testID={`opcion-tema-${t.clave}`}
                   etiqueta={t.etiqueta}
                   activo={p.tema === t.clave}
-                  onPress={() => actualizarBase({ tema: t.clave })}
+                  onPress={() => actualizarBorrador({ tema: t.clave })}
                   insigniaIzquierda={
                     <View
                       style={[e.insigniaAa, { backgroundColor: t.fondo, borderColor: "#C9CED6" }]}
@@ -480,14 +438,14 @@ function TarjetasCategoriasSubpantalla({
                 etiqueta="Estándar (sin contraste extra)"
                 activo={!esAltoContraste}
                 onPress={() => {
-                  if (esAltoContraste) actualizarBase({ tema: "claro" });
+                  if (esAltoContraste) actualizarBorrador({ tema: "claro" });
                 }}
               />
               <BotonOpcionBoceto
                 testID="opcion-tema-altoContrasteClaro"
                 etiqueta="Contraste claro"
                 activo={p.tema === "altoContrasteClaro"}
-                onPress={() => actualizarBase({ tema: "altoContrasteClaro" })}
+                onPress={() => actualizarBorrador({ tema: "altoContrasteClaro" })}
                 insigniaIzquierda={
                   <View
                     style={[
@@ -503,7 +461,7 @@ function TarjetasCategoriasSubpantalla({
                 testID="opcion-tema-altoContrasteOscuro"
                 etiqueta="Contraste oscuro"
                 activo={p.tema === "altoContrasteOscuro"}
-                onPress={() => actualizarBase({ tema: "altoContrasteOscuro" })}
+                onPress={() => actualizarBorrador({ tema: "altoContrasteOscuro" })}
                 insigniaIzquierda={
                   <View
                     style={[e.insigniaAa, { backgroundColor: "#000000", borderColor: "#000000" }]}
@@ -538,7 +496,7 @@ function TarjetasCategoriasSubpantalla({
                   testID={`opcion-fuente-${fuente}`}
                   etiqueta={FUENTES[fuente].etiquetaBoceto}
                   activo={p.fuente === fuente}
-                  onPress={() => actualizarBase({ fuente })}
+                  onPress={() => actualizarBorrador({ fuente })}
                   insigniaIzquierda={
                     <Text
                       style={{
@@ -572,7 +530,7 @@ function TarjetasCategoriasSubpantalla({
                   testID={`opcion-tamanoLetra-${tam}`}
                   etiqueta={TAMANOS_LETRA[tam].etiqueta}
                   activo={p.tamanoLetra === tam}
-                  onPress={() => actualizarBase({ tamanoLetra: tam })}
+                  onPress={() => actualizarBorrador({ tamanoLetra: tam })}
                 />
               ))}
             </View>
@@ -594,7 +552,7 @@ function TarjetasCategoriasSubpantalla({
                   testID={`opcion-caja-${caja}`}
                   etiqueta={CAJAS_LETRA[caja].etiquetaBoceto}
                   activo={p.caja === caja}
-                  onPress={() => actualizarBase({ caja })}
+                  onPress={() => actualizarBorrador({ caja })}
                   forzarTextoTalCual
                 />
               ))}
@@ -623,7 +581,7 @@ function TarjetasCategoriasSubpantalla({
                   testID={`opcion-tamanoBoton-${tam}`}
                   etiqueta={TAMANOS_BOTON[tam].etiquetaBoceto}
                   activo={p.tamanoBoton === tam}
-                  onPress={() => actualizarBase({ tamanoBoton: tam })}
+                  onPress={() => actualizarBorrador({ tamanoBoton: tam })}
                 />
               ))}
             </View>
@@ -645,7 +603,7 @@ function TarjetasCategoriasSubpantalla({
                   testID={`opcion-forma-${forma}`}
                   etiqueta={FORMAS_BOTON[forma].etiqueta}
                   activo={p.forma === forma}
-                  onPress={() => actualizarBase({ forma })}
+                  onPress={() => actualizarBorrador({ forma })}
                 />
               ))}
             </View>
@@ -653,15 +611,10 @@ function TarjetasCategoriasSubpantalla({
         </View>
       );
 
-    // ---- Pantalla 24: Agenda (vistas y tareas visibles) con stepper + y − (24.html) ----
+    // ---- Pantalla 24: Agenda (vistas y tareas visibles) unificada con HU-17 y SCRUM-251 (24.html) ----
     case "agenda24": {
-      const idxActual = ORDEN_TAREAS_VISIBLES.indexOf(p.tareasVisibles);
-      const enMinimo = idxActual <= 0;
-      const enMaximo = idxActual >= ORDEN_TAREAS_VISIBLES.length - 1;
-      const cambiarPasoTareas = (delta: -1 | 1) => {
-        const nuevoIdx = Math.max(0, Math.min(ORDEN_TAREAS_VISIBLES.length - 1, idxActual + delta));
-        actualizarBase({ tareasVisibles: ORDEN_TAREAS_VISIBLES[nuevoIdx] });
-      };
+      const enMinimo = p.tareasVisibles === ORDEN_TAREAS_VISIBLES[0];
+      const enMaximo = p.tareasVisibles === ORDEN_TAREAS_VISIBLES[ORDEN_TAREAS_VISIBLES.length - 1];
 
       return (
         <View style={e.contenedorTarjetasSub} testID="opciones-agenda24">
@@ -677,13 +630,13 @@ function TarjetasCategoriasSubpantalla({
               accessibilityRole="radiogroup"
               accessibilityLabel="Pantalla inicial tras login"
             >
-              {(["hoy", "semana"] as DestinoLoginAgenda24[]).map((dest) => (
+              {ORDEN_VISTAS_AGENDA.map((vista) => (
                 <BotonOpcionBoceto
-                  key={dest}
-                  testID={`opcion-destinoLogin24-${dest}`}
-                  etiqueta={DESTINOS_LOGIN_AGENDA_24[dest].etiqueta}
-                  activo={ext.destinoLogin24 === dest}
-                  onPress={() => actualizarExt({ destinoLogin24: dest })}
+                  key={vista}
+                  testID={`vista-agenda-${vista}`}
+                  etiqueta={VISTAS_AGENDA[vista].etiquetaBoceto}
+                  activo={p.vistaAgenda === vista}
+                  onPress={() => actualizarBorrador({ vistaAgenda: vista })}
                 />
               ))}
             </View>
@@ -696,30 +649,38 @@ function TarjetasCategoriasSubpantalla({
             </View>
             <View style={e.filaStepper24}>
               <Pressable
-                testID="btn-tareas-visibles-dec"
+                testID="btn-menos-tareas"
                 accessibilityRole="button"
-                accessibilityLabel="Menos tareas visibles"
+                accessibilityLabel="Menos tareas"
                 accessibilityState={{ disabled: enMinimo }}
                 disabled={enMinimo}
-                onPress={() => cambiarPasoTareas(-1)}
+                onPress={() =>
+                  actualizarBorrador({
+                    tareasVisibles: moverTareasVisibles(p.tareasVisibles, -1),
+                  })
+                }
                 style={[e.botonStepperNeutro, enMinimo && e.botonStepperApagado]}
               >
                 <Text style={e.textoStepperNeutro}>−</Text>
               </Pressable>
 
-              <View testID="valor-tareas-visibles-24" style={e.campoValorStepper24}>
+              <View testID="valor-tareas-visibles" style={e.campoValorStepper24}>
                 <Text style={e.textoValorStepper24}>
                   {TAREAS_VISIBLES[p.tareasVisibles].etiquetaStepper}
                 </Text>
               </View>
 
               <Pressable
-                testID="btn-tareas-visibles-inc"
+                testID="btn-mas-tareas"
                 accessibilityRole="button"
-                accessibilityLabel="Más tareas visibles"
+                accessibilityLabel="Más tareas"
                 accessibilityState={{ disabled: enMaximo }}
                 disabled={enMaximo}
-                onPress={() => cambiarPasoTareas(1)}
+                onPress={() =>
+                  actualizarBorrador({
+                    tareasVisibles: moverTareasVisibles(p.tareasVisibles, 1),
+                  })
+                }
                 style={[e.botonStepperPrimario, enMaximo && e.botonStepperApagado]}
               >
                 <Text style={e.textoStepperPrimario}>+</Text>
@@ -752,7 +713,7 @@ function TarjetasCategoriasSubpantalla({
                   testID={`opcion-reloj25-${r}`}
                   etiqueta={VER_RELOJ[r].etiquetaBoceto}
                   activo={p.reloj === r}
-                  onPress={() => actualizarBase({ reloj: r })}
+                  onPress={() => actualizarBorrador({ reloj: r })}
                 />
               ))}
             </View>
@@ -773,8 +734,8 @@ function TarjetasCategoriasSubpantalla({
                   key={av}
                   testID={`opcion-aviso25-${av}`}
                   etiqueta={AVISO_PREVIO_25[av].etiqueta}
-                  activo={ext.avisoPrevio25 === av}
-                  onPress={() => actualizarExt({ avisoPrevio25: av })}
+                  activo={p.avisoPrevio === av}
+                  onPress={() => actualizarBorrador({ avisoPrevio: av })}
                 />
               ))}
             </View>
@@ -784,14 +745,14 @@ function TarjetasCategoriasSubpantalla({
 
     // ---- Pantalla extra: Barrido por pulsadores (HU-05 / SCRUM-119) ----
     case "barridoPulsadores": {
-      const idxVel = VELOCIDADES_BARRIDO_MS.indexOf(ext.intervaloBarridoMs);
+      const idxVel = VELOCIDADES_BARRIDO_MS.indexOf(p.intervaloBarridoMs);
       const enMinVel = idxVel <= 0;
       const enMaxVel = idxVel >= VELOCIDADES_BARRIDO_MS.length - 1;
       const cambiarVel = (delta: -1 | 1) => {
         const nuevoIdx = Math.max(0, Math.min(VELOCIDADES_BARRIDO_MS.length - 1, idxVel + delta));
-        actualizarExt({ intervaloBarridoMs: VELOCIDADES_BARRIDO_MS[nuevoIdx] });
+        actualizarBorrador({ intervaloBarridoMs: VELOCIDADES_BARRIDO_MS[nuevoIdx] });
       };
-      const segundosTexto = `${(ext.intervaloBarridoMs / 1000).toFixed(1).replace(".", ",")} segundos`;
+      const segundosTexto = `${(p.intervaloBarridoMs / 1000).toFixed(1).replace(".", ",")} segundos`;
 
       return (
         <View style={e.contenedorTarjetasSub} testID="opciones-barridoPulsadores">
@@ -810,8 +771,8 @@ function TarjetasCategoriasSubpantalla({
                   key={modo}
                   testID={`opcion-barrido-${modo}`}
                   etiqueta={ETIQUETAS_MODO_BARRIDO[modo].titulo}
-                  activo={ext.modoBarrido === modo}
-                  onPress={() => actualizarExt({ modoBarrido: modo })}
+                  activo={p.modoBarrido === modo}
+                  onPress={() => actualizarBorrador({ modoBarrido: modo })}
                 />
               ))}
             </View>
@@ -827,6 +788,7 @@ function TarjetasCategoriasSubpantalla({
                 testID="btn-barrido-vel-dec"
                 accessibilityRole="button"
                 accessibilityLabel="Disminuir tiempo de barrido"
+                accessibilityState={{ disabled: enMinVel }}
                 disabled={enMinVel}
                 onPress={() => cambiarVel(-1)}
                 style={[e.botonStepperNeutro, enMinVel && e.botonStepperApagado]}
@@ -840,6 +802,7 @@ function TarjetasCategoriasSubpantalla({
                 testID="btn-barrido-vel-inc"
                 accessibilityRole="button"
                 accessibilityLabel="Aumentar tiempo de barrido"
+                accessibilityState={{ disabled: enMaxVel }}
                 disabled={enMaxVel}
                 onPress={() => cambiarVel(1)}
                 style={[e.botonStepperPrimario, enMaxVel && e.botonStepperApagado]}
@@ -860,22 +823,20 @@ function TarjetasCategoriasSubpantalla({
 
 /** Subpantalla 26: «Ayuda: qué puede pedir (máximo 3)» fiel a BOCETOS_NUEVOS/26.html. */
 function SubpantallaAyuda26({
-  borrador,
+  borrador: p,
   busqueda,
   onChangeBusqueda,
-  actualizarBase,
-  actualizarExt,
+  actualizarBorrador,
   alGuardar,
 }: {
-  borrador: BorradorSubpantalla;
+  borrador: PreferenciasApariencia;
   busqueda: string;
   onChangeBusqueda: (q: string) => void;
-  actualizarBase: (c: Partial<PreferenciasApariencia>) => void;
-  actualizarExt: (c: Partial<EstadoExtendidoPreferencias>) => void;
+  actualizarBorrador: (c: Partial<PreferenciasApariencia>) => void;
   alGuardar: () => void;
 }) {
   const e = useEstilos(crearEstilos);
-  const elegidas = borrador.ext.ayudas26;
+  const elegidas = p.ayudas;
   const filtro = busqueda.trim().toLowerCase();
   const catalogoFiltrado = CATALOGO_AYUDAS_26.filter(
     (item) => !filtro || item.etiqueta.toLowerCase().includes(filtro),
@@ -891,13 +852,13 @@ function SubpantallaAyuda26({
       if (elegidas.length >= 3) return; // Máximo 3 ayudas
       nuevas = [...elegidas, id];
     }
-    actualizarExt({ ayudas26: nuevas });
     const basicas: ClaveNecesidadBasica[] = CATALOGO_AYUDAS_26.filter(
       (c) => nuevas.includes(c.id) && c.claveBasica,
     ).map((c) => c.claveBasica!);
-    if (basicas.length > 0) {
-      actualizarBase({ necesidades: basicas });
-    }
+    actualizarBorrador({
+      ayudas: nuevas,
+      ...(basicas.length > 0 ? { necesidades: basicas } : {}),
+    });
   };
 
   return (
@@ -1138,13 +1099,12 @@ function MuestraApartado16({
 /** Columna derecha «Así se ve» (390 px) que refleja en vivo el borrador antes de guardar (RF3.15). */
 function VistaPreviaEnVivo({
   apartado,
-  borrador,
+  borrador: p,
 }: {
   apartado: ApartadoPreferencias16;
-  borrador: BorradorSubpantalla;
+  borrador: PreferenciasApariencia;
 }) {
   const e = useEstilos(crearEstilos);
-  const { base: p, ext } = borrador;
   const paletaBorrador = TEMAS[p.tema].paleta;
   const estilosBorrador = estilosApariencia(p);
   const verDibujo = p.canal === "ambos" || p.canal === "soloPictograma";
@@ -1168,7 +1128,7 @@ function VistaPreviaEnVivo({
         {apartado === "agenda24" ? (
           <BloquesMuestra24 tareasVisibles={p.tareasVisibles} />
         ) : apartado === "reloj25" ? (
-          <RelojMuestra25 verReloj={p.reloj} avisoPrevio={ext.avisoPrevio25} />
+          <RelojMuestra25 verReloj={p.reloj} avisoPrevio={p.avisoPrevio} />
         ) : (
           <>
             <View
@@ -1177,11 +1137,11 @@ function VistaPreviaEnVivo({
                 {
                   borderRadius: estilosBorrador.radioTarjeta,
                   borderColor:
-                    apartado === "barridoPulsadores" && ext.modoBarrido !== "desactivado"
+                    apartado === "barridoPulsadores" && p.modoBarrido !== "desactivado"
                       ? "#B42318"
                       : paletaBorrador.primario,
                   borderWidth:
-                    apartado === "barridoPulsadores" && ext.modoBarrido !== "desactivado" ? 5 : 3,
+                    apartado === "barridoPulsadores" && p.modoBarrido !== "desactivado" ? 5 : 3,
                   backgroundColor: paletaBorrador.superficie,
                 },
               ]}

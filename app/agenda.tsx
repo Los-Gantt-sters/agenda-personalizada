@@ -86,6 +86,11 @@ export default function PantallaAgenda() {
   const prefs = usePreferenciasOpcional();
   const tareasVisibles = TAREAS_VISIBLES[prefs?.preferencias.tareasVisibles ?? "tres"].maximo;
   const verReloj = (prefs?.preferencias.reloj ?? "si") === "si";
+  const avisoPrevioHabilitado = (prefs?.preferencias.avisoPrevio ?? "si") === "si";
+  const preferenciasAvisoEfectivas = useMemo<PreferenciasAviso>(
+    () => (!avisoPrevioHabilitado ? { ...preferenciasAviso, minutosAntes: 0 } : preferenciasAviso),
+    [avisoPrevioHabilitado, preferenciasAviso],
+  );
 
   // Permisos según quién mira la agenda (sin sesión de adulto, es el alumno).
   const rol = useSesionOpcional()?.sesion?.user.role ?? "estudiante";
@@ -99,7 +104,7 @@ export default function PantallaAgenda() {
       <AgendaDelDia
         repo={repo}
         estudianteId={estudianteId}
-        preferenciasAviso={preferenciasAviso}
+        preferenciasAviso={preferenciasAvisoEfectivas}
         tareasVisibles={tareasVisibles}
         soloMirar={soloMirar}
         verReloj={verReloj}

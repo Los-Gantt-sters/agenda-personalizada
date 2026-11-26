@@ -1,6 +1,11 @@
 // Opciones de apariencia que el tutor puede elegir para cada estudiante (T-04.3, HU-04 y SCRUM-240).
 // Los valores salen de BOCETOS_NUEVOS/definitiva_v2 (16.html, 16b.html, 17.html, 18.html, 19.html,
-// 22.html, 24.html, 25.html y 26.html).
+// 22.html, 24.html, 25.html y 26.html) y unifican vistaAgenda (HU-17) y moverTareasVisibles (SCRUM-251).
+import {
+  VELOCIDADES_BARRIDO_MS,
+  type IntervaloBarridoMs,
+  type ModoBarridoPulsador,
+} from "../componentes/barrido-pulsadores/tiposBarrido";
 import type { ClaveNecesidadBasica } from "../necesidades/tipos";
 import { NombreTema, TEMA_POR_DEFECTO, esNombreTema } from "../temas";
 
@@ -139,9 +144,12 @@ export const FORMATOS_VISUALES_17: Record<
 
 export type LocucionAudio17 = "automatica" | "manual";
 
-export const LOCUCIONES_AUDIO_17: Record<LocucionAudio17, { etiqueta: string }> = {
-  automatica: { etiqueta: "Automática al abrir" },
-  manual: { etiqueta: "Solo al tocar Audio" },
+export const LOCUCIONES_AUDIO_17: Record<
+  LocucionAudio17,
+  { etiqueta: string; resumenMenu: string }
+> = {
+  automatica: { etiqueta: "Automática al abrir", resumenMenu: "Audio auto" },
+  manual: { etiqueta: "Solo al tocar Audio", resumenMenu: "Audio manual" },
 };
 
 // ---- Letra escolar: cada centro enseña a leer en MAYÚSCULAS o en minúsculas ----
@@ -165,7 +173,7 @@ export const CAJAS_LETRA: Record<
   },
 };
 
-// ---- Tareas que se ven en «Hecho» y en «Después» (24.html: stepper + y − de 1 a 5 y «Todas») ----
+// ---- Tareas que se ven en «Hecho» y en «Después» (SCRUM-251 / boceto 24: + y − de 1 a 5 y «Todas») ----
 export type TareasVisibles = "una" | "dos" | "tres" | "cuatro" | "cinco" | "todas";
 
 export const TAREAS_VISIBLES: Record<
@@ -180,19 +188,24 @@ export const TAREAS_VISIBLES: Record<
   todas: { etiqueta: "Todas", etiquetaStepper: "Todas", resumenMenu: "Todas", maximo: 99 },
 };
 
-export type DestinoLoginAgenda24 = "hoy" | "semana";
+// ---- Pantalla al entrar: Hoy (06) o Semana completa (06b) (MOD HU-17 / SCRUM-125, bocetos 24 y 26d) ----
+export type VistaAgendaPref = "diaria" | "semanal";
 
-export const DESTINOS_LOGIN_AGENDA_24: Record<
-  DestinoLoginAgenda24,
-  { etiqueta: string; resumenMenu: string }
+export const VISTAS_AGENDA: Record<
+  VistaAgendaPref,
+  { etiqueta: string; etiquetaBoceto: string; resumenMenu: string; descripcion: string }
 > = {
-  hoy: {
-    etiqueta: "Ir directo a tareas de Hoy (06 · baja carga)",
+  diaria: {
+    etiqueta: "Ir directo a Hoy",
+    etiquetaBoceto: "Ir directo a tareas de Hoy (06 · baja carga)",
     resumenMenu: "Solo día",
+    descripcion: "Entra a las tareas de hoy (06). Menos cosas a la vista.",
   },
-  semana: {
-    etiqueta: "Ir a Semana completa (06b · visión global)",
+  semanal: {
+    etiqueta: "Semana completa",
+    etiquetaBoceto: "Ir a Semana completa (06b · visión global)",
     resumenMenu: "Día y semana",
+    descripcion: "Entra a la semana de lunes a domingo (06b) y puede ir a cada día.",
   },
 };
 
@@ -315,7 +328,16 @@ export const ORDEN_TAREAS_VISIBLES: TareasVisibles[] = [
   "cinco",
   "todas",
 ];
+
+/** Contador «−» / «+» de «Tareas que se ven» (SCRUM-251 / boceto 24): valor anterior o siguiente. */
+export function moverTareasVisibles(actual: TareasVisibles, delta: -1 | 1): TareasVisibles {
+  const i = ORDEN_TAREAS_VISIBLES.indexOf(actual);
+  const j = Math.min(ORDEN_TAREAS_VISIBLES.length - 1, Math.max(0, i + delta));
+  return ORDEN_TAREAS_VISIBLES[j];
+}
+
 export const ORDEN_VER_RELOJ: VerReloj[] = ["si", "no"];
+export const ORDEN_VISTAS_AGENDA: VistaAgendaPref[] = ["diaria", "semanal"];
 export const ORDEN_NECESIDADES_AYUDA: ClaveNecesidadBasica[] = ["bano", "agua", "descanso"];
 
 /** RI3.1: preferencias de visualización del estudiante que cubre este panel. */
@@ -326,14 +348,28 @@ export interface PreferenciasApariencia {
   tamanoBoton: TamanoBoton;
   forma: FormaBoton;
   canal: ModoCanal;
+  /** Pantalla 17: formato visual inicial al abrir cada paso. */
+  formatoTarea: FormatoVisualTarea17;
+  /** Pantalla 17: locución de audio automática al abrir o solo al tocar Audio. */
+  locucion: LocucionAudio17;
   /** Letra escolar: como se escribe o todo en mayúsculas. */
   caja: CajaLetra;
   /** Cuántas tareas se ven a cada lado de «Ahora». */
   tareasVisibles: TareasVisibles;
+  /** MOD HU-17 (Pantalla 24): pantalla al entrar tras login (Hoy 06 o Semana 06b). */
+  vistaAgenda: VistaAgendaPref;
   /** Si se ve el reloj mientras se hace una tarea. */
   reloj: VerReloj;
-  /** Necesidades que salen en «Ayuda» (al menos una; «Urgencia» sale siempre). */
+  /** Pantalla 25: si se muestra el aviso previo 5 minutos antes del cambio de actividad (08b). */
+  avisoPrevio: AvisoPrevio25;
+  /** Necesidades básicas que salen en «Ayuda» (al menos una; «Urgencia» sale siempre). */
   necesidades: ClaveNecesidadBasica[];
+  /** Pantalla 26: hasta 3 pictogramas de ayuda seleccionados del catálogo ARASAAC / Mi biblioteca. */
+  ayudas: string[];
+  /** HU-05: modo de interacción por pulsador (táctil directo, automático 1 pulsador, manual 2 pulsadores). */
+  modoBarrido: ModoBarridoPulsador;
+  /** HU-05: tiempo en cada botón durante el barrido automático (1200..3200 ms). */
+  intervaloBarridoMs: IntervaloBarridoMs;
 }
 
 /**
@@ -347,14 +383,27 @@ export const PREFERENCIAS_POR_DEFECTO: PreferenciasApariencia = {
   tamanoBoton: "L",
   forma: "round",
   canal: "ambos",
+  formatoTarea: "pictograma",
+  locucion: "automatica",
   caja: "normal",
   tareasVisibles: "tres",
+  vistaAgenda: "diaria",
   reloj: "si",
+  avisoPrevio: "si",
   necesidades: ["bano", "agua", "descanso"],
+  ayudas: ["bano", "agua", "descanso"],
+  modoBarrido: "desactivado",
+  intervaloBarridoMs: 1600,
 };
 
 const tiene = (objeto: object, clave: unknown): boolean =>
   typeof clave === "string" && Object.prototype.hasOwnProperty.call(objeto, clave);
+
+const MODOS_BARRIDO_VALIDOS: Record<ModoBarridoPulsador, true> = {
+  desactivado: true,
+  automatico: true,
+  manual: true,
+};
 
 /**
  * Convierte datos de origen dudoso (p. ej. el perfil guardado en la base de datos) en preferencias
@@ -362,8 +411,26 @@ const tiene = (objeto: object, clave: unknown): boolean =>
  */
 export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
   const d = PREFERENCIAS_POR_DEFECTO;
-  if (typeof crudo !== "object" || crudo === null) return { ...d };
+  if (typeof crudo !== "object" || crudo === null) {
+    return {
+      ...d,
+      necesidades: [...d.necesidades],
+      ayudas: [...d.ayudas],
+    };
+  }
   const c = crudo as Record<string, unknown>;
+  const canalNormalizado = tiene(MODOS_CANAL, c.canal) ? (c.canal as ModoCanal) : d.canal;
+  const formatoNormalizado = tiene(FORMATOS_VISUALES_17, c.formatoTarea)
+    ? (c.formatoTarea as FormatoVisualTarea17)
+    : canalNormalizado === "soloPictograma"
+      ? "soloPictograma"
+      : canalNormalizado === "soloTexto"
+        ? "textoFacil"
+        : d.formatoTarea;
+
+  const necesidadesNormalizadas = normalizarNecesidades(c.necesidades);
+  const ayudasNormalizadas = normalizarAyudas26(c.ayudas, necesidadesNormalizadas);
+
   return {
     tema: esNombreTema(c.tema) ? c.tema : d.tema,
     fuente: tiene(FUENTES, c.fuente) ? (c.fuente as FuenteLetra) : d.fuente,
@@ -374,13 +441,30 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
       ? (c.tamanoBoton as TamanoBoton)
       : d.tamanoBoton,
     forma: tiene(FORMAS_BOTON, c.forma) ? (c.forma as FormaBoton) : d.forma,
-    canal: tiene(MODOS_CANAL, c.canal) ? (c.canal as ModoCanal) : d.canal,
+    canal: canalNormalizado,
+    formatoTarea: formatoNormalizado,
+    locucion: tiene(LOCUCIONES_AUDIO_17, c.locucion) ? (c.locucion as LocucionAudio17) : d.locucion,
     caja: tiene(CAJAS_LETRA, c.caja) ? (c.caja as CajaLetra) : d.caja,
     tareasVisibles: tiene(TAREAS_VISIBLES, c.tareasVisibles)
       ? (c.tareasVisibles as TareasVisibles)
       : d.tareasVisibles,
+    vistaAgenda: tiene(VISTAS_AGENDA, c.vistaAgenda)
+      ? (c.vistaAgenda as VistaAgendaPref)
+      : d.vistaAgenda,
     reloj: tiene(VER_RELOJ, c.reloj) ? (c.reloj as VerReloj) : d.reloj,
-    necesidades: normalizarNecesidades(c.necesidades),
+    avisoPrevio: tiene(AVISO_PREVIO_25, c.avisoPrevio)
+      ? (c.avisoPrevio as AvisoPrevio25)
+      : d.avisoPrevio,
+    necesidades: necesidadesNormalizadas,
+    ayudas: ayudasNormalizadas,
+    modoBarrido: tiene(MODOS_BARRIDO_VALIDOS, c.modoBarrido)
+      ? (c.modoBarrido as ModoBarridoPulsador)
+      : d.modoBarrido,
+    intervaloBarridoMs:
+      typeof c.intervaloBarridoMs === "number" &&
+      VELOCIDADES_BARRIDO_MS.includes(c.intervaloBarridoMs as IntervaloBarridoMs)
+        ? (c.intervaloBarridoMs as IntervaloBarridoMs)
+        : d.intervaloBarridoMs,
   };
 }
 
@@ -389,4 +473,18 @@ function normalizarNecesidades(crudo: unknown): ClaveNecesidadBasica[] {
   const lista = Array.isArray(crudo) ? crudo : [];
   const validas = ORDEN_NECESIDADES_AYUDA.filter((n) => lista.includes(n));
   return validas.length > 0 ? validas : [...PREFERENCIAS_POR_DEFECTO.necesidades];
+}
+
+/** Ayudas del catálogo 26 (entre 1 y 3, sin repetir). */
+function normalizarAyudas26(crudo: unknown, fallbackBasicas: ClaveNecesidadBasica[]): string[] {
+  const idsCatalogo = new Set(CATALOGO_AYUDAS_26.map((item) => item.id));
+  const lista = Array.isArray(crudo) ? crudo : [];
+  const unicas: string[] = [];
+  for (const id of lista) {
+    if (typeof id === "string" && idsCatalogo.has(id) && !unicas.includes(id)) {
+      unicas.push(id);
+    }
+    if (unicas.length >= 3) break;
+  }
+  return unicas.length > 0 ? unicas : [...fallbackBasicas];
 }
