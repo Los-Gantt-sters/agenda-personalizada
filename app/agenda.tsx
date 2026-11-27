@@ -15,6 +15,7 @@
 // HU-16: con ?aviso=prueba la demo mueve las horas para que el aviso de «Reprografía» salga en menos
 // de un minuto; con ?aviso=visual el aviso es solo visual, sin sonido ni vibración (RNF4.3). Se
 // pueden juntar: ?aviso=prueba,visual.
+// HU-22: con ?planb=prueba la demo trae el Plan B activo (pantalla 08c).
 // T-08.6: con ?pendiente=tiempo o ?pendiente=profesor la demo trae una tarea a medias (pantalla 10b).
 import { useEffect, useMemo } from "react";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
@@ -24,6 +25,7 @@ import {
   agendaDemo,
   agendaDemoAviso,
   agendaDemoPendiente,
+  agendaDemoPlanB,
   ESTUDIANTE_DEMO,
   crearRepositorioMemoria,
   hoyISO,
@@ -46,10 +48,11 @@ const PANEL_DE: Partial<Record<UserRole, Href>> = {
 };
 
 export default function PantallaAgenda() {
-  const { estudiante, aviso, pendiente } = useLocalSearchParams<{
+  const { estudiante, aviso, pendiente, planb } = useLocalSearchParams<{
     estudiante?: string;
     aviso?: string;
     pendiente?: string;
+    planb?: string;
   }>();
   const opcionesAviso = (aviso ?? "").split(",");
   const avisoPrueba = opcionesAviso.includes("prueba");
@@ -72,10 +75,12 @@ export default function PantallaAgenda() {
         ? agendaDemoPendiente(hoyISO(), "tiempo_agotado")
         : pendiente === "profesor"
           ? agendaDemoPendiente(hoyISO(), "profesor")
-          : agendaDemo(hoyISO());
+          : planb === "prueba"
+            ? agendaDemoPlanB(hoyISO())
+            : agendaDemo(hoyISO());
     const demo = crearRepositorioMemoria(datos);
     return { repo: demo.repo, estudianteId: ESTUDIANTE_DEMO, tutorDemo: demo.tutor };
-  }, [estudiante, avisoPrueba, pendiente]);
+  }, [estudiante, avisoPrueba, pendiente, planb]);
 
   // Demo: desde la consola del navegador se puede hacer de tutor, p. ej. __tutorDemo.bloquear("e3").
   useEffect(() => {

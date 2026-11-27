@@ -54,6 +54,11 @@ export interface EntradaAgenda {
    * desde la pantalla 10b. Solo existe en el frontend hasta que lo guarde SCRUM-237.
    */
   pendiente_motivo?: MotivoPendiente | null;
+  /**
+   * HU-22: el Plan B está activo. `tarea` ya es la del Plan B y aquí queda la que tocaba, para
+   * enseñar el cambio en la pantalla 08c.
+   */
+  plan_b?: { original: Pick<Tarea, "titulo" | "pictograma_url" | "emoji"> } | null;
 }
 
 /** Resultado de repartir la secuencia del día en los tres bloques (RF4.2). */

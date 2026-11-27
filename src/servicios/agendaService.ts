@@ -9,7 +9,7 @@
 // pasos_tarea. Realtime se activa para ellas en 20261110100000_realtime_agenda.sql.
 // HU-08: las horas reales de «Empezar» y «Terminar» (RI6.1) se guardan en ejecuciones (SCRUM-76).
 import { supabase } from "../lib/supabaseClient";
-import type { EntradaAgenda, RepositorioAgenda } from "../componentes/agenda/tipos";
+import type { EntradaAgenda, RepositorioAgenda, Tarea } from "../componentes/agenda/tipos";
 import { normalizarHora } from "../componentes/agenda/logica";
 
 /** RF4.1: entradas del día del estudiante, ya en orden cronológico y sin las canceladas. */
@@ -23,16 +23,20 @@ export async function obtenerSecuenciaDia(
   });
   if (error) throw error;
   const filas = (data ?? []) as EntradaAgenda[];
-  const marcas = await obtenerMarcasTiempo(filas.map((f) => f.id));
-  return filas.map((fila) => ({
-    ...fila,
-    hora_inicio: normalizarHora(fila.hora_inicio),
-    tarea: { ...fila.tarea, pasos: fila.tarea?.pasos ?? [] },
-    // RI6.1: la hora real de inicio y de fin está en ejecuciones (secuencia_dia no la trae). Sin
-    // ella, al recargar después de «Empezar» se perderían el reloj y «Empezaste a las...».
-    inicio_real: fila.inicio_real ?? marcas.get(fila.id)?.inicio ?? null,
-    fin_real: fila.fin_real ?? marcas.get(fila.id)?.fin ?? null,
-  }));
+  const ids = filas.map((f) => f.id);
+  const marcas = await obtenerMarcasTiempo(ids);
+  const planesB = await obtenerPlanesB(filas);
+  return filas.map((fila) =>
+    aplicarPlanB(planesB.get(fila.id), {
+      ...fila,
+      hora_inicio: normalizarHora(fila.hora_inicio),
+      tarea: { ...fila.tarea, pasos: fila.tarea?.pasos ?? [] },
+      // RI6.1: la hora real de inicio y de fin está en ejecuciones (secuencia_dia no la trae). Sin
+      // ella, al recargar después de «Empezar» se perderían el reloj y «Empezaste a las...».
+      inicio_real: fila.inicio_real ?? marcas.get(fila.id)?.inicio ?? null,
+      fin_real: fila.fin_real ?? marcas.get(fila.id)?.fin ?? null,
+    }),
+  );
 }
 
 /**
@@ -60,6 +64,88 @@ async function obtenerMarcasTiempo(
     // Sin las horas reales la agenda sigue funcionando.
   }
   return marcas;
+}
+
+/**
+ * HU-22 (08c): tarea Plan B de las entradas que lo tienen activo. secuencia_dia no lo trae. El
+ * vínculo es el de la asignación y, si no tiene, el de la tarea. Si algo falla, la agenda sigue
+ * enseñando las tareas de siempre.
+ */
+async function obtenerPlanesB(filas: EntradaAgenda[]): Promise<Map<string, Tarea>> {
+  const planes = new Map<string, Tarea>();
+  if (filas.length === 0) return planes;
+  try {
+    const { data } = await supabase
+      .from("asignaciones")
+      .select("id, tarea_id, plan_b_activado, plan_b_tarea_id")
+      .in(
+        "id",
+        filas.map((f) => f.id),
+      );
+    const activas = (
+      (data ?? []) as {
+        id: string;
+        tarea_id: string;
+        plan_b_activado: boolean | null;
+        plan_b_tarea_id: string | null;
+      }[]
+    ).filter((a) => a.plan_b_activado);
+    if (activas.length === 0) return planes;
+
+    const sinVinculo = activas.filter((a) => !a.plan_b_tarea_id).map((a) => a.tarea_id);
+    const porDefecto = new Map<string, string>();
+    if (sinVinculo.length > 0) {
+      const { data: tareas } = await supabase
+        .from("tareas")
+        .select("id, plan_b_tarea_id")
+        .in("id", sinVinculo);
+      for (const t of (tareas ?? []) as { id: string; plan_b_tarea_id: string | null }[]) {
+        if (t.plan_b_tarea_id) porDefecto.set(t.id, t.plan_b_tarea_id);
+      }
+    }
+    const planDe = new Map<string, string>();
+    for (const a of activas) {
+      const plan = a.plan_b_tarea_id ?? porDefecto.get(a.tarea_id);
+      if (plan) planDe.set(a.id, plan);
+    }
+    const idsPlan = [...new Set(planDe.values())];
+    if (idsPlan.length === 0) return planes;
+
+    const [{ data: tareas }, { data: pasos }] = await Promise.all([
+      supabase.from("tareas").select("id, titulo, pictograma_url, descripcion").in("id", idsPlan),
+      supabase
+        .from("pasos_tarea")
+        .select("tarea_id, orden, texto, imagen_url")
+        .in("tarea_id", idsPlan)
+        .order("orden"),
+    ]);
+    const filasPasos = (pasos ?? []) as {
+      tarea_id: string;
+      orden: number;
+      texto: string;
+      imagen_url: string | null;
+    }[];
+    for (const [idEntrada, idPlan] of planDe) {
+      const tarea = ((tareas ?? []) as Tarea[]).find((t) => t.id === idPlan);
+      if (!tarea) continue;
+      planes.set(idEntrada, {
+        ...tarea,
+        pasos: filasPasos
+          .filter((p) => p.tarea_id === idPlan)
+          .map((p) => ({ orden: p.orden, texto: p.texto, pictograma_url: p.imagen_url })),
+      });
+    }
+  } catch {
+    // Sin el Plan B la agenda sigue funcionando.
+  }
+  return planes;
+}
+
+/** Cambia la tarea de la entrada por su Plan B y recuerda la que tocaba. */
+function aplicarPlanB(planB: Tarea | undefined, entrada: EntradaAgenda): EntradaAgenda {
+  if (!planB) return entrada;
+  const { titulo, pictograma_url } = entrada.tarea;
+  return { ...entrada, tarea: planB, plan_b: { original: { titulo, pictograma_url } } };
 }
 
 /**
