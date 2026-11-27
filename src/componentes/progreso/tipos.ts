@@ -79,6 +79,16 @@ export interface ProgresoAlumno {
   tareas: TareaProgreso[];
   /** Del más reciente al más antiguo. */
   avisos: AvisoProgreso[];
+  /**
+   * Tipo de menú del comedor (alumnos.dieta_comedor: normal, turmix, sin_gluten...). No lo da
+   * progreso_alumno: lo añade el servicio. null si no se ha podido leer.
+   */
+  dieta_comedor?: string | null;
+  /**
+   * Valoración docente: la última observación escrita en una ejecución del periodo
+   * (ejecuciones.observaciones). La añade el servicio; null si no hay ninguna.
+   */
+  valoracion?: { texto: string; fecha: string } | null;
 }
 
 /**

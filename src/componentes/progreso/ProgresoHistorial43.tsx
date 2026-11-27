@@ -339,12 +339,9 @@ function Indicadores({ datos, hoy }: { datos: ProgresoAlumno | null; hoy: string
           r ? `Completadas: ${r.hechas} de ${r.total}, el ${pct} %` : "Completadas"
         }
       >
-        <Texto style={e.rotulo}>Completadas en el periodo</Texto>
+        <Texto style={e.rotulo}>COMPLETADAS EN EL PERIODO</Texto>
         <Texto style={[e.valor, { color: colores.exito }]}>
           {r ? `${r.hechas} de ${r.total}` : "—"}
-        </Texto>
-        <Texto style={e.detalle} numberOfLines={1}>
-          {r && r.total ? `${pct} % de las tareas` : ""}
         </Texto>
       </View>
       <View
@@ -353,12 +350,9 @@ function Indicadores({ datos, hoy }: { datos: ProgresoAlumno | null; hoy: string
         accessible
         accessibilityLabel={datos ? `Pendientes: ${pendientes}. ${detalle}` : "Pendientes"}
       >
-        <Texto style={e.rotulo}>Pendientes</Texto>
+        <Texto style={e.rotulo}>PENDIENTES</Texto>
         <Texto style={[e.valor, { color: colores.aviso }]}>
           {datos ? String(pendientes) : "—"}
-        </Texto>
-        <Texto style={e.detalle} numberOfLines={1}>
-          {detalle}
         </Texto>
       </View>
       <View
@@ -371,12 +365,9 @@ function Indicadores({ datos, hoy }: { datos: ProgresoAlumno | null; hoy: string
             : "Emoción más frecuente: sin datos"
         }
       >
-        <Texto style={e.rotulo}>Emoción más frecuente</Texto>
+        <Texto style={e.rotulo}>EMOCIÓN MÁS FRECUENTE</Texto>
         <Texto style={e.valor} numberOfLines={1}>
           {emocion ? `${emocion.etiqueta} (${emocion.porcentaje} %)` : "Sin datos"}
-        </Texto>
-        <Texto style={e.detalle} numberOfLines={1}>
-          {emocion ? "De las veces que ha dicho cómo se siente" : "Aún no ha dicho cómo se siente"}
         </Texto>
       </View>
     </View>
@@ -479,10 +470,10 @@ function CabeceraTareas({ conDia }: { conDia: boolean }) {
   const ancho = (n: number) => ({ width: Math.round(n * escalaLetra) });
   return (
     <View style={[e.fila, e.filaCabecera]} accessibilityElementsHidden>
+      <Texto style={[e.celdaCabecera, e.colTarea]}>Tarea y ámbito</Texto>
       <Texto style={[e.celdaCabecera, ancho(conDia ? COLUMNAS.cuando : COLUMNAS.hora)]}>
         {conDia ? "Cuándo" : "Hora"}
       </Texto>
-      <Texto style={[e.celdaCabecera, e.colTarea]}>Tarea y ámbito</Texto>
       <Texto style={[e.celdaCabecera, ancho(COLUMNAS.estado)]}>Estado</Texto>
       <Texto style={[e.celdaCabecera, ancho(COLUMNAS.emocion)]}>Emoción</Texto>
     </View>
@@ -529,25 +520,25 @@ function FilaTarea({
       testID={`fila-tarea-${t.id}`}
       accessible
       accessibilityLabel={[
+        `${t.titulo}, ${ambito.toLowerCase()}${t.plan_b ? ", con Plan B" : ""}`,
         conDia ? textoDiaCorto(t.fecha) : null,
         hora,
-        `${t.titulo}, ${ambito.toLowerCase()}${t.plan_b ? ", con Plan B" : ""}`,
         estado.texto,
         emocion ? `se sintió ${emocion.toLowerCase()}` : null,
       ]
         .filter(Boolean)
         .join(". ")}
     >
+      <Texto style={[e.celda, e.colTarea]} numberOfLines={lineasTarea}>
+        <Texto style={e.titulo}>{t.titulo}</Texto>
+        {` · ${ambito}`}
+        {t.plan_b ? <Texto style={e.planB}>{" · Plan B"}</Texto> : null}
+      </Texto>
       <Texto
         style={[e.celda, e.celdaApoyo, ancho(conDia ? COLUMNAS.cuando : COLUMNAS.hora)]}
         numberOfLines={1}
       >
         {conDia ? `${textoDiaCorto(t.fecha)} · ${t.hora ?? "—"}` : (t.hora ?? "—")}
-      </Texto>
-      <Texto style={[e.celda, e.colTarea]} numberOfLines={lineasTarea}>
-        <Texto style={e.titulo}>{t.titulo}</Texto>
-        {` · ${ambito}`}
-        {t.plan_b ? <Texto style={e.planB}>{" · Plan B"}</Texto> : null}
       </Texto>
       <View style={ancho(COLUMNAS.estado)}>
         <Etiqueta texto={estado.texto} tono={estado.tono} />
@@ -632,7 +623,7 @@ function ResumenPeriodo({ datos, hoy }: { datos: ProgresoAlumno | null; hoy: str
         }}
       >
         <Texto style={e.tituloResumen} accessibilityRole="header">
-          Resumen del periodo
+          Resumen del periodo seleccionado
         </Texto>
         {tarjetas.map((t) => (
           <TarjetaDeResumen key={t.id} {...t} lineas={lineas} />
@@ -846,11 +837,6 @@ const crearEstilos = (c: Paleta) =>
       lineHeight: 32,
       fontWeight: "700",
       color: c.texto,
-    },
-    detalle: {
-      fontSize: 14,
-      lineHeight: 18,
-      color: c.textoSecundario,
     },
     zona: {
       flex: 1,

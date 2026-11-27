@@ -165,10 +165,15 @@ export function progresoDemo(
     tareas.push(...tareasDelDia(aISO(d), ahora));
     avisos.push(...avisosDelDia(aISO(d)));
   }
-  return consolidarProgreso(tareas, avisos, desde, hasta, {
-    id: ESTUDIANTE_DEMO_PROGRESO,
-    nombre: "Alejandro",
-  });
+  return {
+    ...consolidarProgreso(tareas, avisos, desde, hasta, {
+      id: ESTUDIANTE_DEMO_PROGRESO,
+      nombre: "Alejandro",
+    }),
+    // Lo mismo que el boceto 43.
+    dieta_comedor: "normal",
+    valoracion: tareas.length ? { texto: "Trabaja con mucha autonomía", fecha: ultimo } : null,
+  };
 }
 
 /** Repositorio de la demo: responde al momento con los datos de ejemplo. */

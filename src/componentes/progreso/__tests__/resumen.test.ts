@@ -147,8 +147,17 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     // La hora de la urgencia se cuenta en la hora local
     const d = new Date(urgencia.creado_en);
     const hora = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    expect(tarjetasResumen(conAvisos, HOY)).toEqual([
-      { id: "dias", tono: "exito", titulo: "Días con todo hecho:", texto: "0 de 2." },
+    expect(
+      tarjetasResumen(
+        {
+          ...conAvisos,
+          dieta_comedor: "normal",
+          valoracion: { texto: "Trabaja con mucha autonomía", fecha: "2026-11-24" },
+        },
+        HOY,
+      ),
+    ).toEqual([
+      { id: "comedor", tono: "primario", titulo: "Comedor:", texto: "menú normal." },
       {
         id: "plan-b",
         tono: "neutro",
@@ -156,16 +165,16 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
         texto: "Huerto (lunes 23).",
       },
       {
-        id: "ayuda",
-        tono: "primario",
-        titulo: "Ha pedido ayuda 2 veces:",
-        texto: "baño (1) y urgencia (1).",
+        id: "valoracion",
+        tono: "exito",
+        titulo: "Valoración docente:",
+        texto: "«Trabaja con mucha autonomía» (martes 24).",
       },
       {
-        id: "pendientes",
-        tono: "pendiente",
-        titulo: "2 tareas pendientes:",
-        texto: "Tarea 4 (lunes 23) y Tarea 6 (martes 24).",
+        id: "ayuda",
+        tono: "neutro",
+        titulo: "Ha pedido ayuda 2 veces:",
+        texto: "baño (1) y urgencia (1).",
       },
       {
         id: "urgencias",
@@ -176,23 +185,30 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
     ]);
   });
 
-  it("si no ha pasado nada, lo dice; en un día no hay tarjeta de días", () => {
+  it("como en el boceto 43: Comedor, Plan B y Valoración docente siempre, aunque no haya datos", () => {
     expect(
       tarjetasResumen(consolidarProgreso([tarea("1")], [], "2026-11-23", "2026-11-23"), HOY),
     ).toEqual([
-      { id: "plan-b", tono: "neutro", titulo: "Plan B:", texto: "no se ha activado." },
-      { id: "ayuda", tono: "primario", titulo: "Ayuda:", texto: "no ha pedido ayuda." },
+      { id: "comedor", tono: "primario", titulo: "Comedor:", texto: "no se sabe el menú." },
+      { id: "plan-b", tono: "neutro", titulo: "Plan B activado:", texto: "ninguna vez." },
+      {
+        id: "valoracion",
+        tono: "exito",
+        titulo: "Valoración docente:",
+        texto: "no hay ninguna en este periodo.",
+      },
     ]);
   });
 
-  it("nombra los días con todo hecho si son pocos", () => {
-    const semana = consolidarProgreso(
-      [tarea("1"), tarea("2", { fecha: "2026-11-24", estado: "pendiente" })],
-      [],
-      "2026-11-23",
-      "2026-11-29",
-    );
-    expect(tarjetasResumen(semana, HOY)[0].texto).toBe("1 de 2 (lunes 23).");
+  it("en un día, la valoración no repite la fecha; el menú sale con su nombre", () => {
+    const dia = {
+      ...consolidarProgreso([tarea("1")], [], "2026-11-23", "2026-11-23"),
+      dieta_comedor: "turmix",
+      valoracion: { texto: "Muy atento", fecha: "2026-11-23" },
+    };
+    const [comedor, , valoracion] = tarjetasResumen(dia, HOY);
+    expect(comedor.texto).toBe("menú triturado líquido (túrmix).");
+    expect(valoracion.texto).toBe("«Muy atento».");
   });
 
   it("si hay muchos Plan B o avisos, nombra unos pocos y dice cuántos más", () => {
@@ -203,7 +219,7 @@ describe("resumen de la pantalla 43 (HU-25)", () => {
       "2026-11-23",
       "2026-11-23",
     );
-    const [planB, ayuda] = tarjetasResumen(muchos, HOY);
+    const [, planB, , ayuda] = tarjetasResumen(muchos, HOY);
     expect(planB.titulo).toBe("Plan B activado 5 veces:");
     expect(planB.texto).toBe("A (09:00), B (09:00) y 3 más.");
     expect(ayuda.texto).toBe("baño (2), agua (1), descanso (1) y 1 más.");
