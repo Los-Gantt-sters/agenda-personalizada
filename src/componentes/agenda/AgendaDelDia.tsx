@@ -117,6 +117,7 @@ export function AgendaDelDia({
     confirmarFin,
     deshacerEmpezar,
     deshacerFin,
+    guardarEmocion,
   } = useAgendaDia(repo, estudianteId, fecha, {
     maxHecho: tareasVisibles,
     maxDespues: tareasVisibles,
@@ -127,8 +128,7 @@ export function AgendaDelDia({
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
   const abierta = entradas.find((e) => e.id === abiertaId) ?? null;
   // Tarea recién terminada mientras se enseña el refuerzo positivo.
-  // «¿Cómo te has sentido?»: la respuesta se entrega con onEmocion. Todavía no se guarda en el
-  // colegio ni se enseña: falta decidir con el centro quién la ve y dónde se guarda.
+  // «¿Cómo te has sentido?»: la respuesta se guarda con la tarea (HU-21) y se avisa con onEmocion.
   const [terminada, setTerminada] = useState<{ id: string; titulo: string } | null>(null);
   // Tarea empezada desde esta pantalla (para los adultos, que no entran directos a la tarea).
   const [empezadaAqui, setEmpezadaAqui] = useState<string | null>(null);
@@ -226,7 +226,10 @@ export function AgendaDelDia({
           void deshacerFin(terminada.id);
           setTerminada(null);
         }}
-        onEmocion={(emocion) => onEmocion?.(terminada.id, emocion)}
+        onEmocion={(emocion) => {
+          void guardarEmocion(terminada.id, emocion);
+          onEmocion?.(terminada.id, emocion);
+        }}
       />
     );
   }
