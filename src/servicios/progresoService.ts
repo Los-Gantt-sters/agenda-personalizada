@@ -64,6 +64,10 @@ export async function obtenerProgresoAlumno(
   });
   if (error) throw new Error(mensajeDeError(error));
   const datos = (data ?? {}) as RespuestaCruda;
+  const [dieta_comedor, valoracion] = await Promise.all([
+    leerDietaComedor(estudianteId),
+    leerValoracion(estudianteId, desde, hasta),
+  ]);
   const { bloqueadas = 0, ...resumen } = datos.resumen ?? {};
   const juntos = { ...VACIO.resumen, ...resumen };
   return {
@@ -77,7 +81,58 @@ export async function obtenerProgresoAlumno(
       sin_terminar: juntos.sin_terminar + bloqueadas,
     },
     tareas: (datos.tareas ?? []).map(sinBloqueadas),
+    dieta_comedor,
+    valoracion,
   };
+}
+
+/**
+ * Tipo de menú del alumno para la tarjeta «Comedor» del resumen. Tutor y familia pueden leer la
+ * ficha de su alumno. Si falla, la tarjeta dice que no se sabe (no se rompe la pantalla).
+ */
+async function leerDietaComedor(estudianteId: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("alumnos")
+      .select("dieta_comedor")
+      .eq("id", estudianteId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return (data.dieta_comedor as string | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * «Valoración docente»: la última observación escrita en una tarea del periodo. Las ejecuciones las
+ * pueden leer los supervisores del alumno. Si no hay ninguna o falla, null.
+ */
+async function leerValoracion(
+  estudianteId: string,
+  desde: string,
+  hasta: string,
+): Promise<{ texto: string; fecha: string } | null> {
+  try {
+    const { data, error } = await supabase
+      .from("ejecuciones")
+      .select("observaciones, fin, inicio")
+      .eq("estudiante_id", estudianteId)
+      .gte("inicio", `${desde}T00:00:00`)
+      .lte("inicio", `${hasta}T23:59:59`)
+      .not("observaciones", "is", null)
+      .order("inicio", { ascending: false })
+      .limit(5);
+    if (error || !data) return null;
+    const fila = (data as { observaciones: string | null; inicio: string }[]).find(
+      (f) => (f.observaciones ?? "").trim().length > 0,
+    );
+    return fila
+      ? { texto: (fila.observaciones ?? "").trim(), fecha: fila.inicio.slice(0, 10) }
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Repositorio del progreso contra Supabase, para pasárselo a la pantalla. */

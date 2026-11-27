@@ -1,10 +1,17 @@
-import { render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
+import { ChipAlumno } from "../../../ui";
+import { TEMAS } from "../../../temas";
+import { AVISO_POR_DEFECTO } from "../../aviso-anticipado/tipos";
 import { AgendaDelDia } from "../AgendaDelDia";
 import { ESTUDIANTE_DEMO, agendaDemo, agendaDemoPendiente } from "../datosDemo";
 import { deshacerEmpezar, dividirEnBloques, retomarTarea } from "../logica";
 import { crearRepositorioMemoria } from "../repositorioMemoria";
 import type { EntradaAgenda } from "../tipos";
 import { hoyISO } from "../useAgendaDia";
+
+// Sin el aviso de 5 minutos (08b): taparía la agenda si se pasan las pruebas justo antes de una tarea.
+const SIN_AVISO = { ...AVISO_POR_DEFECTO, activado: false };
 
 // La agenda compila el reloj (SVG): sin caché de Jest (CI) tarda más de 5 s.
 jest.setTimeout(20_000);
@@ -67,7 +74,14 @@ describe("Pantalla 10b «Retomar tarea» (SCRUM-264: T-08.6)", () => {
   ) => {
     const { repo, tutor } = crearRepositorioMemoria(datos);
     const user = userEvent.setup();
-    await render(<AgendaDelDia repo={repo} estudianteId={ESTUDIANTE_DEMO} {...props} />);
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={repo}
+        estudianteId={ESTUDIANTE_DEMO}
+        {...props}
+      />,
+    );
     return { repo, tutor, user };
   };
 
@@ -84,6 +98,28 @@ describe("Pantalla 10b «Retomar tarea» (SCRUM-264: T-08.6)", () => {
     );
     expect(screen.getByText("Te quedó por terminar esta tarea")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retomar tarea" })).toBeTruthy();
+  });
+
+  it("como en el boceto 10b: píldora amarilla suave, «Retomar» a la derecha y el alumno arriba", async () => {
+    const { user } = await abrir(agendaDemoPendiente(hoyISO(), "profesor"), {
+      marco: { titulo: "Mi agenda", alumno: <ChipAlumno nombre="Alejandro" /> },
+    });
+    await user.press(await screen.findByTestId("mini-e2"));
+
+    const paleta = TEMAS.claro.paleta;
+    const pildora = StyleSheet.flatten(screen.getByTestId("motivo-pendiente").props.style);
+    expect(pildora).toMatchObject({
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: paleta.resalte,
+      backgroundColor: paleta.resalteSuave,
+    });
+    expect(screen.getByText("Marcada como pendiente por tu profesor")).toBeTruthy();
+
+    const boton = StyleSheet.flatten(screen.getByTestId("retomar-tarea").props.style);
+    expect(boton.alignSelf).toBe("flex-end");
+
+    expect(within(screen.getByTestId("chip-alumno")).getByText("Alejandro")).toBeTruthy();
   });
 
   it("dice el motivo real: no culpa al profesor si se acabó el tiempo", async () => {

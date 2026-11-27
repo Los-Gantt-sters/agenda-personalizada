@@ -5,6 +5,7 @@ export type { Apariencia } from "./apariencia";
 export { Texto } from "./Texto";
 export { LetraFija } from "./LetraFija";
 export { Icono } from "./Icono";
+export { ChipAlumno } from "./ChipAlumno";
 export type { IconoProps, NombreIcono } from "./Icono";
 export { LogoColegio } from "./LogoColegio";
 export { PICTOGRAMAS_INTERFAZ, PictogramaInterfaz } from "./PictogramaInterfaz";
