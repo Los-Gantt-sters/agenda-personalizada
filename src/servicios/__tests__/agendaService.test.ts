@@ -187,6 +187,38 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     expect(ejec.eq).toHaveBeenCalledWith("asignacion_id", "e1");
   });
 
+  it("HU-22: con el Plan B activo la entrada lleva la tarea Plan B y recuerda la que tocaba", async () => {
+    sb.rpc.mockResolvedValue({
+      data: [
+        {
+          id: "a1",
+          hora_inicio: "11:30:00",
+          tarea: { id: "recreo", titulo: "Recreo", pictograma_url: null },
+        },
+      ],
+      error: null,
+    });
+    sb.from.mockImplementation((t: string) =>
+      consultaFalsa({
+        error: null,
+        data:
+          t === "asignaciones"
+            ? [{ id: "a1", tarea_id: "recreo", plan_b_activado: true, plan_b_tarea_id: "juegos" }]
+            : t === "tareas"
+              ? [{ id: "juegos", titulo: "Juegos en clase", pictograma_url: null }]
+              : t === "pasos_tarea"
+                ? [{ tarea_id: "juegos", orden: 1, texto: "Elige un juego.", imagen_url: null }]
+                : [],
+      }),
+    );
+
+    const [entrada] = await obtenerSecuenciaDia("al1", "2026-11-26");
+
+    expect(entrada.tarea.titulo).toBe("Juegos en clase");
+    expect(entrada.tarea.pasos).toHaveLength(1);
+    expect(entrada.plan_b?.original.titulo).toBe("Recreo");
+  });
+
   it("SCRUM-136: guarda la emoción en la ejecución de la tarea", async () => {
     const ejec = consultaFalsa({ data: [{ id: "ej1" }], error: null });
     sb.from.mockReturnValue(ejec);

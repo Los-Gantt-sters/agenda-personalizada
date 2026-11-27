@@ -33,6 +33,11 @@ export interface ElegirAlumno26dProps {
   /** «Atrás» en la primera página (vuelve al panel del tutor). */
   alAtras: () => void;
   alCerrarSesion?: () => void;
+  /** La misma lista sirve para otras pantallas (Plan B de un alumno). */
+  titulo?: string;
+  pregunta?: string;
+  /** Lo que se lee tras el nombre en cada alumno («cambiar sus permisos»). */
+  accion?: string;
 }
 
 export function ElegirAlumno26d({
@@ -42,6 +47,9 @@ export function ElegirAlumno26d({
   alElegir,
   alAtras,
   alCerrarSesion,
+  titulo = "Permisos del alumno",
+  pregunta = "¿De qué alumno quieres cambiar los permisos?",
+  accion = "cambiar sus permisos",
 }: ElegirAlumno26dProps) {
   const { colores } = useApariencia();
   const e = useEstilos(crearEstilos);
@@ -64,7 +72,7 @@ export function ElegirAlumno26d({
 
   return (
     <MarcoPantalla
-      titulo="Permisos del alumno"
+      titulo={titulo}
       derecha={
         alCerrarSesion ? (
           <Pressable
@@ -87,7 +95,7 @@ export function ElegirAlumno26d({
     >
       <View style={e.contenedor}>
         <Texto style={e.pregunta} accessibilityRole="header">
-          ¿De qué alumno quieres cambiar los permisos?
+          {pregunta}
         </Texto>
         {mensaje ? (
           <Texto style={e.mensaje} testID="mensaje-elegir-alumno-26d">
@@ -103,7 +111,7 @@ export function ElegirAlumno26d({
                   key={alumno.id}
                   testID={`elegir-alumno-26d-${alumno.id}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`${completo}: cambiar sus permisos`}
+                  accessibilityLabel={`${completo}: ${accion}`}
                   onPress={() => alElegir(alumno)}
                   style={({ pressed }) => [e.tarjeta, pressed && e.pulsado]}
                 >

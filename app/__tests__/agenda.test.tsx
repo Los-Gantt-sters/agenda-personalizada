@@ -6,6 +6,7 @@ import {
   AgendaDelDia,
   ESTUDIANTE_DEMO,
   agendaDemo,
+  agendaDemoPlanB,
   crearRepositorioMemoria,
   hoyISO,
 } from "../../src/componentes/agenda";
@@ -226,6 +227,58 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
     await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
     expect(JSON.stringify(screen.toJSON())).not.toContain('"type":"TextInput"');
+  });
+});
+
+describe("Pantalla 08c: Plan B activo (HU-22 · SCRUM-140)", () => {
+  const conPlanB = () => crearRepositorioMemoria(agendaDemoPlanB(hoyISO())).repo;
+
+  it("enseña el cambio de actividad, con «Atrás» desactivado y un solo «Siguiente»", async () => {
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={conPlanB()}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
+
+    expect(await screen.findByTestId("pantalla-plan-b-activo")).toBeTruthy();
+    expect(screen.getByText("Hoy cambiamos de actividad")).toBeTruthy();
+    expect(screen.getByText("Plan B: Juegos en clase")).toBeTruthy();
+    expect(screen.getByTestId("btn-barra-atras").props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+    expect(screen.getAllByText("Siguiente")).toHaveLength(1);
+  });
+
+  it("«Siguiente» lleva a los pasos de la tarea nueva y no vuelve a salir", async () => {
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={conPlanB()}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
+    await screen.findByTestId("pantalla-plan-b-activo");
+
+    await userEvent.setup().press(screen.getByTestId("btn-barra-adelante"));
+
+    expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
+    expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Juegos en clase");
+    expect(screen.queryByTestId("pantalla-plan-b-activo")).toBeNull();
+  });
+
+  it("un adulto que mira la agenda no ve la transición", async () => {
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={conPlanB()}
+        estudianteId={ESTUDIANTE_DEMO}
+        abrirTareaEnCurso={false}
+      />,
+    );
+    await screen.findByTestId("bloque-ahora");
+    expect(screen.queryByTestId("pantalla-plan-b-activo")).toBeNull();
   });
 });
 

@@ -28,7 +28,7 @@ import { AgendaTresBloques } from "./AgendaTresBloques";
 import { PantallaTarea, type VistaTarea } from "./PantallaTarea";
 import { PantallaTareaHecha } from "./PantallaTareaHecha";
 import { PantallaTareaPendiente } from "./PantallaTareaPendiente";
-import { esPendienteRetomar } from "./logica";
+import { esPendienteRetomar, necesitaEmpezar } from "./logica";
 import { Pantalla } from "../../pantalla/Pantalla";
 import { Texto, useApariencia } from "../../ui";
 import { PantallaConfirmarFin } from "../ejecucion-tarea/PantallaConfirmarFin";
@@ -41,6 +41,7 @@ import {
 import { useAvisoAnticipado } from "../aviso-anticipado/useAvisoAnticipado";
 import { AvisoFlotante } from "../aviso-anticipado/AvisoFlotante";
 import { PantallaAviso } from "../aviso-anticipado/PantallaAviso";
+import { PantallaPlanBActivo } from "../ejecucion-tarea/PantallaPlanBActivo";
 import {
   AVISO_POR_DEFECTO,
   type EventoAviso,
@@ -140,6 +141,8 @@ export function AgendaDelDia({
   const [vistas, setVistas] = useState<Record<string, VistaTarea>>({});
   // Lo mismo para el detalle abierto, aparte: mirar los pasos no adelanta la tarea al empezarla.
   const [vistaDetalle, setVistaDetalle] = useState<VistaTarea | undefined>(undefined);
+  // HU-22: cambios a Plan B que el alumno ya ha visto en la 08c (por entrada y tarea nueva).
+  const [planesVistos, setPlanesVistos] = useState<string[]>([]);
   // Cerrar el aviso solo lo quita de la pantalla: la tarea en curso sigue igual.
   const { aviso, cerrar: cerrarAviso } = useAvisoAnticipado(entradas, preferenciasAviso, onAviso);
 
@@ -246,6 +249,29 @@ export function AgendaDelDia({
         onNo={() => setConfirmandoId(null)}
         conSonido={marco.conSonido}
         derecha={marco.alumno}
+      />
+    );
+  }
+
+  // ---- Pantalla 08c: el tutor ha activado el Plan B de la tarea de «Ahora» ----
+  const clavePlanB = ahora?.plan_b ? `${ahora.id}:${ahora.tarea.id}` : null;
+  if (abrirTareaEnCurso && !soloMirar && ahora?.plan_b && !planesVistos.includes(clavePlanB!)) {
+    return (
+      <PantallaPlanBActivo
+        key={`plan-b-${clavePlanB}`}
+        original={ahora.plan_b.original}
+        nueva={ahora.tarea}
+        conSonido={marco.conSonido}
+        onSiguiente={() => {
+          setPlanesVistos((vistos) => [...vistos, clavePlanB!]);
+          cerrarDetalle();
+          olvidarVista(ahora.id);
+          // «Siguiente» lleva a los pasos de la tarea nueva (07).
+          if (ahora.estado === "pendiente" && necesitaEmpezar(ahora)) {
+            setEmpezadaAqui(ahora.id);
+            void empezar(ahora.id);
+          }
+        }}
       />
     );
   }
