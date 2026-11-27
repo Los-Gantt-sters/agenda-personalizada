@@ -3,6 +3,7 @@
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import { BLOQUEO_AL_APARECER_MS } from "../../ejecucion-tarea/BotonAccionTarea";
+import { AVISO_POR_DEFECTO } from "../../aviso-anticipado/tipos";
 import { AgendaDelDia } from "../AgendaDelDia";
 import { ESTUDIANTE_DEMO, agendaDemo, agendaDemoPendiente } from "../datosDemo";
 import { crearRepositorioMemoria } from "../repositorioMemoria";
@@ -13,6 +14,9 @@ import { AgendaAdultoAlumno } from "../../tutor-familia/AgendaAdultoAlumno";
 import { VistaTareaFamiliaCasa42b } from "../../tutor-familia/VistaTareaFamiliaCasa42b";
 import { VistaTareaTutor41 } from "../../tutor-familia/VistaTareaTutor41";
 
+// Sin el aviso de 5 minutos (08b): taparía la agenda si se pasan las pruebas justo antes de una tarea.
+const SIN_AVISO = { ...AVISO_POR_DEFECTO, activado: false };
+
 // La agenda compila el reloj (SVG): sin caché de Jest (CI) tarda más de 5 s.
 jest.setTimeout(20_000);
 
@@ -22,7 +26,9 @@ jest.spyOn(servicioVoz, "leer").mockImplementation(() => {});
 const abrir = async (datos: EntradaAgenda[]) => {
   const { repo, tutor } = crearRepositorioMemoria(datos);
   const user = userEvent.setup();
-  await render(<AgendaDelDia repo={repo} estudianteId={ESTUDIANTE_DEMO} />);
+  await render(
+    <AgendaDelDia preferenciasAviso={SIN_AVISO} repo={repo} estudianteId={ESTUDIANTE_DEMO} />,
+  );
   return { repo, tutor, user };
 };
 
