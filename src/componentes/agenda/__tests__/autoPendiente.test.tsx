@@ -3,6 +3,7 @@
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import { BLOQUEO_AL_APARECER_MS } from "../../ejecucion-tarea/BotonAccionTarea";
+import { AVISO_POR_DEFECTO } from "../../aviso-anticipado/tipos";
 import { AgendaDelDia } from "../AgendaDelDia";
 import { ESTUDIANTE_DEMO, agendaDemo, agendaDemoPendiente } from "../datosDemo";
 import { crearRepositorioMemoria } from "../repositorioMemoria";
@@ -12,6 +13,10 @@ import * as servicioVoz from "../../../servicios/voz";
 import { AgendaAdultoAlumno } from "../../tutor-familia/AgendaAdultoAlumno";
 import { VistaTareaFamiliaCasa42b } from "../../tutor-familia/VistaTareaFamiliaCasa42b";
 import { VistaTareaTutor41 } from "../../tutor-familia/VistaTareaTutor41";
+import { TEMAS } from "../../../temas";
+
+// Sin el aviso de 5 minutos (08b): taparía la agenda si se pasan las pruebas justo antes de una tarea.
+const SIN_AVISO = { ...AVISO_POR_DEFECTO, activado: false };
 
 // La agenda compila el reloj (SVG): sin caché de Jest (CI) tarda más de 5 s.
 jest.setTimeout(20_000);
@@ -22,7 +27,9 @@ jest.spyOn(servicioVoz, "leer").mockImplementation(() => {});
 const abrir = async (datos: EntradaAgenda[]) => {
   const { repo, tutor } = crearRepositorioMemoria(datos);
   const user = userEvent.setup();
-  await render(<AgendaDelDia repo={repo} estudianteId={ESTUDIANTE_DEMO} />);
+  await render(
+    <AgendaDelDia preferenciasAviso={SIN_AVISO} repo={repo} estudianteId={ESTUDIANTE_DEMO} />,
+  );
   return { repo, tutor, user };
 };
 
@@ -43,6 +50,11 @@ describe("Agenda del alumno (06): tarea que pasa sola a Pendiente (SCRUM-266)", 
     expect(tarjeta.props.accessibilityLabel).toContain(
       "pendiente de retomar porque se acabó el tiempo",
     );
+    // Boceto 06: fondo amarillo suave y borde ámbar.
+    expect(StyleSheet.flatten(tarjeta.props.style)).toMatchObject({
+      borderColor: TEMAS.claro.paleta.aviso,
+      backgroundColor: TEMAS.claro.paleta.resalteSuave,
+    });
   });
 
   it("si la dejó pendiente el profesor, la tarjeta no habla del tiempo", async () => {
@@ -112,9 +124,16 @@ describe("Agendas de tutor (39) y familia (40) (SCRUM-266)", () => {
       await render(<AgendaAdultoAlumno rol={rol} alAbrirTarea={jest.fn()} />);
 
       const pendiente = screen.getByTestId("tarjeta-hecho-t-rincon-lectura");
-      expect(within(pendiente).getByText("Auto-pendiente (tiempo agotado)")).toBeTruthy();
+      // Como en los bocetos 39 y 40: con la hora y el lugar, y en amarillo suave con borde ámbar.
+      expect(
+        within(pendiente).getByText("9:15 · Auto-pendiente (tiempo agotado) · Clase"),
+      ).toBeTruthy();
       expect(within(pendiente).queryByText("!")).toBeNull();
-      expect(StyleSheet.flatten(pendiente.props.style).borderWidth).toBe(3);
+      expect(StyleSheet.flatten(pendiente.props.style)).toMatchObject({
+        borderWidth: 3,
+        borderColor: TEMAS.claro.paleta.aviso,
+        backgroundColor: TEMAS.claro.paleta.resalteSuave,
+      });
 
       const hecha = screen.getByTestId("tarjeta-hecho-t-asamblea");
       expect(within(hecha).queryByText("✓")).toBeNull();
@@ -137,5 +156,10 @@ describe("Aviso informativo de 41 y 42b (SCRUM-266)", () => {
       ),
     ).toBeTruthy();
     expect(within(aviso).queryByText(/⏱/)).toBeNull();
+    // Píldora amarilla suave como en los bocetos 41 y 42b.
+    expect(StyleSheet.flatten(aviso.props.style)).toMatchObject({
+      borderRadius: 20,
+      backgroundColor: TEMAS.claro.paleta.resalteSuave,
+    });
   });
 });

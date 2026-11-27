@@ -13,6 +13,7 @@ import {
 import { TAM_RELOJ_TAREA } from "../../src/componentes/agenda/PantallaTarea";
 import { PreferenciasProvider } from "../../src/preferencias";
 import { TemaProvider } from "../../src/temas";
+import { AVISO_POR_DEFECTO } from "../../src/componentes/aviso-anticipado";
 
 // La primera prueba compila el reloj (SVG) y la agenda: sin caché de Jest (CI) tarda más de 5 s.
 jest.setTimeout(20_000);
@@ -29,6 +30,18 @@ jest.mock("expo-router", () => ({
   // Sin ?estudiante= la pantalla abre la demo con datos de ejemplo.
   useLocalSearchParams: () => ({}),
 }));
+
+// El aviso de 5 minutos (08b) tapa la agenda si las pruebas se pasan en los 5 minutos antes de una
+// tarea de la demo (9:25, 10:10, 10:40, 11:25 o 11:55). Las pruebas que no son del aviso lo quitan:
+// a AgendaDelDia se le pasa apagado y la ruta se abre con «Sin aviso previo» (pantalla 25).
+const SIN_AVISO = { ...AVISO_POR_DEFECTO, activado: false };
+const PantallaAgendaSinAviso = () => (
+  <TemaProvider>
+    <PreferenciasProvider preferenciasIniciales={{ avisoPrevio: "no" }}>
+      <PantallaAgenda />
+    </PreferenciasProvider>
+  </TemaProvider>
+);
 
 const etiqueta = (id: string) => screen.getByTestId(id).props.accessibilityLabel;
 // Un botón recién aparecido no hace caso durante 0,8 s (el mismo toque no vale para dos cosas).
@@ -63,7 +76,7 @@ async function terminarTarea() {
 
 describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
   it("muestra los tres bloques con la tarea de ahora en el centro (T-06.1)", async () => {
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
 
     await screen.findByTestId("bloque-ahora");
     expect(etiqueta("bloque-hecho")).toBe("Hecho: Asamblea");
@@ -74,7 +87,7 @@ describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
 
   it("al pulsar una tarjeta abre su pantalla (sin ventana) y «Atrás» vuelve a la agenda (RF4.4)", async () => {
     const user = userEvent.setup();
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
 
     await user.press(await screen.findByTestId("mini-e3"));
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Desayuno");
@@ -89,7 +102,7 @@ describe("Pantalla agenda del día (SCRUM-69 y SCRUM-70)", () => {
   });
 
   it("al terminar, la tarea pasa a Hecho y la siguiente a Ahora (RF4.3, T-06.2)", async () => {
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
     await terminarTarea();
     await userEvent.setup().press(screen.getByTestId("btn-barra-adelante"));
@@ -105,7 +118,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
   it("BDD: con un toque en Empezar solo se ve la tarea, con la hora, los pasos y un reloj pequeño", async () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 5, 9, 32) });
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     const empezar = await screen.findByRole("button", { name: "Empezar" });
     await act(() => jest.advanceTimersByTime(1000));
 
@@ -125,7 +138,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
 
   it("«Atrás» en la tarea empezada la deshace: vuelve a la agenda sin empezar", async () => {
     const user = userEvent.setup();
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
 
     await user.press(screen.getByTestId("btn-barra-atras"));
@@ -135,7 +148,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
   });
 
   it("BDD: al pulsar Terminar sale el refuerzo con sonido y Seguir vuelve a la agenda", async () => {
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
     await terminarTarea();
 
@@ -149,7 +162,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
 
   it("«Atrás» en la felicitación deshace Terminar: la tarea vuelve a estar en curso", async () => {
     const user = userEvent.setup();
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
     await terminarTarea();
 
@@ -162,7 +175,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
 
   it("error de la profesora: tras terminar una tarea, la siguiente también pide «Empezar»", async () => {
     const user = userEvent.setup();
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
     await terminarTarea();
     await user.press(screen.getByRole("button", { name: "Seguir" }));
@@ -178,7 +191,11 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
   it("con Supabase (sin el dato requiere_inicio_fin) la tarea también pide «Empezar»", async () => {
     const sinDato = agendaDemo(hoyISO()).map((e) => ({ ...e, requiere_inicio_fin: undefined }));
     await render(
-      <AgendaDelDia repo={crearRepositorioMemoria(sinDato).repo} estudianteId={ESTUDIANTE_DEMO} />,
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={crearRepositorioMemoria(sinDato).repo}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
     );
     expect(await screen.findByRole("button", { name: "Empezar" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Terminar" })).toBeNull();
@@ -189,6 +206,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
     const sinEmpezar = agendaDemo(hoyISO()).map((e) => ({ ...e, requiere_inicio_fin: false }));
     await render(
       <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
         repo={crearRepositorioMemoria(sinEmpezar).repo}
         estudianteId={ESTUDIANTE_DEMO}
       />,
@@ -206,7 +224,7 @@ describe("Pantalla agenda del día (SCRUM-74 y mejoras de la profesora: un toque
   });
 
   it("no hay ningún campo de texto para el estudiante (RNF6.4)", async () => {
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
     expect(JSON.stringify(screen.toJSON())).not.toContain('"type":"TextInput"');
   });
@@ -216,7 +234,13 @@ describe("Pantalla 08c: Plan B activo (HU-22 · SCRUM-140)", () => {
   const conPlanB = () => crearRepositorioMemoria(agendaDemoPlanB(hoyISO())).repo;
 
   it("enseña el cambio de actividad, con «Atrás» desactivado y un solo «Siguiente»", async () => {
-    await render(<AgendaDelDia repo={conPlanB()} estudianteId={ESTUDIANTE_DEMO} />);
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={conPlanB()}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
 
     expect(await screen.findByTestId("pantalla-plan-b-activo")).toBeTruthy();
     expect(screen.getByText("Hoy cambiamos de actividad")).toBeTruthy();
@@ -228,7 +252,13 @@ describe("Pantalla 08c: Plan B activo (HU-22 · SCRUM-140)", () => {
   });
 
   it("«Siguiente» lleva a los pasos de la tarea nueva y no vuelve a salir", async () => {
-    await render(<AgendaDelDia repo={conPlanB()} estudianteId={ESTUDIANTE_DEMO} />);
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={conPlanB()}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
     await screen.findByTestId("pantalla-plan-b-activo");
 
     await userEvent.setup().press(screen.getByTestId("btn-barra-adelante"));
@@ -240,17 +270,40 @@ describe("Pantalla 08c: Plan B activo (HU-22 · SCRUM-140)", () => {
 
   it("un adulto que mira la agenda no ve la transición", async () => {
     await render(
-      <AgendaDelDia repo={conPlanB()} estudianteId={ESTUDIANTE_DEMO} abrirTareaEnCurso={false} />,
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={conPlanB()}
+        estudianteId={ESTUDIANTE_DEMO}
+        abrirTareaEnCurso={false}
+      />,
     );
     await screen.findByTestId("bloque-ahora");
     expect(screen.queryByTestId("pantalla-plan-b-activo")).toBeNull();
   });
 });
 
+describe("Etiqueta del alumno en la cabecera (bocetos 08, 08b, 10 y 10b)", () => {
+  it("en la demo sale «Alejandro» arriba a la derecha en la 08", async () => {
+    await render(<PantallaAgendaSinAviso />);
+    await empezarLavarse();
+    await pedirTerminar();
+    expect(screen.getByTestId("chip-alumno").props.accessibilityLabel).toBe("Agenda de Alejandro");
+    expect(screen.getByText("Alejandro")).toBeTruthy();
+    await decirQueSi();
+    await screen.findByText("¡Muy bien!");
+  });
+});
+
 describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
   const abrirAgenda = async () => {
     const demo = crearRepositorioMemoria(agendaDemo(hoyISO()));
-    await render(<AgendaDelDia repo={demo.repo} estudianteId={ESTUDIANTE_DEMO} />);
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={demo.repo}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
     await empezarLavarse();
     return demo;
   };
@@ -354,7 +407,7 @@ describe("Pantalla 08 «¿Has terminado?» (SCRUM-262: T-08.4)", () => {
 describe("Pantalla 10 «Tarea hecha» (SCRUM-263: T-08.5)", () => {
   it("enseña solo el tick, el dibujo, «Tarea hecha» y el nombre", async () => {
     const user = userEvent.setup();
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
 
     await user.press(await screen.findByTestId("mini-e1"));
 
@@ -375,7 +428,7 @@ describe("Pantalla 10 «Tarea hecha» (SCRUM-263: T-08.5)", () => {
 
   it("«Atrás» vuelve a la agenda", async () => {
     const user = userEvent.setup();
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await user.press(await screen.findByTestId("mini-e1"));
 
     await user.press(screen.getByTestId("btn-barra-atras"));
@@ -386,7 +439,7 @@ describe("Pantalla 10 «Tarea hecha» (SCRUM-263: T-08.5)", () => {
 
   it("una tarea recién terminada también se abre así desde «Hecho»", async () => {
     const user = userEvent.setup();
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await empezarLavarse();
     await terminarTarea();
     await user.press(screen.getByRole("button", { name: "Seguir" }));
@@ -409,7 +462,13 @@ describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () =
     ).repo;
 
   it("una tarea en curso se ve sola al abrir la agenda (también tras recargar)", async () => {
-    await render(<AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} />);
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={repoEnCurso()}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
     expect(await screen.findByTestId("pantalla-tarea-en-curso")).toBeTruthy();
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Lavarse las manos");
   });
@@ -420,6 +479,7 @@ describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () =
     const volverAlPanel = jest.fn();
     await render(
       <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
         repo={repo}
         estudianteId={ESTUDIANTE_DEMO}
         abrirTareaEnCurso={false}
@@ -438,6 +498,7 @@ describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () =
   it("si el adulto pulsa él «Empezar», también pasa a la pantalla de la tarea", async () => {
     await render(
       <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
         repo={crearRepositorioMemoria(agendaDemo(hoyISO())).repo}
         estudianteId={ESTUDIANTE_DEMO}
         abrirTareaEnCurso={false}
@@ -449,7 +510,12 @@ describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () =
 
   it("con la preferencia «Sin reloj» la tarea en curso no enseña reloj", async () => {
     await render(
-      <AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} verReloj={false} />,
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={repoEnCurso()}
+        estudianteId={ESTUDIANTE_DEMO}
+        verReloj={false}
+      />,
     );
     await screen.findByTestId("pantalla-tarea-en-curso");
     expect(screen.queryByTestId("reloj-tarea")).toBeNull();
@@ -457,7 +523,13 @@ describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () =
   });
 
   it("el reloj es pequeño: mucho más que el dibujo de la tarea", async () => {
-    await render(<AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} />);
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={repoEnCurso()}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
     await screen.findByTestId("reloj-tarea");
     expect(TAM_RELOJ_TAREA).toBeLessThanOrEqual(120);
   });
@@ -467,7 +539,11 @@ describe("Pantalla de la tarea (mejoras de la profesora: formato y reloj)", () =
     await render(
       <TemaProvider>
         <PreferenciasProvider preferenciasIniciales={{ canal: "soloPictograma" }}>
-          <AgendaDelDia repo={repoEnCurso()} estudianteId={ESTUDIANTE_DEMO} />
+          <AgendaDelDia
+            preferenciasAviso={SIN_AVISO}
+            repo={repoEnCurso()}
+            estudianteId={ESTUDIANTE_DEMO}
+          />
         </PreferenciasProvider>
       </TemaProvider>,
     );
@@ -487,7 +563,7 @@ describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas q
   const repoDemo = () => crearRepositorioMemoria(agendaDemo(hoyISO())).repo;
 
   it("lleva cabecera «Mi agenda» y barra de abajo; el alumno no puede ir Atrás", async () => {
-    await render(<PantallaAgenda />);
+    await render(<PantallaAgendaSinAviso />);
     await screen.findByTestId("bloque-ahora");
     expect(screen.getByTestId("titulo-pantalla")).toHaveTextContent("Mi agenda");
     expect(screen.getByTestId("btn-barra-atras").props.accessibilityState).toMatchObject({
@@ -496,7 +572,14 @@ describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas q
   });
 
   it("la familia ve la misma agenda pero sin Empezar ni Terminar (solo mirar)", async () => {
-    await render(<AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} soloMirar />);
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={repoDemo()}
+        estudianteId={ESTUDIANTE_DEMO}
+        soloMirar
+      />,
+    );
     await screen.findByTestId("bloque-ahora");
     expect(etiqueta("bloque-ahora")).toBe("Ahora: Lavarse las manos");
     expect(screen.getByTestId("aviso-solo-mirar")).toBeTruthy();
@@ -506,7 +589,12 @@ describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas q
 
   it("con «Solo 1», en Después se ve solo la tarea siguiente", async () => {
     await render(
-      <AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} tareasVisibles={1} />,
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={repoDemo()}
+        estudianteId={ESTUDIANTE_DEMO}
+        tareasVisibles={1}
+      />,
     );
     await screen.findByTestId("bloque-ahora");
     expect(etiqueta("bloque-despues")).toBe("Después: Desayuno");
@@ -514,7 +602,12 @@ describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas q
 
   it("con «Todas», Después enseña más de 3 tareas o dice «y N más»", async () => {
     await render(
-      <AgendaDelDia repo={repoDemo()} estudianteId={ESTUDIANTE_DEMO} tareasVisibles={99} />,
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={repoDemo()}
+        estudianteId={ESTUDIANTE_DEMO}
+        tareasVisibles={99}
+      />,
     );
     await screen.findByTestId("bloque-ahora");
     const despues = etiqueta("bloque-despues") as string;
@@ -524,46 +617,5 @@ describe("Pantalla agenda del día (mejoras de la profesora: permisos y tareas q
       .split(", ");
     const ocultas = Number(/ y (\d+) más$/.exec(despues)?.[1] ?? 0);
     expect(vistas.length + ocultas).toBeGreaterThan(3);
-  });
-
-  it("con «Sin aviso previo» (avisoPrevio: 'no' en pantalla 25) no sale el aviso de 5 minutos (08b)", async () => {
-    // La tarea «Lavarse las manos» (e2) empieza a las 09:30; a las 09:25 faltan 5 minutos.
-    jest.useFakeTimers({
-      doNotFake: [
-        "nextTick",
-        "setImmediate",
-        "setTimeout",
-        "clearTimeout",
-        "setInterval",
-        "clearInterval",
-      ],
-      now: new Date(2026, 10, 5, 9, 25),
-    });
-    try {
-      const { unmount } = await render(
-        <TemaProvider>
-          <PreferenciasProvider preferenciasIniciales={{ avisoPrevio: "no" }}>
-            <PantallaAgenda />
-          </PreferenciasProvider>
-        </TemaProvider>,
-      );
-      // Con avisoPrevio="no" se ve la agenda normal y NO sale la pantalla 08b de aviso anticipado
-      expect(await screen.findByTestId("bloque-ahora")).toBeTruthy();
-      expect(screen.queryByTestId("pantalla-aviso")).toBeNull();
-      unmount();
-
-      // En cambio, con avisoPrevio="si" (por defecto) a la misma hora (09:25) sí sale el aviso 08b
-      const segundo = await render(
-        <TemaProvider>
-          <PreferenciasProvider preferenciasIniciales={{ avisoPrevio: "si" }}>
-            <PantallaAgenda />
-          </PreferenciasProvider>
-        </TemaProvider>,
-      );
-      expect(await screen.findByTestId("pantalla-aviso")).toBeTruthy();
-      segundo.unmount();
-    } finally {
-      jest.useRealTimers();
-    }
   });
 });

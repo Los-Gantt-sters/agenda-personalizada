@@ -38,7 +38,8 @@ export type NombreIcono =
   | "abajo"
   | "arriba"
   | "siguiente"
-  | "repetir";
+  | "repetir"
+  | "retomar";
 
 const TRAZOS: Record<NombreIcono, React.ReactNode> = {
   llave: (
@@ -151,6 +152,8 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <Path d="M10 8l-4 4 4 4M6 12h10" />
     </>
   ),
+  // Flecha en círculo de «Retomar tarea» (pantalla 10b).
+  retomar: <Path d="M20 11a8 8 0 10-2.3 5.7M20 4v7h-7" />,
   reproducir: (
     <>
       <Rect x={2.5} y={5} width={19} height={14} rx={3} />

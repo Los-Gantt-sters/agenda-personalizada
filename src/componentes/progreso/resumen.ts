@@ -1,6 +1,7 @@
 // Textos e indicadores de la pantalla 43 (HU-25) a partir del progreso que da Supabase.
 // Todo es lógica sin pantalla, para poder probarla sola.
 import { EMOCIONES } from "../ejecucion-tarea/emociones";
+import { nombreTipoMenu } from "../administracion/menus";
 import { aISO, textoDiaSinMes } from "./periodos";
 import type { AmbitoTarea, ProgresoAlumno, TareaProgreso } from "./tipos";
 
@@ -135,7 +136,7 @@ const horaLocal = (d: Date) =>
 export type TonoTarjeta = "exito" | "neutro" | "primario" | "pendiente" | "peligro";
 
 export interface TarjetaResumen {
-  id: "dias" | "plan-b" | "ayuda" | "pendientes" | "urgencias";
+  id: "comedor" | "plan-b" | "valoracion" | "ayuda" | "urgencias";
   tono: TonoTarjeta;
   /** Lo primero, en negrita: «Plan B activado 1 vez:». */
   titulo: string;
@@ -144,30 +145,26 @@ export interface TarjetaResumen {
 }
 
 /**
- * Tarjetas del bloque «Resumen del periodo», de arriba abajo: días con todo hecho (si el periodo
- * tiene más de un día), Plan B, peticiones de ayuda y, solo si las hay, tareas pendientes y
- * urgencias sin atender. Como mucho 5, para que quepan sin scroll. `hoy` es AAAA-MM-DD.
+ * Tarjetas del bloque «Resumen del periodo seleccionado» (boceto 43), de arriba abajo: Comedor,
+ * Plan B activado y Valoración docente siempre; debajo, solo si las hay, las peticiones de ayuda y
+ * las urgencias sin atender. Como mucho 5, para que quepan sin scroll. Lo pendiente ya se ve en
+ * «PENDIENTES» y en la tabla, y los días completos en «Ver días». `hoy` es AAAA-MM-DD.
  */
-export function tarjetasResumen(p: ProgresoAlumno, hoy: string, maxDetalle = 2): TarjetaResumen[] {
+export function tarjetasResumen(p: ProgresoAlumno, _hoy: string, maxDetalle = 2): TarjetaResumen[] {
   const unDia = p.desde === p.hasta;
   // En un día basta con la hora; en una semana o un mes, el día.
   const cuandoTarea = (t: TareaProgreso) =>
     unDia ? (t.hora ?? "sin hora") : textoDiaSinMes(t.fecha);
   const tarjetas: TarjetaResumen[] = [];
 
-  if (!unDia && p.dias.length) {
-    const completos = p.dias.filter((d) => d.total > 0 && d.hechas === d.total);
-    const cuales =
-      completos.length && completos.length <= maxDetalle
-        ? ` (${unirConY(completos.map((d) => textoDiaSinMes(d.fecha)))})`
-        : "";
-    tarjetas.push({
-      id: "dias",
-      tono: "exito",
-      titulo: "Días con todo hecho:",
-      texto: `${completos.length} de ${p.dias.length}${cuales}.`,
-    });
-  }
+  tarjetas.push({
+    id: "comedor",
+    tono: "primario",
+    titulo: "Comedor:",
+    texto: p.dieta_comedor
+      ? `menú ${nombreTipoMenu(p.dieta_comedor).toLowerCase()}.`
+      : "no se sabe el menú.",
+  });
 
   const conPlanB = p.tareas.filter((t) => t.plan_b);
   tarjetas.push(
@@ -181,8 +178,18 @@ export function tarjetasResumen(p: ProgresoAlumno, hoy: string, maxDetalle = 2):
             maxDetalle,
           )}.`,
         }
-      : { id: "plan-b", tono: "neutro", titulo: "Plan B:", texto: "no se ha activado." },
+      : { id: "plan-b", tono: "neutro", titulo: "Plan B activado:", texto: "ninguna vez." },
   );
+
+  const v = p.valoracion;
+  tarjetas.push({
+    id: "valoracion",
+    tono: "exito",
+    titulo: "Valoración docente:",
+    texto: v
+      ? `«${v.texto}»${unDia ? "" : ` (${textoDiaSinMes(v.fecha)})`}.`
+      : "no hay ninguna en este periodo.",
+  });
 
   if (p.avisos.length) {
     const porNecesidad = new Map<string, number>();
@@ -193,30 +200,9 @@ export function tarjetasResumen(p: ProgresoAlumno, hoy: string, maxDetalle = 2):
       .map(([necesidad, n]) => `${etiquetaNecesidad(necesidad).toLowerCase()} (${n})`);
     tarjetas.push({
       id: "ayuda",
-      tono: "primario",
+      tono: "neutro",
       titulo: `Ha pedido ayuda ${vecesTexto(p.avisos.length)}:`,
       texto: `${algunos(grupos, 3)}.`,
-    });
-  } else {
-    tarjetas.push({
-      id: "ayuda",
-      tono: "primario",
-      titulo: "Ayuda:",
-      texto: "no ha pedido ayuda.",
-    });
-  }
-
-  const pendientes = p.tareas.filter((t) => esPendiente(t, hoy));
-  if (pendientes.length) {
-    tarjetas.push({
-      id: "pendientes",
-      tono: "pendiente",
-      titulo:
-        pendientes.length === 1 ? "1 tarea pendiente:" : `${pendientes.length} tareas pendientes:`,
-      texto: `${algunos(
-        pendientes.map((t) => `${t.titulo} (${cuandoTarea(t)})`),
-        maxDetalle,
-      )}.`,
     });
   }
 
