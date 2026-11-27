@@ -282,6 +282,40 @@ describe("Pantalla 08c: Plan B activo (HU-22 · SCRUM-140)", () => {
   });
 });
 
+describe("Cómo se ha sentido al terminar (HU-21: SCRUM-135 y SCRUM-136)", () => {
+  const terminarLavarse = async () => {
+    const demo = crearRepositorioMemoria(agendaDemo(hoyISO()));
+    await render(
+      <AgendaDelDia
+        preferenciasAviso={SIN_AVISO}
+        repo={demo.repo}
+        estudianteId={ESTUDIANTE_DEMO}
+      />,
+    );
+    await empezarLavarse();
+    await terminarTarea();
+    return demo;
+  };
+
+  it("al pulsar «Seguir» guarda la emoción elegida con esa tarea y vuelve a la agenda (09c)", async () => {
+    const demo = await terminarLavarse();
+    fireEvent.press(screen.getByTestId("emocion-tranquilo"));
+    expect(demo.emociones.size).toBe(0); // todavía puede cambiar de idea
+    await userEvent.setup().press(screen.getByRole("button", { name: "Seguir" }));
+
+    await screen.findByTestId("bloque-ahora");
+    await waitFor(() => expect(demo.emociones.get("e2")).toBe("tranquilo"));
+  });
+
+  it("se puede seguir sin contestar y no se guarda nada", async () => {
+    const demo = await terminarLavarse();
+    await userEvent.setup().press(screen.getByRole("button", { name: "Seguir" }));
+
+    await screen.findByTestId("bloque-ahora");
+    expect(demo.emociones.size).toBe(0);
+  });
+});
+
 describe("Etiqueta del alumno en la cabecera (bocetos 08, 08b, 10 y 10b)", () => {
   it("en la demo sale «Alejandro» arriba a la derecha en la 08", async () => {
     await render(<PantallaAgendaSinAviso />);

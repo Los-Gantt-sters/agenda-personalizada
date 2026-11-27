@@ -1,6 +1,7 @@
 import {
   desmarcarTareaEnCurso,
   desmarcarTareaHecha,
+  guardarEmocion,
   marcarTareaEnCurso,
   marcarTareaHecha,
   obtenerSecuenciaDia,
@@ -216,6 +217,41 @@ describe("agendaService (SCRUM-70: T-06.2 Supabase y Realtime)", () => {
     expect(entrada.tarea.titulo).toBe("Juegos en clase");
     expect(entrada.tarea.pasos).toHaveLength(1);
     expect(entrada.plan_b?.original.titulo).toBe("Recreo");
+  });
+
+  it("SCRUM-136: guarda la emoción en la ejecución de la tarea", async () => {
+    const ejec = consultaFalsa({ data: [{ id: "ej1" }], error: null });
+    sb.from.mockReturnValue(ejec);
+
+    await guardarEmocion("e1", "cansado");
+
+    expect(ejec.update).toHaveBeenCalledWith({ valoracion_emocional: "cansado" });
+    expect(ejec.eq).toHaveBeenCalledWith("asignacion_id", "e1");
+    expect(ejec.upsert).not.toHaveBeenCalled();
+  });
+
+  it("SCRUM-136: si la tarea no pedía «Empezar», crea la ejecución con la emoción", async () => {
+    const asig = consultaFalsa({ data: [{ estudiante_id: "al1" }], error: null });
+    const ejec = consultaFalsa({ data: [], error: null });
+    sb.from.mockImplementation((t: string) => (t === "asignaciones" ? asig : ejec));
+
+    await guardarEmocion("e1", "triste");
+
+    expect(ejec.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        asignacion_id: "e1",
+        estudiante_id: "al1",
+        valoracion_emocional: "triste",
+        inicio: expect.any(String),
+        fin: expect.any(String),
+      }),
+      { onConflict: "asignacion_id" },
+    );
+  });
+
+  it("SCRUM-136: si Supabase falla al guardar la emoción, se entera quien lo pide", async () => {
+    sb.from.mockReturnValue(consultaFalsa({ data: null, error: new Error("sin red") }));
+    await expect(guardarEmocion("e1", "contento")).rejects.toThrow("sin red");
   });
 
   it("se suscribe a Realtime y avisa con los cambios del tutor (RF4.7)", () => {
