@@ -1,10 +1,12 @@
 // Repositorio de la agenda en memoria (T-06.2, HU-06): se usa en la demo, sin Supabase, y en las
 // pruebas. `tutor` simula lo que haría el tutor desde su terminal (crear, modificar, bloquear, borrar).
 import type { EntradaAgenda, RepositorioAgenda } from "./tipos";
+import type { Emocion } from "../ejecucion-tarea/emociones";
 
 export function crearRepositorioMemoria(inicial: EntradaAgenda[]) {
   let entradas = inicial.map((e) => ({ ...e }));
   const oyentes = new Set<() => void>();
+  const emociones = new Map<string, Emocion>();
   const avisar = () => setTimeout(() => oyentes.forEach((f) => f()), 0);
 
   const repo: RepositorioAgenda = {
@@ -43,6 +45,9 @@ export function crearRepositorioMemoria(inicial: EntradaAgenda[]) {
       );
       avisar();
     },
+    async guardarEmocion(idEntrada, emocion) {
+      emociones.set(idEntrada, emocion);
+    },
     suscribir(_estudianteId, _fecha, alCambiar) {
       oyentes.add(alCambiar);
       return () => {
@@ -69,5 +74,5 @@ export function crearRepositorioMemoria(inicial: EntradaAgenda[]) {
     },
   };
 
-  return { repo, tutor };
+  return { repo, tutor, emociones };
 }

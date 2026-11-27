@@ -18,6 +18,7 @@ import {
   retomarTarea,
   type OpcionesBloques,
 } from "./logica";
+import type { Emocion } from "../ejecucion-tarea/emociones";
 
 export function hoyISO(d = new Date()): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -190,6 +191,19 @@ export function useAgendaDia(
     [guardar, repo],
   );
 
+  /** HU-21: «¿Cómo te has sentido?». Va detrás del envío de «Terminar» de esa tarea. */
+  const guardarEmocion = useCallback(
+    async (idEntrada: string, emocion: Emocion) => {
+      try {
+        await colas.current.get(idEntrada)?.catch(() => {});
+        await repo.guardarEmocion(idEntrada, emocion);
+      } catch (e: any) {
+        setErrorGuardado(e?.message ?? "No se ha podido guardar");
+      }
+    },
+    [repo],
+  );
+
   const maxHecho = opciones?.maxHecho;
   const maxDespues = opciones?.maxDespues;
   const bloques = useMemo(
@@ -208,6 +222,7 @@ export function useAgendaDia(
     confirmarFin,
     deshacerEmpezar,
     deshacerFin,
+    guardarEmocion,
     recargar,
   };
 }

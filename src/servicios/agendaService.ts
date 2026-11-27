@@ -11,6 +11,7 @@
 import { supabase } from "../lib/supabaseClient";
 import type { EntradaAgenda, RepositorioAgenda } from "../componentes/agenda/tipos";
 import { normalizarHora } from "../componentes/agenda/logica";
+import type { Emocion } from "../componentes/ejecucion-tarea/emociones";
 
 /** RF4.1: entradas del día del estudiante, ya en orden cronológico y sin las canceladas. */
 export async function obtenerSecuenciaDia(
@@ -152,6 +153,41 @@ export async function desmarcarTareaHecha(
   if (errorEjecucion) throw errorEjecucion;
 }
 
+/**
+ * HU-21 (09): guarda en ejecuciones cómo se ha sentido el alumno al terminar la tarea. Si la tarea
+ * no pedía «Empezar» (RF6.8) todavía no hay ejecución: se crea con la hora actual como inicio y fin,
+ * porque el inicio es obligatorio.
+ */
+export async function guardarEmocion(idEntrada: string, emocion: Emocion): Promise<void> {
+  const { data, error } = await supabase
+    .from("ejecuciones")
+    .update({ valoracion_emocional: emocion })
+    .eq("asignacion_id", idEntrada)
+    .select("id");
+  if (error) throw error;
+  if ((data as unknown[] | null)?.length) return;
+
+  const { data: asignaciones, error: errorAsignacion } = await supabase
+    .from("asignaciones")
+    .select("estudiante_id")
+    .eq("id", idEntrada);
+  if (errorAsignacion) throw errorAsignacion;
+  const fila = (asignaciones as { estudiante_id: string }[] | null)?.[0];
+  if (!fila) return; // el tutor ha borrado la asignación
+  const ahora = new Date().toISOString();
+  const { error: errorEjecucion } = await supabase.from("ejecuciones").upsert(
+    {
+      asignacion_id: idEntrada,
+      estudiante_id: fila.estudiante_id,
+      inicio: ahora,
+      fin: ahora,
+      valoracion_emocional: emocion,
+    },
+    { onConflict: "asignacion_id" },
+  );
+  if (errorEjecucion) throw errorEjecucion;
+}
+
 /** RF4.7: suscripción Realtime a la agenda del estudiante. Devuelve la función para darse de baja. */
 export function suscribirseAgenda(
   estudianteId: string,
@@ -205,5 +241,6 @@ export const repositorioAgendaSupabase: RepositorioAgenda = {
   marcarHecha: marcarTareaHecha,
   desmarcarEnCurso: desmarcarTareaEnCurso,
   desmarcarHecha: desmarcarTareaHecha,
+  guardarEmocion,
   suscribir: suscribirseAgenda,
 };
