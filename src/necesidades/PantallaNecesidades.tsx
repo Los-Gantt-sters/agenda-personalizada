@@ -10,7 +10,7 @@
 // - Baño, agua y descanso llevan los textos del boceto 14 («Quiero ir al baño»...).
 // - Al pedir algo, la 14b solo enseña un tick verde grande y «Solicitud enviada»; «Adelante» queda
 //   apagado y se vuelve con «Atrás».
-import React from "react";
+import React, { useState } from "react";
 import { Image, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 
 import { claveBasicaDeAyuda } from "../preferencias/ayudas";
@@ -40,6 +40,9 @@ export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
 }) => {
   // Los colores salen del tema activo (claro, oscuro, pastel o alto contraste).
   const { colores } = useApariencia();
+  // Ayudas cuya imagen no ha cargado (p. ej. la URL firmada de Mi biblioteca ha caducado): en vez
+  // de una tarjeta vacía se enseña su texto, aunque el canal sea solo pictograma.
+  const [sinImagen, setSinImagen] = useState<ReadonlySet<string>>(() => new Set());
   if (!visible) return null;
 
   const verDibujo = canal !== "soloTexto";
@@ -74,6 +77,7 @@ export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
           <View style={estilos.cuadriculaOpciones} testID="cuadricula-opciones-necesidades">
             {ayudas.map((ayuda) => {
               const texto = textoEnLa14(ayuda);
+              const imagenRota = sinImagen.has(ayuda.id);
               return (
                 <TouchableOpacity
                   key={ayuda.id}
@@ -88,7 +92,7 @@ export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
                     { backgroundColor: colores.superficie, borderColor: colores.primario },
                   ]}
                 >
-                  {verDibujo && (
+                  {verDibujo && !imagenRota && (
                     <View
                       style={[
                         estilos.contenedorPictograma,
@@ -103,10 +107,11 @@ export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
                         ]}
                         accessibilityIgnoresInvertColors
                         testID={`img-ayuda-${ayuda.id}`}
+                        onError={() => setSinImagen((antes) => new Set(antes).add(ayuda.id))}
                       />
                     </View>
                   )}
-                  {verTexto && (
+                  {(verTexto || imagenRota) && (
                     <Texto
                       style={[
                         estilos.etiquetaOpcion,
@@ -166,12 +171,16 @@ export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
           <View
             testID="tick-solicitud-enviada"
             style={[estilos.circuloTick, { backgroundColor: colores.exito }]}
-            accessible
-            accessibilityLabel="Hecho"
+            accessible={false}
           >
             <Icono nombre="check" color={textoSobre(colores.exito)} tam={84} grosor={4} />
           </View>
-          <Texto style={[estilos.textoSolicitudEnviada, { color: colorTexto }]}>
+          {/* Se anuncia sola al aparecer; el tick es decorativo y no se lee aparte. */}
+          <Texto
+            style={[estilos.textoSolicitudEnviada, { color: colorTexto }]}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
             Solicitud enviada
           </Texto>
         </View>

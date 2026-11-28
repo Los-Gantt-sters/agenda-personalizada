@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
 import { AYUDAS_POR_DEFECTO } from "../../preferencias/ayudas";
 import { PantallaNecesidades } from "../PantallaNecesidades";
@@ -82,6 +82,20 @@ describe("Pantalla 14 «¿Qué necesitas?» (MOD HU-18)", () => {
     );
   });
 
+  it("si la imagen de una ayuda no carga, enseña su texto en vez de una tarjeta vacía", async () => {
+    // Pasa con las de Mi biblioteca cuando caduca su URL firmada.
+    await montar({ ayudas: [PROPIA, CASA], canal: "soloPictograma" });
+    expect(screen.queryByText("Patio del cole")).toBeNull();
+
+    await fireEvent(screen.getByTestId("img-ayuda-propio:p1"), "error");
+
+    expect(screen.queryByTestId("img-ayuda-propio:p1")).toBeNull();
+    expect(screen.getByText("Patio del cole")).toBeTruthy();
+    // Las demás siguen igual.
+    expect(screen.getByTestId("img-ayuda-arasaac:6964")).toBeTruthy();
+    expect(screen.queryByText("Ir a casa")).toBeNull();
+  });
+
   it("pulsar una ayuda la envía completa; Urgencia envía 'urgencia'", async () => {
     const user = userEvent.setup();
     const alSolicitar = jest.fn();
@@ -125,6 +139,14 @@ describe("Pantalla 14b «Aviso enviado» (MOD HU-18)", () => {
     expect(screen.queryByText("Patio del cole")).toBeNull();
     expect(screen.queryByText(/Carmen/)).toBeNull();
     expect(screen.queryByTestId(/^opcion-/)).toBeNull();
+  });
+
+  it("el lector de pantalla anuncia «Solicitud enviada» y no lee el tick aparte", async () => {
+    await montar({ ayudas: [PROPIA], solicitudEnviada: PROPIA });
+    const aviso = screen.getByText("Solicitud enviada");
+    expect(aviso.props.accessibilityRole).toBe("alert");
+    expect(aviso.props.accessibilityLiveRegion).toBe("polite");
+    expect(screen.getByTestId("tick-solicitud-enviada").props.accessible).toBe(false);
   });
 
   it("también tras una Urgencia", async () => {
