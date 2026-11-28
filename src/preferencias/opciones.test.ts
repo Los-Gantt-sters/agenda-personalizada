@@ -194,6 +194,6 @@ describe("reloj, aviso previo 5m y necesidades de Ayuda (pantallas 25 y 26)", ()
       normalizarPreferencias({ ayudas: ["casa", "libro", "futbol", "ayuda"] }).ayudas.map(
         (a) => a.id,
       ),
-    ).toEqual(["arasaac:6964", "propio:libro", "arasaac:7137"]);
+    ).toEqual(["arasaac:6964", "arasaac:2450", "arasaac:7137"]);
   });
 });

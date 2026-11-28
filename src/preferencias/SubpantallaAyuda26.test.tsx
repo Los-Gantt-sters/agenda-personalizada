@@ -19,10 +19,15 @@ import {
 import { SubpantallaAyuda26 } from "./SubpantallaAyuda26";
 
 let mockRol: string | null = null;
+let mockUsuarioId = "u1";
 jest.mock("../sesion/SesionProvider", () => ({
   useSesionOpcional: () =>
     mockRol
-      ? { sesion: { user: { role: mockRol } }, cargando: false, cerrarSesion: jest.fn() }
+      ? {
+          sesion: { user: { id: mockUsuarioId, role: mockRol } },
+          cargando: false,
+          cerrarSesion: jest.fn(),
+        }
       : null,
 }));
 
@@ -62,7 +67,8 @@ async function montar({
 } = {}) {
   const actualizarBorrador = jest.fn<(c: Partial<PreferenciasApariencia>) => void>();
   const borrador: PreferenciasApariencia = { ...PREFERENCIAS_POR_DEFECTO, ayudas };
-  const vista = await render(
+  // Una función, para que cada pintado cree un elemento nuevo (React no repinta el mismo).
+  const pantalla = () => (
     <TemaProvider>
       <SubpantallaAyuda26
         borrador={borrador}
@@ -73,11 +79,16 @@ async function montar({
         clienteArasaac={cliente(buscar)}
         cargarBiblioteca={cargarBiblioteca}
       />
-    </TemaProvider>,
+    </TemaProvider>
   );
+  const vista = await render(pantalla());
   // Deja que termine la carga de Mi biblioteca antes de seguir (si no, se solapa con el siguiente act).
   await act(async () => {});
-  return { actualizarBorrador, cargarBiblioteca, unmount: vista.unmount };
+  const repintar = async () => {
+    await vista.rerender(pantalla());
+    await act(async () => {});
+  };
+  return { actualizarBorrador, cargarBiblioteca, repintar, unmount: vista.unmount };
 }
 
 describe("Subpantalla 26 con buscador real (MOD HU-18, SCRUM-269)", () => {
@@ -121,6 +132,52 @@ describe("Subpantalla 26 con buscador real (MOD HU-18, SCRUM-269)", () => {
     mockRol = "tutor_docente";
     const otra = await montar();
     expect(otra.cargarBiblioteca).toHaveBeenCalledWith("tutor");
+  });
+
+  it("si la sesión llega después de abrir la 26, vuelve a cargar Mi biblioteca", async () => {
+    mockRol = null; // la sesión todavía se está cargando
+    const { cargarBiblioteca, repintar } = await montar();
+    expect(cargarBiblioteca).toHaveBeenCalledTimes(1);
+
+    mockRol = "tutor_docente"; // llega la sesión del tutor: mismo rol («tutor»), otro usuario
+    await repintar();
+    expect(cargarBiblioteca).toHaveBeenCalledTimes(2);
+    expect(cargarBiblioteca).toHaveBeenLastCalledWith("tutor");
+  });
+
+  it("si Mi biblioteca falla, «Reintentar» la vuelve a cargar y quita el aviso", async () => {
+    const cargarBiblioteca = jest
+      .fn<Cargar>()
+      .mockRejectedValueOnce(new Error("sin red"))
+      .mockResolvedValueOnce([PROPIO]);
+    await montar({ busqueda: "patio", cargarBiblioteca });
+    expect(screen.getByTestId("error-biblioteca-26")).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Reintentar cargar Mi biblioteca" }));
+    await act(async () => {});
+
+    expect(cargarBiblioteca).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId("error-biblioteca-26")).toBeNull();
+    expect(screen.getByTestId("resultado-ayuda-propio:p1")).toBeTruthy();
+  });
+
+  it("aunque Mi biblioteca tenga muchos que coinciden, deja sitio para 4 de ARASAAC", async () => {
+    const propios = Array.from({ length: 8 }, (_, i) => ({ ...PROPIO, id: `p${i}` }));
+    const deArasaac = Array.from({ length: 6 }, (_, i) => ({ ...PATIO, id: 100 + i }));
+    await montar({
+      busqueda: "patio",
+      cargarBiblioteca: jest.fn<Cargar>(async () => propios),
+      buscar: jest.fn(async () => deArasaac) as ClienteArasaac["buscar"],
+    });
+    expect(await screen.findAllByTestId(/^resultado-ayuda-arasaac:/)).toHaveLength(4);
+    expect(screen.getAllByTestId(/^resultado-ayuda-propio:/)).toHaveLength(4);
+  });
+
+  it("si ARASAAC da pocos, Mi biblioteca ocupa los huecos que sobran", async () => {
+    const propios = Array.from({ length: 8 }, (_, i) => ({ ...PROPIO, id: `p${i}` }));
+    await montar({ busqueda: "patio", cargarBiblioteca: jest.fn<Cargar>(async () => propios) });
+    expect(await screen.findAllByTestId(/^resultado-ayuda-arasaac:/)).toHaveLength(1);
+    expect(screen.getAllByTestId(/^resultado-ayuda-propio:/)).toHaveLength(7);
   });
 
   it("elegir guarda la ayuda completa y actualiza las necesidades", async () => {
