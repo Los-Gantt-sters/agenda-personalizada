@@ -28,6 +28,7 @@ export function PantallaConfirmarFin({
   onSi,
   onNo,
   conSonido = false,
+  derecha,
 }: {
   tarea: Pick<Tarea, "titulo" | "pictograma_url" | "emoji">;
   /** «Sí, he terminado». */
@@ -35,6 +36,8 @@ export function PantallaConfirmarFin({
   /** «No, sigo» y «Atrás»: vuelve al último paso de la tarea. */
   onNo: () => void;
   conSonido?: boolean;
+  /** Arriba a la derecha: el nombre del alumno (como en los bocetos). */
+  derecha?: ReactNode;
 }) {
   const { colores, canal, escalaLetra: L } = useApariencia();
   const e = useEstilos(crearEstilos);
@@ -71,6 +74,7 @@ export function PantallaConfirmarFin({
   return (
     <Pantalla
       titulo={PREGUNTA}
+      derecha={derecha}
       simbolo={
         <View style={e.simbolo}>
           <Icono nombre="check" color={colores.primario} tam={26} />

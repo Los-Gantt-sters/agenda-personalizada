@@ -299,7 +299,12 @@ function Mini({
             ? { flexDirection: "row", minHeight: ALTO_COMPACTA * escala }
             : { flexDirection: "row", flex: 1, maxWidth: 360 },
         bloqueada && { borderStyle: "dashed", borderColor: colores.aviso },
-        porRetomar && { borderWidth: 3, borderColor: colores.aviso },
+        // Como en el boceto 06: fondo amarillo suave y borde ámbar.
+        porRetomar && {
+          borderWidth: 3,
+          borderColor: colores.aviso,
+          backgroundColor: colores.resalteSuave,
+        },
         pressed && estilos.pulsado,
       ]}
     >
@@ -336,6 +341,8 @@ function Mini({
               estilos.subTexto,
               { fontSize: (compacta ? 14 : 16) * escala },
               !enFila && estilos.centrado,
+              // Sobre el amarillo suave, el gris no llega al contraste: va en ámbar.
+              porRetomar && { color: colores.aviso, fontWeight: "700" },
             ]}
             // «Pendiente (tiempo agotado)» no cabe en una línea en la columna estrecha de «Hecho»; con
             // letra extra grande en la tableta necesita tres.

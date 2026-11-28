@@ -3,7 +3,7 @@
 // emergentes ni scroll. Se queda hasta pulsar «Vale» o «Atrás», y entonces AgendaDelDia devuelve al
 // alumno justo donde estaba. No hace caso durante un momento al aparecer: como llega sin avisar, un
 // toque que iba para otra cosa no puede quitarla sin haberla visto.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSenalAviso } from "./AvisoFlotante";
 import { AVISO_POR_DEFECTO, type EventoAviso, type PreferenciasAviso } from "./tipos";
@@ -25,6 +25,7 @@ export function PantallaAviso({
   onCerrar,
   conSonido = false,
   bloqueoAlAparecerMs = BLOQUEO_AL_APARECER_MS,
+  derecha,
 }: {
   aviso: EventoAviso;
   preferencias?: Pick<PreferenciasAviso, "vibracion">;
@@ -32,6 +33,8 @@ export function PantallaAviso({
   onCerrar: () => void;
   conSonido?: boolean;
   bloqueoAlAparecerMs?: number;
+  /** Arriba a la derecha: el nombre del alumno (como en los bocetos). */
+  derecha?: ReactNode;
 }) {
   useSenalAviso(aviso, preferencias.vibracion);
   const { colores, canal, escalaLetra: L } = useApariencia();
@@ -90,6 +93,7 @@ export function PantallaAviso({
   return (
     <Pantalla
       titulo="Pronto cambia la actividad"
+      derecha={derecha}
       simbolo={
         <View style={e.simbolo}>
           <Icono nombre="campana" color={colores.primario} tam={26} />

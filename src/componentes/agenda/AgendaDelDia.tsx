@@ -28,7 +28,7 @@ import { AgendaTresBloques } from "./AgendaTresBloques";
 import { PantallaTarea, type VistaTarea } from "./PantallaTarea";
 import { PantallaTareaHecha } from "./PantallaTareaHecha";
 import { PantallaTareaPendiente } from "./PantallaTareaPendiente";
-import { esPendienteRetomar } from "./logica";
+import { esPendienteRetomar, necesitaEmpezar } from "./logica";
 import { Pantalla } from "../../pantalla/Pantalla";
 import { Texto, useApariencia } from "../../ui";
 import { PantallaConfirmarFin } from "../ejecucion-tarea/PantallaConfirmarFin";
@@ -41,11 +41,13 @@ import {
 import { useAvisoAnticipado } from "../aviso-anticipado/useAvisoAnticipado";
 import { AvisoFlotante } from "../aviso-anticipado/AvisoFlotante";
 import { PantallaAviso } from "../aviso-anticipado/PantallaAviso";
+import { PantallaPlanBActivo } from "../ejecucion-tarea/PantallaPlanBActivo";
 import {
   AVISO_POR_DEFECTO,
   type EventoAviso,
   type PreferenciasAviso,
 } from "../aviso-anticipado/tipos";
+import type { FormatoMultimediaAlumno } from "../../tipos/permisosAlumno";
 
 /** Cabecera y «Atrás» de la pantalla de la agenda (cambian según quién la mira). */
 export interface MarcoAgenda {
@@ -56,6 +58,8 @@ export interface MarcoAgenda {
   alAtras?: (() => void) | null;
   /** Sonido suave en los botones de la barra (pantallas del alumno). */
   conSonido?: boolean;
+  /** Etiqueta del alumno arriba a la derecha en 08, 08b, 10 y 10b (p. ej. <ChipAlumno />). */
+  alumno?: ReactNode;
 }
 
 const MARCO_POR_DEFECTO: MarcoAgenda = { titulo: "Mi agenda", alAtras: null };
@@ -74,6 +78,7 @@ export function AgendaDelDia({
   verReloj = true,
   abrirTareaEnCurso = true,
   marco = MARCO_POR_DEFECTO,
+  formatosPermitidos,
 }: {
   repo: RepositorioAgenda;
   estudianteId: string;
@@ -100,6 +105,8 @@ export function AgendaDelDia({
   abrirTareaEnCurso?: boolean;
   /** Cabecera y «Atrás» de la agenda. */
   marco?: MarcoAgenda;
+  /** Formatos que el tutor deja ver en las tareas (pantalla 26d). Sin ellos se ve todo. */
+  formatosPermitidos?: readonly FormatoMultimediaAlumno[] | null;
 }) {
   // Se piden las que quiere ver el alumno; la vista enseña las que quepan en la pantalla.
   const {
@@ -113,6 +120,7 @@ export function AgendaDelDia({
     confirmarFin,
     deshacerEmpezar,
     deshacerFin,
+    guardarEmocion,
   } = useAgendaDia(repo, estudianteId, fecha, {
     maxHecho: tareasVisibles,
     maxDespues: tareasVisibles,
@@ -123,8 +131,7 @@ export function AgendaDelDia({
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
   const abierta = entradas.find((e) => e.id === abiertaId) ?? null;
   // Tarea recién terminada mientras se enseña el refuerzo positivo.
-  // «¿Cómo te has sentido?»: la respuesta se entrega con onEmocion. Todavía no se guarda en el
-  // colegio ni se enseña: falta decidir con el centro quién la ve y dónde se guarda.
+  // «¿Cómo te has sentido?»: la respuesta se guarda con la tarea (HU-21) y se avisa con onEmocion.
   const [terminada, setTerminada] = useState<{ id: string; titulo: string } | null>(null);
   // Tarea empezada desde esta pantalla (para los adultos, que no entran directos a la tarea).
   const [empezadaAqui, setEmpezadaAqui] = useState<string | null>(null);
@@ -134,6 +141,8 @@ export function AgendaDelDia({
   const [vistas, setVistas] = useState<Record<string, VistaTarea>>({});
   // Lo mismo para el detalle abierto, aparte: mirar los pasos no adelanta la tarea al empezarla.
   const [vistaDetalle, setVistaDetalle] = useState<VistaTarea | undefined>(undefined);
+  // HU-22: cambios a Plan B que el alumno ya ha visto en la 08c (por entrada y tarea nueva).
+  const [planesVistos, setPlanesVistos] = useState<string[]>([]);
   // Cerrar el aviso solo lo quita de la pantalla: la tarea en curso sigue igual.
   const { aviso, cerrar: cerrarAviso } = useAvisoAnticipado(entradas, preferenciasAviso, onAviso);
 
@@ -222,7 +231,10 @@ export function AgendaDelDia({
           void deshacerFin(terminada.id);
           setTerminada(null);
         }}
-        onEmocion={(emocion) => onEmocion?.(terminada.id, emocion)}
+        onEmocion={(emocion) => {
+          void guardarEmocion(terminada.id, emocion);
+          onEmocion?.(terminada.id, emocion);
+        }}
       />
     );
   }
@@ -236,6 +248,30 @@ export function AgendaDelDia({
         onSi={() => terminar(aConfirmar.id)}
         onNo={() => setConfirmandoId(null)}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
+      />
+    );
+  }
+
+  // ---- Pantalla 08c: el tutor ha activado el Plan B de la tarea de «Ahora» ----
+  const clavePlanB = ahora?.plan_b ? `${ahora.id}:${ahora.tarea.id}` : null;
+  if (abrirTareaEnCurso && !soloMirar && ahora?.plan_b && !planesVistos.includes(clavePlanB!)) {
+    return (
+      <PantallaPlanBActivo
+        key={`plan-b-${clavePlanB}`}
+        original={ahora.plan_b.original}
+        nueva={ahora.tarea}
+        conSonido={marco.conSonido}
+        onSiguiente={() => {
+          setPlanesVistos((vistos) => [...vistos, clavePlanB!]);
+          cerrarDetalle();
+          olvidarVista(ahora.id);
+          // «Siguiente» lleva a los pasos de la tarea nueva (07).
+          if (ahora.estado === "pendiente" && necesitaEmpezar(ahora)) {
+            setEmpezadaAqui(ahora.id);
+            void empezar(ahora.id);
+          }
+        }}
       />
     );
   }
@@ -249,6 +285,7 @@ export function AgendaDelDia({
         preferencias={preferenciasAviso}
         onCerrar={cerrarAviso}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
       />
     );
   }
@@ -261,6 +298,7 @@ export function AgendaDelDia({
         tarea={abierta.tarea}
         alAtras={cerrarDetalle}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
       />
     );
   }
@@ -292,6 +330,7 @@ export function AgendaDelDia({
         }
         alAtras={cerrarDetalle}
         conSonido={marco.conSonido}
+        derecha={marco.alumno}
       />
     );
   }
@@ -312,6 +351,7 @@ export function AgendaDelDia({
         pie={pieError}
         vistaInicial={vistaDetalle}
         onCambioVista={setVistaDetalle}
+        formatosPermitidos={formatosPermitidos}
       />
     );
   }
@@ -338,6 +378,7 @@ export function AgendaDelDia({
         pie={pieError}
         vistaInicial={vistas[enCurso.id]}
         onCambioVista={(vista) => setVistas((v) => ({ ...v, [enCurso.id]: vista }))}
+        formatosPermitidos={formatosPermitidos}
       />
     );
   }

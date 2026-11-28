@@ -59,17 +59,21 @@ for f in supabase/tests/supabase_minimo.sql \
          supabase/migrations/20261126000000_seguridad_perfiles_vinculos.sql \
          supabase/migrations/20261128000000_progreso_alumno.sql \
          supabase/migrations/20261128100000_agenda_compartida_y_franjas.sql \
+         supabase/migrations/20261129000000_emociones_feedback.sql \
+         supabase/migrations/20261130000000_plan_b_asignaciones.sql \
          supabase/tests/secuencia_dia_test.sql \
          supabase/tests/auto_pendiente_test.sql \
          supabase/tests/seguridad_perfiles_vinculos_test.sql \
          supabase/tests/progreso_alumno_test.sql \
-         supabase/tests/agenda_compartida_y_franjas_test.sql; do
+         supabase/tests/agenda_compartida_y_franjas_test.sql \
+         supabase/tests/emociones_feedback_test.sql \
+         supabase/tests/plan_b_test.sql; do
   docker exec -i pg-prueba psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" || break
 done
 docker stop pg-prueba
 ```
 
-Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan`, `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan` `NOTICE: progreso_alumno: las 13 comprobaciones pasan` y `NOTICE: agenda_compartida_y_franjas: las 14 comprobaciones pasan`.
+Debe terminar con `NOTICE: secuencia_dia: las 9 comprobaciones pasan`, `NOTICE: auto_pendiente: las 11 comprobaciones pasan`, `NOTICE: seguridad_perfiles_vinculos: las 13 comprobaciones pasan`, `NOTICE: progreso_alumno: las 13 comprobaciones pasan`, `NOTICE: agenda_compartida_y_franjas: las 14 comprobaciones pasan`, `NOTICE: SCRUM-136: OK` (el alumno guarda las 5 emociones y no se admite ninguna otra) y `NOTICE: plan_b: las 5 comprobaciones pasan`.
 
 ## Caducidad automática (SCRUM-265 · T-AUTO.1, SCRUM-237)
 
