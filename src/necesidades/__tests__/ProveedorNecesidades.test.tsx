@@ -4,6 +4,22 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { ProveedorNecesidades, useNecesidades } from "../ProveedorNecesidades";
 import { PreferenciasProvider } from "../../preferencias/PreferenciasProvider";
 import { TemaProvider } from "../../temas";
+import { AYUDAS_POR_DEFECTO } from "../../preferencias/ayudas";
+import type { AyudaElegida } from "../tipos";
+
+const [BANO] = AYUDAS_POR_DEFECTO;
+const CASA: AyudaElegida = {
+  id: "arasaac:6964",
+  texto: "Ir a casa",
+  imagenUrl: "https://x/6964.png",
+  origen: "arasaac",
+};
+const PROPIA: AyudaElegida = {
+  id: "propio:p1",
+  texto: "Patio del cole",
+  imagenUrl: "https://y/p1.png",
+  origen: "biblioteca",
+};
 
 // Con «¿Qué necesitas?» encima, lo de debajo queda oculto al lector de pantalla: las marcas de
 // prueba de la pantalla de debajo se leen incluyendo lo oculto.
@@ -66,34 +82,69 @@ describe("ProveedorNecesidades", () => {
     expect(screen.getByText("Necesito descansar")).toBeTruthy();
   });
 
-  it("permite seleccionar una necesidad básica, ver la confirmación y cerrar el modal", async () => {
-    const handleSolicitar = jest.fn();
+  it("al pedir una ayuda básica avisa con la ayuda completa y con su clave, y enseña la 14b", async () => {
+    const onSolicitarNecesidad = jest.fn();
+    const onSolicitarAyuda = jest.fn();
     const user = userEvent.setup();
 
     await render(
-      <ProveedorNecesidades onSolicitarNecesidad={handleSolicitar} nombreTutora="Carmen">
+      <ProveedorNecesidades
+        onSolicitarNecesidad={onSolicitarNecesidad}
+        onSolicitarAyuda={onSolicitarAyuda}
+      >
         <ComponenteHijo />
       </ProveedorNecesidades>,
     );
 
     await user.press(screen.getByRole("button", { name: /necesito ayuda/i }));
-    await user.press(screen.getByTestId("opcion-necesidad-bano"));
+    await user.press(screen.getByTestId(`opcion-ayuda-${BANO.id}`));
 
-    expect(handleSolicitar).toHaveBeenCalledWith("bano");
+    expect(onSolicitarAyuda).toHaveBeenCalledWith(BANO);
+    expect(onSolicitarNecesidad).toHaveBeenCalledWith("bano");
     expect(screen.getByTestId("ultima-necesidad", oculto)).toHaveTextContent("bano");
-    expect(screen.getByText(/Carmen ya lo sabe/)).toBeTruthy();
+    expect(screen.getByText("Solicitud enviada")).toBeTruthy();
 
-    await user.press(screen.getByTestId("btn-vale-confirmacion"));
+    await user.press(screen.getByTestId("btn-cerrar-necesidades"));
     expect(screen.queryByTestId("modal-necesidades-abierto", oculto)).toBeNull();
     // Al volver, la pantalla de debajo sigue ahí y se puede leer otra vez.
     expect(screen.getByText("Pantalla Principal")).toBeTruthy();
   });
 
-  it("profesora: en «Ayuda» salen solo las necesidades elegidas en Preferencias", async () => {
+  it("una ayuda que no es básica solo llega a onSolicitarAyuda; Urgencia llega a los dos", async () => {
+    const onSolicitarNecesidad = jest.fn();
+    const onSolicitarAyuda = jest.fn();
+    const user = userEvent.setup();
+
+    await render(
+      <TemaProvider>
+        <PreferenciasProvider preferenciasIniciales={{ ayudas: [CASA] }}>
+          <ProveedorNecesidades
+            onSolicitarNecesidad={onSolicitarNecesidad}
+            onSolicitarAyuda={onSolicitarAyuda}
+          >
+            <ComponenteHijo />
+          </ProveedorNecesidades>
+        </PreferenciasProvider>
+      </TemaProvider>,
+    );
+
+    await user.press(screen.getByRole("button", { name: /necesito ayuda/i }));
+    await user.press(screen.getByTestId(`opcion-ayuda-${CASA.id}`));
+    expect(onSolicitarAyuda).toHaveBeenCalledWith(CASA);
+    expect(onSolicitarNecesidad).not.toHaveBeenCalled();
+
+    await user.press(screen.getByTestId("btn-cerrar-necesidades"));
+    await user.press(screen.getByRole("button", { name: /necesito ayuda/i }));
+    await user.press(screen.getByTestId("opcion-necesidad-urgencia"));
+    expect(onSolicitarAyuda).toHaveBeenLastCalledWith("urgencia");
+    expect(onSolicitarNecesidad).toHaveBeenCalledWith("urgencia");
+  });
+
+  it("en «Ayuda» salen las ayudas elegidas en Preferencias (también las de Mi biblioteca)", async () => {
     const user = userEvent.setup();
     await render(
       <TemaProvider>
-        <PreferenciasProvider preferenciasIniciales={{ necesidades: ["bano", "descanso"] }}>
+        <PreferenciasProvider preferenciasIniciales={{ ayudas: [PROPIA, CASA] }}>
           <ProveedorNecesidades>
             <ComponenteHijo />
           </ProveedorNecesidades>
@@ -101,9 +152,9 @@ describe("ProveedorNecesidades", () => {
       </TemaProvider>,
     );
     await user.press(screen.getByRole("button", { name: /necesito ayuda/i }));
-    expect(screen.getByTestId("opcion-necesidad-bano")).toBeTruthy();
-    expect(screen.getByTestId("opcion-necesidad-descanso")).toBeTruthy();
-    expect(screen.queryByTestId("opcion-necesidad-agua")).toBeNull();
+    expect(screen.getByTestId(`opcion-ayuda-${PROPIA.id}`)).toBeTruthy();
+    expect(screen.getByTestId(`opcion-ayuda-${CASA.id}`)).toBeTruthy();
+    expect(screen.queryByTestId(`opcion-ayuda-${BANO.id}`)).toBeNull();
     expect(screen.getByTestId("opcion-necesidad-urgencia")).toBeTruthy();
   });
 });

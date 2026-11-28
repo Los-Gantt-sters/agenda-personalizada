@@ -6,8 +6,9 @@ import {
   type IntervaloBarridoMs,
   type ModoBarridoPulsador,
 } from "../componentes/barrido-pulsadores/tiposBarrido";
-import type { ClaveNecesidadBasica } from "../necesidades/tipos";
+import type { AyudaElegida, ClaveNecesidadBasica } from "../necesidades/tipos";
 import { NombreTema, TEMA_POR_DEFECTO, esNombreTema } from "../temas";
+import { AYUDAS_POR_DEFECTO, necesidadesDesdeAyudas, normalizarAyudas } from "./ayudas";
 
 // ---- Tipo de letra (RF3.2): las tres fuentes pensadas para Lectura Fácil ----
 export type FuenteLetra = "atkinson" | "lexend" | "andika";
@@ -242,76 +243,7 @@ export const NECESIDADES_AYUDA: Record<ClaveNecesidadBasica, { etiqueta: string 
   descanso: { etiqueta: "Descanso" },
 };
 
-export interface PictogramaAyudaCatalogo26 {
-  id: string;
-  etiqueta: string;
-  origen: "ARASAAC" | "Mi biblioteca";
-  emoji: string;
-  pictoIdArasaac: number;
-  claveBasica?: ClaveNecesidadBasica;
-}
-
-export const CATALOGO_AYUDAS_26: PictogramaAyudaCatalogo26[] = [
-  {
-    id: "bano",
-    etiqueta: "Ir al baño",
-    origen: "ARASAAC",
-    emoji: "🚻",
-    pictoIdArasaac: 6929,
-    claveBasica: "bano",
-  },
-  {
-    id: "agua",
-    etiqueta: "Beber agua",
-    origen: "ARASAAC",
-    emoji: "💧",
-    pictoIdArasaac: 2248,
-    claveBasica: "agua",
-  },
-  {
-    id: "descanso",
-    etiqueta: "Descansar (propio)",
-    origen: "Mi biblioteca",
-    emoji: "🛋️",
-    pictoIdArasaac: 2369,
-    claveBasica: "descanso",
-  },
-  {
-    id: "desayuno",
-    etiqueta: "Tengo hambre",
-    origen: "ARASAAC",
-    emoji: "🥪",
-    pictoIdArasaac: 4626,
-  },
-  {
-    id: "casa",
-    etiqueta: "Ir a casa",
-    origen: "ARASAAC",
-    emoji: "🏠",
-    pictoIdArasaac: 6964,
-  },
-  {
-    id: "libro",
-    etiqueta: "Rincón lectura",
-    origen: "Mi biblioteca",
-    emoji: "📖",
-    pictoIdArasaac: 2450,
-  },
-  {
-    id: "futbol",
-    etiqueta: "Jugar patio",
-    origen: "ARASAAC",
-    emoji: "⚽",
-    pictoIdArasaac: 7137,
-  },
-  {
-    id: "ayuda",
-    etiqueta: "Pedir ayuda",
-    origen: "ARASAAC",
-    emoji: "✋",
-    pictoIdArasaac: 32648,
-  },
-];
+export { CATALOGO_AYUDAS_26, type PictogramaAyudaCatalogo26 } from "./ayudas";
 
 /** Orden en que se muestran las opciones en el panel. */
 export const ORDEN_FUENTES: FuenteLetra[] = ["andika", "lexend", "atkinson"];
@@ -364,8 +296,8 @@ export interface PreferenciasApariencia {
   avisoPrevio: AvisoPrevio25;
   /** Necesidades básicas que salen en «Ayuda» (al menos una; «Urgencia» sale siempre). */
   necesidades: ClaveNecesidadBasica[];
-  /** Pantalla 26: hasta 3 pictogramas de ayuda seleccionados del catálogo ARASAAC / Mi biblioteca. */
-  ayudas: string[];
+  /** Pantalla 26: de 1 a 3 ayudas (ARASAAC o Mi biblioteca), guardadas completas (MOD HU-18). */
+  ayudas: AyudaElegida[];
   /** HU-05: modo de interacción por pulsador (táctil directo, automático 1 pulsador, manual 2 pulsadores). */
   modoBarrido: ModoBarridoPulsador;
   /** HU-05: tiempo en cada botón durante el barrido automático (1200..3200 ms). */
@@ -391,7 +323,7 @@ export const PREFERENCIAS_POR_DEFECTO: PreferenciasApariencia = {
   reloj: "si",
   avisoPrevio: "si",
   necesidades: ["bano", "agua", "descanso"],
-  ayudas: ["bano", "agua", "descanso"],
+  ayudas: AYUDAS_POR_DEFECTO.map((a) => ({ ...a })),
   modoBarrido: "desactivado",
   intervaloBarridoMs: 1600,
 };
@@ -415,7 +347,7 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
     return {
       ...d,
       necesidades: [...d.necesidades],
-      ayudas: [...d.ayudas],
+      ayudas: d.ayudas.map((a) => ({ ...a })),
     };
   }
   const c = crudo as Record<string, unknown>;
@@ -429,7 +361,8 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
         : d.formatoTarea;
 
   const necesidadesNormalizadas = normalizarNecesidades(c.necesidades);
-  const ayudasNormalizadas = normalizarAyudas26(c.ayudas, necesidadesNormalizadas);
+  // Las ayudas mandan; las necesidades básicas se derivan de ellas (MOD HU-18).
+  const ayudasNormalizadas = normalizarAyudas(c.ayudas, necesidadesNormalizadas);
 
   return {
     tema: esNombreTema(c.tema) ? c.tema : d.tema,
@@ -455,7 +388,7 @@ export function normalizarPreferencias(crudo: unknown): PreferenciasApariencia {
     avisoPrevio: tiene(AVISO_PREVIO_25, c.avisoPrevio)
       ? (c.avisoPrevio as AvisoPrevio25)
       : d.avisoPrevio,
-    necesidades: necesidadesNormalizadas,
+    necesidades: necesidadesDesdeAyudas(ayudasNormalizadas, necesidadesNormalizadas),
     ayudas: ayudasNormalizadas,
     modoBarrido: tiene(MODOS_BARRIDO_VALIDOS, c.modoBarrido)
       ? (c.modoBarrido as ModoBarridoPulsador)
@@ -473,18 +406,4 @@ function normalizarNecesidades(crudo: unknown): ClaveNecesidadBasica[] {
   const lista = Array.isArray(crudo) ? crudo : [];
   const validas = ORDEN_NECESIDADES_AYUDA.filter((n) => lista.includes(n));
   return validas.length > 0 ? validas : [...PREFERENCIAS_POR_DEFECTO.necesidades];
-}
-
-/** Ayudas del catálogo 26 (entre 1 y 3, sin repetir). */
-function normalizarAyudas26(crudo: unknown, fallbackBasicas: ClaveNecesidadBasica[]): string[] {
-  const idsCatalogo = new Set(CATALOGO_AYUDAS_26.map((item) => item.id));
-  const lista = Array.isArray(crudo) ? crudo : [];
-  const unicas: string[] = [];
-  for (const id of lista) {
-    if (typeof id === "string" && idsCatalogo.has(id) && !unicas.includes(id)) {
-      unicas.push(id);
-    }
-    if (unicas.length >= 3) break;
-  }
-  return unicas.length > 0 ? unicas : [...fallbackBasicas];
 }

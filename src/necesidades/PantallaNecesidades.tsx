@@ -1,38 +1,48 @@
-// Pantalla «¿Qué necesitas?» (SCRUM-87, T-18.2), que se abre con el botón «Ayuda» de la barra.
+// Pantalla «¿Qué necesitas?» (14) y «Aviso enviado» (14b), que se abren con «Ayuda» de la barra.
 // Mejoras de la profesora (noviembre de 2026):
 // - Ya no es una ventana emergente: es una pantalla completa con su cabecera y su barra de abajo.
 //   Tapa la pantalla de la que viene sin quitarla, así que al volver todo sigue igual.
 // - Sin scroll: las opciones caben siempre en la pantalla.
-// - En Preferencias se elige qué necesidades salen; «Urgencia» sale siempre. (Como las demás
-//   preferencias, de momento vale para esta tableta y no se guarda al recargar ni por alumno.)
-// - «Atrás» vuelve sin avisar a nadie. Al elegir una, la misma pantalla enseña «Ya lo sabe».
-import React from "react";
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+// - «Atrás» vuelve sin avisar a nadie.
+// MOD HU-18 (SCRUM-268, bocetos 14 y 14b de definitiva_v2):
+// - Salen las 1-3 ayudas que el adulto eligió en la 26 (de ARASAAC o de Mi biblioteca), cada una
+//   con su imagen y su texto guardados, y debajo «Urgencia» siempre, a todo lo ancho.
+// - Baño, agua y descanso llevan los textos del boceto 14 («Quiero ir al baño»...).
+// - Al pedir algo, la 14b solo enseña un tick verde grande y «Solicitud enviada»; «Adelante» queda
+//   apagado y se vuelve con «Atrás».
+import React, { useState } from "react";
+import { Image, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 
-import { PictogramaTarea } from "../componentes/agenda/PictogramaTarea";
+import { claveBasicaDeAyuda } from "../preferencias/ayudas";
 import { MarcoPantalla } from "../pantalla/MarcoPantalla";
 import { ratioContraste } from "../temas";
 import { Icono, PictogramaInterfaz, Texto, useApariencia } from "../ui";
-import { OPCIONES_NECESIDADES_BASICAS, obtenerInfoNecesidad } from "./opcionesNecesidades";
-import type { PantallaNecesidadesProps } from "./tipos";
+import { OPCIONES_NECESIDADES_BASICAS } from "./opcionesNecesidades";
+import type { AyudaElegida, PantallaNecesidadesProps } from "./tipos";
 
 /** Blanco o negro, el que más contraste dé sobre `fondo`. */
 const textoSobre = (fondo: string) =>
   ratioContraste("#FFFFFF", fondo) >= ratioContraste("#000000", fondo) ? "#FFFFFF" : "#000000";
 
+/** Texto de la tarjeta: el del boceto 14 si es baño, agua o descanso; si no, el guardado. */
+function textoEnLa14(ayuda: AyudaElegida): string {
+  const clave = claveBasicaDeAyuda(ayuda);
+  return OPCIONES_NECESIDADES_BASICAS.find((o) => o.clave === clave)?.etiqueta ?? ayuda.texto;
+}
+
 export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
   visible,
-  alSeleccionarNecesidad,
+  ayudas,
+  alSolicitar,
   alCerrar,
-  necesidadEnviada = null,
-  alConfirmarAvisoEnviado,
-  nombreTutora = "Carmen",
+  solicitudEnviada = null,
   canal = "ambos",
-  mostrarImagenArasaac = true,
-  necesidades,
 }) => {
   // Los colores salen del tema activo (claro, oscuro, pastel o alto contraste).
   const { colores } = useApariencia();
+  // Ayudas cuya imagen no ha cargado (p. ej. la URL firmada de Mi biblioteca ha caducado): en vez
+  // de una tarjeta vacía se enseña su texto, aunque el canal sea solo pictograma.
+  const [sinImagen, setSinImagen] = useState<ReadonlySet<string>>(() => new Set());
   if (!visible) return null;
 
   const verDibujo = canal !== "soloTexto";
@@ -40,109 +50,107 @@ export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
   const colorTexto = colores.texto;
   const colorUrgencia = colores.peligro;
   const colorTextoUrgencia = textoSobre(colorUrgencia);
-  const opciones = OPCIONES_NECESIDADES_BASICAS.filter(
-    (o) => !necesidades || necesidades.includes(o.clave),
-  );
-
-  const infoEnviada = necesidadEnviada ? obtenerInfoNecesidad(necesidadEnviada) : null;
-  const esUrgenciaEnviada = necesidadEnviada === "urgencia";
+  const enviada = solicitudEnviada !== null;
 
   return (
     <MarcoPantalla
       encima
       testID="pantalla-necesidades"
-      titulo={necesidadEnviada ? "Aviso enviado" : "¿Qué necesitas?"}
-      simbolo={<PictogramaInterfaz nombre="ayuda" etiqueta="Ayuda" tam={44} />}
+      titulo={enviada ? "Aviso enviado" : "¿Qué necesitas?"}
+      simbolo={
+        enviada ? (
+          <Icono nombre="check" color={colores.primario} tam={36} grosor={3} />
+        ) : (
+          <PictogramaInterfaz nombre="ayuda" etiqueta="Ayuda" tam={44} />
+        )
+      }
       atras={alCerrar}
-      etiquetaAtras="Atrás: volver sin avisar"
-      adelante={necesidadEnviada ? (alConfirmarAvisoEnviado ?? alCerrar) : null}
-      textoAdelante={necesidadEnviada ? "Vale" : "Adelante"}
-      etiquetaAdelante={necesidadEnviada ? "Vale, entendido" : undefined}
+      etiquetaAtras={enviada ? "Atrás" : "Atrás: volver sin avisar"}
+      adelante={null}
       idTitulo="titulo-necesidades"
       idAtras="btn-cerrar-necesidades"
       idAdelante="btn-vale-confirmacion"
     >
-      {!necesidadEnviada ? (
+      {!enviada ? (
         <View style={estilos.contenido}>
-          {/* Opciones gigantes ARASAAC: Baño, Agua y Descanso (las que haya elegido el tutor). */}
+          {/* Las 1-3 ayudas que eligió el adulto en la 26, en su orden. */}
           <View style={estilos.cuadriculaOpciones} testID="cuadricula-opciones-necesidades">
-            {opciones.map((opcion) => (
-              <TouchableOpacity
-                key={opcion.clave}
-                testID={`opcion-necesidad-${opcion.clave}`}
-                accessibilityRole="button"
-                accessibilityLabel={opcion.etiqueta}
-                accessibilityHint={`Pulsa para avisar a ${nombreTutora}: ${opcion.etiqueta}`}
-                activeOpacity={0.75}
-                onPress={() => alSeleccionarNecesidad(opcion.clave)}
-                style={[
-                  estilos.botonOpcionGigante,
-                  { backgroundColor: colores.superficie, borderColor: colores.primario },
-                ]}
-              >
-                {verDibujo && (
-                  <View
-                    style={[
-                      estilos.contenedorPictograma,
-                      canal === "soloPictograma" && estilos.contenedorPictogramaGigante,
-                    ]}
-                  >
-                    {mostrarImagenArasaac ? (
+            {ayudas.map((ayuda) => {
+              const texto = textoEnLa14(ayuda);
+              const imagenRota = sinImagen.has(ayuda.id);
+              return (
+                <TouchableOpacity
+                  key={ayuda.id}
+                  testID={`opcion-ayuda-${ayuda.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={texto}
+                  accessibilityHint={`Pulsa para pedir: ${texto}`}
+                  activeOpacity={0.75}
+                  onPress={() => alSolicitar(ayuda)}
+                  style={[
+                    estilos.botonOpcionGigante,
+                    { backgroundColor: colores.superficie, borderColor: colores.primario },
+                  ]}
+                >
+                  {verDibujo && !imagenRota && (
+                    <View
+                      style={[
+                        estilos.contenedorPictograma,
+                        canal === "soloPictograma" && estilos.contenedorPictogramaGigante,
+                      ]}
+                    >
                       <Image
-                        source={{ uri: opcion.urlPictograma }}
+                        source={{ uri: ayuda.imagenUrl }}
                         style={[
                           estilos.imagenPictograma,
                           canal === "soloPictograma" && estilos.imagenPictogramaGigante,
                         ]}
-                        accessibilityLabel={opcion.descripcionAlternativa}
-                        testID={`img-arasaac-${opcion.arasaacId}`}
+                        accessibilityIgnoresInvertColors
+                        testID={`img-ayuda-${ayuda.id}`}
+                        onError={() => setSinImagen((antes) => new Set(antes).add(ayuda.id))}
                       />
-                    ) : (
-                      <Text
-                        style={[
-                          estilos.simboloPictograma,
-                          canal === "soloPictograma" && { fontSize: 56 },
-                        ]}
-                      >
-                        {opcion.simbolo}
-                      </Text>
-                    )}
-                  </View>
-                )}
-                {verTexto && (
-                  <Texto
-                    style={[
-                      estilos.etiquetaOpcion,
-                      { color: colorTexto },
-                      canal === "soloTexto" && { fontSize: 26, lineHeight: 32 },
-                    ]}
-                  >
-                    {opcion.etiqueta}
-                  </Texto>
-                )}
-              </TouchableOpacity>
-            ))}
+                    </View>
+                  )}
+                  {(verTexto || imagenRota) && (
+                    <Texto
+                      style={[
+                        estilos.etiquetaOpcion,
+                        { color: colorTexto },
+                        canal === "soloTexto" && { fontSize: 26, lineHeight: 32 },
+                      ]}
+                    >
+                      {texto}
+                    </Texto>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          {/* Urgencia de un toque (RF11.4): sale siempre. */}
+          {/* Urgencia de un toque (RF11.4): sale siempre, a todo lo ancho. */}
           <TouchableOpacity
             testID="opcion-necesidad-urgencia"
             accessibilityRole="button"
             accessibilityLabel="Urgencia. Necesito ayuda ya"
             activeOpacity={0.8}
-            onPress={() => alSeleccionarNecesidad("urgencia")}
+            onPress={() => alSolicitar("urgencia")}
             style={[
               estilos.botonUrgencia,
               { backgroundColor: colorUrgencia, borderColor: colorUrgencia },
             ]}
           >
             {verDibujo && (
-              <Icono
-                nombre="alerta"
-                color={colorTextoUrgencia}
-                tam={canal === "soloPictograma" ? 52 : 36}
-                grosor={3}
-              />
+              <>
+                <View style={estilos.placaPictogramaUrgencia}>
+                  <PictogramaInterfaz nombre="ayuda" etiqueta="" tam={40} />
+                </View>
+                <Icono
+                  nombre="alerta"
+                  color={colorTextoUrgencia}
+                  tam={canal === "soloPictograma" ? 52 : 36}
+                  grosor={3}
+                />
+              </>
             )}
             {verTexto && (
               <Texto
@@ -158,66 +166,23 @@ export const PantallaNecesidades: React.FC<PantallaNecesidadesProps> = ({
           </TouchableOpacity>
         </View>
       ) : (
-        /* Confirmación tranquila en la misma pantalla (E.ovl.sent en el prototipo). */
+        /* 14b: pantalla limpia, solo el tick verde grande y «Solicitud enviada». */
         <View style={estilos.contenido} testID="confirmacion-necesidad-enviada">
-          <View style={estilos.flujoVisualConfirmacion}>
-            <View
-              style={[
-                estilos.cajaFiguraConfirmacion,
-                { backgroundColor: colores.superficie, borderColor: colores.borde },
-              ]}
-            >
-              {verDibujo && infoEnviada && !esUrgenciaEnviada && (
-                <PictogramaTarea
-                  tarea={{
-                    titulo: infoEnviada.etiqueta,
-                    emoji: infoEnviada.simbolo,
-                    pictograma_url: mostrarImagenArasaac ? infoEnviada.urlPictograma : null,
-                  }}
-                  tam={120}
-                />
-              )}
-              {verDibujo && esUrgenciaEnviada && (
-                <Icono nombre="alerta" color={colores.peligro} tam={96} grosor={2.6} />
-              )}
-              {verTexto && (
-                <Texto style={[estilos.pieFiguraConfirmacion, { color: colorTexto }]}>
-                  {infoEnviada?.etiqueta}
-                </Texto>
-              )}
-            </View>
-
-            <Icono nombre="adelante" color={colorTexto} tam={48} grosor={3} />
-
-            <View
-              style={[
-                estilos.cajaFiguraConfirmacion,
-                { backgroundColor: colores.superficie, borderColor: colores.primario },
-              ]}
-            >
-              {verDibujo && (
-                <PictogramaInterfaz nombre="profesora" etiqueta={nombreTutora} tam={120} />
-              )}
-              {verTexto && (
-                <View style={estilos.filaIcono}>
-                  <Icono nombre="check" color={colores.exito} tam={26} grosor={3} />
-                  <Texto style={[estilos.pieFiguraConfirmacion, { color: colorTexto }]}>
-                    {esUrgenciaEnviada
-                      ? `${nombreTutora} viene ahora`
-                      : `${nombreTutora} ya lo sabe`}
-                  </Texto>
-                </View>
-              )}
-            </View>
+          <View
+            testID="tick-solicitud-enviada"
+            style={[estilos.circuloTick, { backgroundColor: colores.exito }]}
+            accessible={false}
+          >
+            <Icono nombre="check" color={textoSobre(colores.exito)} tam={84} grosor={4} />
           </View>
-
-          {verTexto && (
-            <Texto style={[estilos.mensajeTranquilizador, { color: colorTexto }]}>
-              {esUrgenciaEnviada
-                ? "Quédate donde estás. Ya viene."
-                : "Espera un momento, por favor."}
-            </Texto>
-          )}
+          {/* Se anuncia sola al aparecer; el tick es decorativo y no se lee aparte. */}
+          <Texto
+            style={[estilos.textoSolicitudEnviada, { color: colorTexto }]}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
+            Solicitud enviada
+          </Texto>
         </View>
       )}
     </MarcoPantalla>
@@ -269,7 +234,6 @@ const estilos = StyleSheet.create({
   contenedorPictogramaGigante: { width: 150, height: 150 },
   imagenPictograma: { width: 110, height: 110, resizeMode: "contain" },
   imagenPictogramaGigante: { width: 140, height: 140 },
-  simboloPictograma: { fontSize: 48, textAlign: "center" },
   etiquetaOpcion: { fontSize: 22, fontWeight: "700", textAlign: "center", lineHeight: 28 },
   botonUrgencia: {
     width: "100%",
@@ -285,24 +249,18 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 20,
   },
   textoUrgencia: { fontSize: 24, fontWeight: "700" },
-  flujoVisualConfirmacion: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  placaPictogramaUrgencia: {
+    // Placa blanca: el pictograma se ve también sobre el rojo.
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 4,
+  },
+  circuloTick: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     alignItems: "center",
     justifyContent: "center",
-    gap: 24,
   },
-  cajaFiguraConfirmacion: {
-    minWidth: 220,
-    minHeight: 200,
-    padding: 18,
-    borderRadius: 16,
-    borderWidth: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  pieFiguraConfirmacion: { fontSize: 22, fontWeight: "700", textAlign: "center" },
-  filaIcono: { flexDirection: "row", alignItems: "center", gap: 8 },
-  mensajeTranquilizador: { fontSize: 28, fontWeight: "700", textAlign: "center" },
+  textoSolicitudEnviada: { fontSize: 40, fontWeight: "700", textAlign: "center" },
 });
