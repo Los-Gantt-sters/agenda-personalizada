@@ -4,6 +4,7 @@
  *   - Pantalla 35 (`SelectorAulasTutor`): 9 clases sin paginación
  *   - Pantalla 36 (`BuscadorAlumnosAula`): buscador de alumnos por nombre en el aula elegida
  *   - Pantalla 37 (`FichaAlumnoTutor`): ficha limpia sin etiquetas RGPD y enlaces a 39, 43, 16, 26d y 47b
+ *   - Pantalla 47b (`PantallaPlanB`): Plan B del alumno, con los datos de ejemplo de este flujo
  */
 
 import React, { useState } from "react";
@@ -11,8 +12,11 @@ import { PantallaEjecucionRestringida07e, PantallaPermisosAlumno26d } from "../p
 import { BuscadorAlumnosAula } from "./BuscadorAlumnosAula";
 import { FichaAlumnoTutor, type DestinoFichaTutor } from "./FichaAlumnoTutor";
 import { SelectorAulasTutor } from "./SelectorAulasTutor";
+import { hoyISO } from "../agenda/useAgendaDia";
+import { crearRepositorioPlanBDemo, PantallaPlanB } from "../plan-b";
+import { TODOS_ESTUDIANTES_TUTOR } from "./datosAulasTutor";
 
-export type PasoNavegacionTutor = "35" | "36" | "37" | "26d" | "07e";
+export type PasoNavegacionTutor = "35" | "36" | "37" | "26d" | "07e" | "47b";
 
 export interface NavegacionTutorProps {
   /** Pantalla inicial del flujo (`35` por defecto). */
@@ -45,6 +49,7 @@ export function NavegacionTutor({
   const [paso, setPaso] = useState<PasoNavegacionTutor>(pasoInicial);
   const [aulaId, setAulaId] = useState<string>(aulaInicialId);
   const [alumnoId, setAlumnoId] = useState<string>(alumnoInicialId);
+  const [repoPlanB] = useState(() => crearRepositorioPlanBDemo());
 
   if (paso === "35") {
     return (
@@ -89,6 +94,20 @@ export function NavegacionTutor({
     );
   }
 
+  if (paso === "47b") {
+    return (
+      <PantallaPlanB
+        repo={repoPlanB}
+        estudianteIds={[alumnoId]}
+        fecha={hoyISO()}
+        nombreAlumno={TODOS_ESTUDIANTES_TUTOR.find((a) => a.id === alumnoId)?.nombre ?? "alumno"}
+        nombreTutor={nombreTutor}
+        alAtras={() => setPaso("37")}
+        alCerrarSesion={alCerrarSesion}
+      />
+    );
+  }
+
   if (paso === "07e") {
     return (
       <PantallaEjecucionRestringida07e
@@ -107,9 +126,9 @@ export function NavegacionTutor({
           alAbrirDestinoFicha(destino, id);
           return;
         }
-        if (destino === "26d") {
+        if (destino === "26d" || destino === "47b") {
           setAlumnoId(id);
-          setPaso("26d");
+          setPaso(destino);
         }
       }}
       alAtras={() => setPaso("36")}

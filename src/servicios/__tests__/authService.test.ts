@@ -9,6 +9,9 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { AUTH_GENERIC_ERROR_MESSAGE } from "../../tipos/auth";
 
+// Carpeta de esta prueba (el proyecto no trae los tipos de Node).
+declare const __dirname: string;
+
 jest.mock("../../lib/supabaseClient", () => {
   return {
     supabase: {
@@ -54,8 +57,21 @@ describe("authService - HU-01 y HU-02 (Backend JWT, bcrypt & RBAC)", () => {
       expect(getRoleHomeRoute("admin")).toBe("/admin/dashboard");
       expect(getRoleHomeRoute("familiar")).toBe("/familiar/resumen");
       expect(getRoleHomeRoute("especialista")).toBe("/especialista/terapias");
-      expect(getRoleHomeRoute("estudiante")).toBe("/estudiante/agenda");
+      // La ruta tiene que existir en app/: la agenda del alumno es /agenda.
+      expect(getRoleHomeRoute("estudiante")).toBe("/agenda");
       expect(getRoleHomeRoute("tutor_docente")).toBe("/docente/agenda");
+    });
+
+    it("la ruta de inicio de cada rol existe en app/ (revisión de Álvaro, SCRUM-280)", () => {
+      // El proyecto no trae los tipos de Node: basta con lo que se usa aquí.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require("fs") as { existsSync: (ruta: string) => boolean };
+      const roles = ["admin", "familiar", "especialista", "estudiante", "tutor_docente"] as const;
+      for (const rol of roles) {
+        const ruta = getRoleHomeRoute(rol);
+        const archivo = `${__dirname}/../../../app${ruta}.tsx`;
+        expect({ rol, ruta, existe: fs.existsSync(archivo) }).toEqual({ rol, ruta, existe: true });
+      }
     });
 
     it("valida los roles y deniega (null) los desconocidos en vez de dar uno por defecto (SCRUM-280)", () => {

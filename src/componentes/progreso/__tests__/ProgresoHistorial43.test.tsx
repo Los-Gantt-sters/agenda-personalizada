@@ -106,29 +106,36 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     expect(screen.getByTestId("texto-periodo")).toHaveTextContent(
       "Esta semana: del 23 al 29 de noviembre de 2026",
     );
-    expect(within(screen.getByTestId("kpi-completadas")).getByText("4 de 7")).toBeTruthy();
-    expect(
-      within(screen.getByTestId("kpi-completadas")).getByText("57 % de las tareas"),
-    ).toBeTruthy();
-    // Pendientes: solo la que se pasó de hora; debajo, lo que está en curso o aún no toca
-    expect(within(screen.getByTestId("kpi-pendientes")).getByText("1")).toBeTruthy();
-    expect(
-      within(screen.getByTestId("kpi-pendientes")).getByText("Además, 1 en curso · 1 por hacer"),
-    ).toBeTruthy();
-    expect(within(screen.getByTestId("kpi-emocion")).getByText("Contento (75 %)")).toBeTruthy();
-    // Resumen a la derecha, en tarjetas
-    expect(screen.getByTestId("resumen-dias")).toHaveTextContent(
-      "Días con todo hecho: 1 de 4 (lunes 23).",
+    // Boceto 43: el rótulo en mayúsculas y debajo solo el número (sin una tercera línea).
+    const completadas = within(screen.getByTestId("kpi-completadas"));
+    expect(completadas.getByText("COMPLETADAS EN EL PERIODO")).toBeTruthy();
+    expect(completadas.getByText("4 de 7")).toBeTruthy();
+    expect(completadas.queryByText(/% de las tareas/)).toBeNull();
+    // Pendientes: solo la que se pasó de hora (lo que está en curso o aún no toca, solo en voz)
+    const pendientes = within(screen.getByTestId("kpi-pendientes"));
+    expect(pendientes.getByText("PENDIENTES")).toBeTruthy();
+    expect(pendientes.getByText("1")).toBeTruthy();
+    expect(pendientes.queryByText(/Además/)).toBeNull();
+    expect(screen.getByTestId("kpi-pendientes").props.accessibilityLabel).toContain(
+      "Además, 1 en curso · 1 por hacer",
     );
+    const emocion = within(screen.getByTestId("kpi-emocion"));
+    expect(emocion.getByText("EMOCIÓN MÁS FRECUENTE")).toBeTruthy();
+    expect(emocion.getByText("Contento (75 %)")).toBeTruthy();
+    // Resumen a la derecha, en tarjetas: Comedor, Plan B y Valoración docente, y lo que urge
+    expect(screen.getByText("Resumen del periodo seleccionado")).toBeTruthy();
+    expect(screen.getByTestId("resumen-comedor")).toHaveTextContent("Comedor: no se sabe el menú.");
     expect(screen.getByTestId("resumen-plan-b")).toHaveTextContent(
       "Plan B activado 2 veces: Huerto (lunes 23) y Recreo (martes 24).",
+    );
+    expect(screen.getByTestId("resumen-valoracion")).toHaveTextContent(
+      "Valoración docente: no hay ninguna en este periodo.",
     );
     expect(screen.getByTestId("resumen-ayuda")).toHaveTextContent(
       "Ha pedido ayuda 1 vez: urgencia (1).",
     );
-    expect(screen.getByTestId("resumen-pendientes")).toHaveTextContent(
-      "1 tarea pendiente: Lectura fácil (martes 24).",
-    );
+    expect(screen.queryByTestId("resumen-pendientes")).toBeNull();
+    expect(screen.queryByTestId("resumen-dias")).toBeNull();
     expect(screen.getByTestId("resumen-urgencias")).toHaveTextContent(
       /^Urgencia sin atender: martes 24 a las/,
     );
@@ -156,9 +163,7 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     expect(
       within(screen.getByTestId("resumen-plan-b")).getByText(/Huerto/).props.numberOfLines,
     ).toBe(2);
-    expect(screen.getByTestId("resumen-dias")).toHaveTextContent(
-      "Días con todo hecho: 1 de 4 (lunes 23).",
-    );
+    expect(screen.getByTestId("resumen-comedor")).toHaveTextContent("Comedor: no se sabe el menú.");
   });
 
   it("en compacto, aunque no haya ejemplos que quitar, corta en dos líneas", async () => {
@@ -167,8 +172,7 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     await fireEvent.press(screen.getByTestId("cal-semana-2026-11-09"));
     await screen.findByTestId("sin-tareas");
     const lineas = () =>
-      within(screen.getByTestId("resumen-plan-b")).getByText(/no se ha activado/).props
-        .numberOfLines;
+      within(screen.getByTestId("resumen-plan-b")).getByText(/ninguna vez/).props.numberOfLines;
     expect(lineas()).toBeUndefined(); // completo: el texto entero
 
     await fireEvent(screen.getByTestId("resumen-periodo"), "layout", {
@@ -180,11 +184,12 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     expect(lineas()).toBe(2);
   });
 
-  it("cada fila dice cuándo, tarea, ámbito, estado (etiqueta de color con texto) y emoción", async () => {
+  it("cada fila dice tarea y ámbito, cuándo, estado (etiqueta de color con texto) y emoción", async () => {
     await abrir();
 
+    // Boceto 43: TAREA Y ÁMBITO | HORA | ESTADO | EMOCIÓN.
     expect(screen.getByTestId("fila-tarea-a2").props.accessibilityLabel).toBe(
-      "Lun 23. 11:30. Huerto, clase, con Plan B. Hecha. se sintió triste",
+      "Huerto, clase, con Plan B. Lun 23. 11:30. Hecha. se sintió triste",
     );
     expect(screen.getByTestId("fila-tarea-a2")).toHaveTextContent(/Lun 23 · 11:30/);
     expect(screen.getByTestId("fila-tarea-a3").props.accessibilityLabel).toContain(
@@ -283,9 +288,10 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
       "Hoy, jueves 26 de noviembre de 2026",
     );
     expect(screen.queryByTestId("cambiar-vista")).toBeNull();
-    expect(
-      (await screen.findByTestId("fila-tarea-a7")).props.accessibilityLabel.startsWith("13:30"),
-    ).toBe(true);
+    // Sin columna de día: después de la tarea va directamente la hora.
+    expect((await screen.findByTestId("fila-tarea-a7")).props.accessibilityLabel).toMatch(
+      /^[^.]+\. 13:30\./,
+    );
 
     await fireEvent.press(screen.getByTestId("abrir-calendario"));
     expect(screen.getByTestId("cal-titulo")).toHaveTextContent("Elige el día");
@@ -326,8 +332,11 @@ describe("Pantalla 43 · Progreso e historial (HU-25)", () => {
     expect(await screen.findByTestId("sin-tareas")).toHaveTextContent(
       "No hay tareas en este periodo.",
     );
-    expect(screen.getByTestId("resumen-plan-b")).toHaveTextContent("Plan B: no se ha activado.");
-    expect(screen.getByTestId("resumen-ayuda")).toHaveTextContent("Ayuda: no ha pedido ayuda.");
+    expect(screen.getByTestId("resumen-plan-b")).toHaveTextContent("Plan B activado: ninguna vez.");
+    expect(screen.getByTestId("resumen-valoracion")).toHaveTextContent(
+      "Valoración docente: no hay ninguna en este periodo.",
+    );
+    expect(screen.queryByTestId("resumen-ayuda")).toBeNull();
   });
 
   it("si falla la carga, lo explica y deja reintentar", async () => {

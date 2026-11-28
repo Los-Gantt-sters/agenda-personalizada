@@ -165,9 +165,7 @@ export function AgendaAdultoAlumno({
                   key={tarea.id}
                   testID={`tarjeta-hecho-${tarea.id}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`${tarea.titulo}, ${
-                    esAutoPendiente ? "Auto-pendiente (tiempo agotado)" : tarea.horaInicio
-                  }`}
+                  accessibilityLabel={`${tarea.titulo}, ${subtituloMini(tarea)}`}
                   onPress={() => alAbrirTarea(resolverDestinoTareaAdulto(rol, tarea.ambito), tarea)}
                   style={[estilos.miniTarjeta, esAutoPendiente && estilos.miniTarjetaAutoPendiente]}
                 >
@@ -195,7 +193,7 @@ export function AgendaAdultoAlumno({
                   <Texto
                     style={[estilos.miniSubtitulo, esAutoPendiente && estilos.textoAutoPendiente]}
                   >
-                    {esAutoPendiente ? "Auto-pendiente (tiempo agotado)" : tarea.horaInicio}
+                    {subtituloMini(tarea)}
                   </Texto>
                 </Pressable>
               );
@@ -281,6 +279,29 @@ export function AgendaAdultoAlumno({
       </View>
     </MarcoPantalla>
   );
+}
+
+/** «9:15» a partir de «09:15», como en los bocetos. */
+const horaSinCero = (hora: string) => hora.replace(/^0(\d)/, "$1");
+
+/** Lugar de la tarea en las tarjetas pequeñas: en el colegio, «Clase»; en casa, «Casa». */
+const ETIQUETA_AMBITO: Record<TareaAgendaAdulto["ambito"], string> = {
+  escolar: "Clase",
+  hogar: "Casa",
+};
+
+/**
+ * Segunda línea de las tarjetas de «Hecho» (bocetos 39 y 40): la hora, el aviso si se pasó a
+ * pendiente sola y el lugar. P. ej. «9:30 · Auto-pendiente (tiempo agotado) · Clase».
+ */
+export function subtituloMini(tarea: TareaAgendaAdulto): string {
+  return [
+    horaSinCero(tarea.horaInicio),
+    tarea.estado === "auto_pendiente" ? "Auto-pendiente (tiempo agotado)" : null,
+    ETIQUETA_AMBITO[tarea.ambito],
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 const crearEstilos = (c: Paleta) =>
@@ -399,10 +420,11 @@ const crearEstilos = (c: Paleta) =>
       justifyContent: "center",
       gap: 4,
     },
-    // SCRUM-266: ámbar con los colores del tema, como la tarjeta de la agenda del alumno (06).
+    // SCRUM-266: fondo amarillo suave y borde ámbar, como en los bocetos 39 y 40 (y en la 06).
     miniTarjetaAutoPendiente: {
       borderWidth: 3,
       borderColor: c.aviso,
+      backgroundColor: c.resalteSuave,
     },
     contenedorMiniPicto: {
       position: "relative",

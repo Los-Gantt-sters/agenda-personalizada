@@ -6,3 +6,5 @@
 
 export * from "./PantallaPermisosAlumno26d";
 export * from "./PantallaEjecucionRestringida07e";
+export * from "./useFormatosPermitidos";
+export * from "./ElegirAlumno26d";

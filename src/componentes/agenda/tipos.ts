@@ -2,6 +2,8 @@
 // RI4.1: entrada de agenda (estudiante, tarea, fecha, hora de inicio, duración prevista, orden y estado).
 // HU-08 (T-08.1) añade el registro de ejecución de RI6.1 (hora real de inicio y de fin) y RF6.8.
 
+import type { Emocion } from "../ejecucion-tarea/emociones";
+
 export type EstadoEntrada = "pendiente" | "en_curso" | "hecha" | "cancelada" | "bloqueada";
 
 /** T-08.6: por qué una tarea se quedó a medias y se puede retomar (pantalla 10b). */
@@ -54,6 +56,11 @@ export interface EntradaAgenda {
    * desde la pantalla 10b. Solo existe en el frontend hasta que lo guarde SCRUM-237.
    */
   pendiente_motivo?: MotivoPendiente | null;
+  /**
+   * HU-22: el Plan B está activo. `tarea` ya es la del Plan B y aquí queda la que tocaba, para
+   * enseñar el cambio en la pantalla 08c.
+   */
+  plan_b?: { original: Pick<Tarea, "titulo" | "pictograma_url" | "emoji"> } | null;
 }
 
 /** Resultado de repartir la secuencia del día en los tres bloques (RF4.2). */
@@ -80,6 +87,8 @@ export interface RepositorioAgenda {
   desmarcarEnCurso(idEntrada: string): Promise<void>;
   /** «Atrás» tras «Terminar»: la entrada hecha vuelve a `volverA` y se borra la hora de fin. */
   desmarcarHecha(idEntrada: string, volverA: "pendiente" | "en_curso"): Promise<void>;
+  /** HU-21 (09): guarda cómo se ha sentido el alumno al terminar la tarea. */
+  guardarEmocion(idEntrada: string, emocion: Emocion): Promise<void>;
   /**
    * RF4.7: avisa cada vez que cambia algo de la agenda del estudiante (el tutor crea, modifica,
    * bloquea o borra una tarea). Devuelve la función para darse de baja.

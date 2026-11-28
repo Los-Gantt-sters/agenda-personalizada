@@ -23,6 +23,8 @@ import { textoTiempoRestante } from "../reloj-visual/textoTiempo";
 import { Pantalla } from "../../pantalla/Pantalla";
 import type { ModoCanal } from "../../preferencias/opciones";
 import { leer, puedeLeer } from "../../servicios/voz";
+import type { FormatoMultimediaAlumno } from "../../tipos/permisosAlumno";
+import { ajustarFormato, formatoPermitido, permisosDeVista } from "./formatosPermitidos";
 import type { Paleta } from "../../temas";
 import {
   Icono,
@@ -70,6 +72,7 @@ export function PantallaTarea({
   pie,
   vistaInicial,
   onCambioVista,
+  formatosPermitidos,
 }: {
   entrada: EntradaAgenda;
   /** La tarea se está haciendo: reloj (si se quiere) y «Terminar». Si no, es el detalle. */
@@ -89,6 +92,8 @@ export function PantallaTarea({
   vistaInicial?: VistaTarea;
   /** Se llama al cambiar de paso o de formato. */
   onCambioVista?: (vista: VistaTarea) => void;
+  /** Formatos que el tutor deja ver al alumno (pantalla 26d). Sin ellos se ve todo. */
+  formatosPermitidos?: readonly FormatoMultimediaAlumno[] | null;
 }) {
   const { colores, canal, escalaLetra: L } = useApariencia();
   const e = useEstilos(crearEstilos);
@@ -98,7 +103,10 @@ export function PantallaTarea({
   const [formatoElegido, setFormatoElegido] = useState<ModoCanal | null>(
     vistaInicial?.formato ?? null,
   );
-  const formato = formatoElegido ?? canal;
+  // Lo que no deja ver el tutor (26d) no sale, aunque se elija en las preferencias o aquí.
+  const permisos = permisosDeVista(formatosPermitidos);
+  const formatosVisibles = FORMATOS.filter((f) => formatoPermitido(f.modo, permisos));
+  const formato = ajustarFormato(formatoElegido ?? canal, permisos);
   const verDibujo = formato !== "soloTexto";
   const verTexto = formato !== "soloPictograma";
 
@@ -161,40 +169,43 @@ export function PantallaTarea({
     <Pantalla
       titulo={t.titulo}
       derecha={
-        <View
-          style={e.formatos}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Cómo se ve la tarea"
-          testID="selector-formato"
-        >
-          {FORMATOS.map((f) => {
-            const elegido = formato === f.modo;
-            return (
-              <Pressable
-                key={f.modo}
-                accessibilityRole="radio"
-                accessibilityLabel={f.etiqueta}
-                accessibilityState={{ checked: elegido, selected: elegido }}
-                testID={`formato-${f.modo}`}
-                onPress={() => elegirFormato(f.modo)}
-                style={({ pressed }) => [
-                  e.formato,
-                  elegido && e.formatoElegido,
-                  pressed && e.pulsado,
-                ]}
-              >
-                {f.iconos.map((n) => (
-                  <Icono
-                    key={n}
-                    nombre={n}
-                    color={elegido ? colores.textoSobrePrimario : colores.primario}
-                    tam={24}
-                  />
-                ))}
-              </Pressable>
-            );
-          })}
-        </View>
+        // Con un solo formato permitido no hay nada que elegir.
+        formatosVisibles.length > 1 ? (
+          <View
+            style={e.formatos}
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Cómo se ve la tarea"
+            testID="selector-formato"
+          >
+            {formatosVisibles.map((f) => {
+              const elegido = formato === f.modo;
+              return (
+                <Pressable
+                  key={f.modo}
+                  accessibilityRole="radio"
+                  accessibilityLabel={f.etiqueta}
+                  accessibilityState={{ checked: elegido, selected: elegido }}
+                  testID={`formato-${f.modo}`}
+                  onPress={() => elegirFormato(f.modo)}
+                  style={({ pressed }) => [
+                    e.formato,
+                    elegido && e.formatoElegido,
+                    pressed && e.pulsado,
+                  ]}
+                >
+                  {f.iconos.map((n) => (
+                    <Icono
+                      key={n}
+                      nombre={n}
+                      color={elegido ? colores.textoSobrePrimario : colores.primario}
+                      tam={24}
+                    />
+                  ))}
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null
       }
       alAtras={alAtras}
       etiquetaAtras={etiquetaAtras}
@@ -312,7 +323,7 @@ export function PantallaTarea({
             {onTerminar ? (
               <BotonAccionTarea accion="terminar" onConfirmar={onTerminar} anchoMinimo={260} />
             ) : null}
-            {puedeLeer ? (
+            {puedeLeer && permisos.audio ? (
               <BotonPequeno
                 texto="Escuchar"
                 // Con letra grande, solo el dibujo: así cabe al lado de «Terminar».
@@ -321,7 +332,7 @@ export function PantallaTarea({
                 onPress={() => leer(textoVoz)}
               />
             ) : null}
-            {t.video_url ? (
+            {t.video_url && permisos.video ? (
               <BotonPequeno
                 texto="Ver vídeo"
                 verTexto={verTexto && !letraGrande}
