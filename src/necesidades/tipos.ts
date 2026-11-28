@@ -9,6 +9,23 @@ export type ClaveNecesidadBasica = "bano" | "agua" | "descanso";
 
 export type ClaveNecesidad = ClaveNecesidadBasica | "urgencia";
 
+/**
+ * Una ayuda que el adulto ha elegido en la pantalla 26 (MOD HU-18, máximo 3). Se guarda completa
+ * para que la pantalla 14 la pinte sin pedir nada a la red.
+ */
+export interface AyudaElegida {
+  /** "arasaac:<idPictograma>" o "propio:<idPictogramaPropio>". */
+  id: string;
+  texto: string;
+  imagenUrl: string;
+  origen: "arasaac" | "biblioteca";
+  /**
+   * Solo en las de Mi biblioteca: ruta del archivo en el bucket privado `pictogramas-propios`.
+   * `imagenUrl` es una URL firmada que caduca; con la ruta se podrá volver a firmar.
+   */
+  rutaStorage?: string;
+}
+
 export interface OpcionNecesidadArasaac {
   clave: ClaveNecesidadBasica;
   etiqueta: string;
