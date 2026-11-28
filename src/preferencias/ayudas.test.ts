@@ -25,11 +25,11 @@ describe("ayudas (MOD HU-18)", () => {
       "arasaac:6929",
       "arasaac:6964",
     ]);
-    expect(normalizarAyudas(["descanso"], ["bano"])[0]).toMatchObject({
-      id: "propio:descanso",
-      origen: "biblioteca",
-      texto: "Descansar (propio)",
-    });
+    // Las 8 sugerencias son de ARASAAC: «Mi biblioteca» solo son los pictogramas propios reales.
+    expect(normalizarAyudas(["descanso", "libro"], ["bano"])).toMatchObject([
+      { id: "arasaac:2369", origen: "arasaac", texto: "Descansar" },
+      { id: "arasaac:2450", origen: "arasaac", texto: "Rincón lectura" },
+    ]);
   });
 
   it("acepta objetos válidos, quita repetidos y deja como mucho 3", () => {
@@ -55,7 +55,7 @@ describe("ayudas (MOD HU-18)", () => {
     expect(AYUDAS_POR_DEFECTO.map((a) => a.id)).toEqual([
       "arasaac:6929",
       "arasaac:2248",
-      "propio:descanso",
+      "arasaac:2369",
     ]);
   });
 
@@ -79,6 +79,17 @@ describe("ayudas (MOD HU-18)", () => {
       imagenUrl: propio.imagenUrl,
       origen: "biblioteca",
     });
+  });
+
+  it("guarda la ruta de Storage de los propios para poder volver a firmar su imagen", () => {
+    const propio = { ...CATALOGO_INICIAL_PICTOGRAMAS_51[0], rutaStorage: "u1/123-patio.png" };
+    expect(ayudaDesdeBiblioteca(propio).rutaStorage).toBe("u1/123-patio.png");
+    const guardada = { ...ayudaDesdeBiblioteca(propio), id: "propio:z" };
+    expect(normalizarAyudas([guardada], ["bano"])[0].rutaStorage).toBe("u1/123-patio.png");
+    // Una ruta vacía o que no es texto no se conserva.
+    expect(normalizarAyudas([{ ...guardada, rutaStorage: 5 }], ["bano"])[0]).not.toHaveProperty(
+      "rutaStorage",
+    );
   });
 
   it("sabe qué ayudas son baño, agua o descanso", () => {

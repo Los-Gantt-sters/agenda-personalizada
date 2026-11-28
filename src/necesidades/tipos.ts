@@ -19,6 +19,11 @@ export interface AyudaElegida {
   texto: string;
   imagenUrl: string;
   origen: "arasaac" | "biblioteca";
+  /**
+   * Solo en las de Mi biblioteca: ruta del archivo en el bucket privado `pictogramas-propios`.
+   * `imagenUrl` es una URL firmada que caduca; con la ruta se podrá volver a firmar.
+   */
+  rutaStorage?: string;
 }
 
 export interface OpcionNecesidadArasaac {

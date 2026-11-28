@@ -35,6 +35,8 @@ import { CATALOGO_AYUDAS_26, type PreferenciasApariencia } from "./opciones";
 
 /** Resultados que caben en la cuadrícula sin scroll (2 filas de 4). */
 const MAXIMO_RESULTADOS = 8;
+/** Huecos guardados para ARASAAC aunque Mi biblioteca tenga muchos que coincidan. */
+const MINIMO_ARASAAC = 4;
 
 const SUGERENCIAS = CATALOGO_AYUDAS_26.map(ayudaDesdeCatalogo26);
 
@@ -71,6 +73,8 @@ export function SubpantallaAyuda26({
   const rol: RolBibliotecaPictogramas51 = sesion?.user.role === "familiar" ? "familia" : "tutor";
   const [biblioteca, setBiblioteca] = useState<PictogramaPropio51[]>([]);
   const [errorBiblioteca, setErrorBiblioteca] = useState(false);
+  const [intento, setIntento] = useState(0); // sube con «Reintentar» para volver a cargar
+  const usuarioId = sesion?.user.id;
   useEffect(() => {
     let activo = true;
     const cargar =
@@ -80,7 +84,9 @@ export function SubpantallaAyuda26({
         : async (r: RolBibliotecaPictogramas51) => obtenerPictogramasPropiosPorRol51(r));
     cargar(rol)
       .then((lista) => {
-        if (activo) setBiblioteca(lista);
+        if (!activo) return;
+        setBiblioteca(lista);
+        setErrorBiblioteca(false);
       })
       .catch(() => {
         if (activo) setErrorBiblioteca(true);
@@ -88,9 +94,10 @@ export function SubpantallaAyuda26({
     return () => {
       activo = false;
     };
-    // Se carga una vez por rol; la función de carga no cambia mientras la pantalla está abierta.
+    // Se vuelve a cargar si cambia el rol, si llega (o cambia) la sesión del adulto o al pulsar
+    // «Reintentar». Si la sesión llega después de abrir la 26, la primera carga fue la de memoria.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rol]);
+  }, [rol, usuarioId, intento]);
 
   const arasaac = useBuscadorPictogramas(
     busqueda,
@@ -103,7 +110,10 @@ export function SubpantallaAyuda26({
       .filter((pic) => normalizarTexto(pic.palabraClave).includes(termino))
       .map(ayudaDesdeBiblioteca);
     const deArasaac = arasaac.resultados.map(ayudaDesdeArasaac);
-    return [...propios, ...deArasaac].slice(0, MAXIMO_RESULTADOS);
+    // Los propios van delante, pero sin quitarle a ARASAAC sus huecos mínimos.
+    const huecosPropios = MAXIMO_RESULTADOS - Math.min(MINIMO_ARASAAC, deArasaac.length);
+    const elegidosPropios = propios.slice(0, huecosPropios);
+    return [...elegidosPropios, ...deArasaac].slice(0, MAXIMO_RESULTADOS);
   }, [termino, biblioteca, arasaac.resultados]);
 
   const estaElegida = (ayuda: AyudaElegida) => elegidas.some((x) => x.id === ayuda.id);
@@ -160,9 +170,20 @@ export function SubpantallaAyuda26({
           </Text>
         ) : null}
         {errorBiblioteca ? (
-          <Text testID="error-biblioteca-26" style={e.avisoBusqueda26}>
-            No se pudo cargar Mi biblioteca.
-          </Text>
+          <View testID="error-biblioteca-26" style={e.filaAviso26}>
+            <Text style={e.avisoBusqueda26}>No se pudo cargar Mi biblioteca.</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Reintentar cargar Mi biblioteca"
+              onPress={() => {
+                setErrorBiblioteca(false);
+                setIntento((n) => n + 1);
+              }}
+              style={e.botonReintentar26}
+            >
+              <Text style={e.textoReintentar26}>Reintentar</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         <View style={e.rejilla26}>
@@ -288,6 +309,16 @@ const crearEstilos = (c: Paleta) =>
     },
     tituloSeccion26: { fontSize: 18, fontWeight: "700", color: c.texto },
     avisoBusqueda26: { fontSize: 15, fontWeight: "600", color: c.texto, marginBottom: 6 },
+    filaAviso26: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 12 },
+    botonReintentar26: {
+      minHeight: 44,
+      paddingHorizontal: 16,
+      justifyContent: "center",
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: c.primario,
+    },
+    textoReintentar26: { fontSize: 15, fontWeight: "700", color: c.primario },
     pildoraPrimaria26: {
       backgroundColor: c.superficieDestacada,
       borderColor: c.primario,

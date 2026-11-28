@@ -303,9 +303,9 @@ describe("PanelPreferencias (SCRUM-240 · Bocetos 16, 16b, 17, 18, 19, 22, 24, 2
       checked: false,
     });
 
-    // Quitamos "Beber agua" y "Descansar (propio)" -> queda solo "Ir al baño" (1 de 3)
+    // Quitamos "Beber agua" y "Descansar" -> queda solo "Ir al baño" (1 de 3)
     await user.press(screen.getByTestId("resultado-ayuda-arasaac:2248"));
-    await user.press(screen.getByTestId("resultado-ayuda-propio:descanso"));
+    await user.press(screen.getByTestId("resultado-ayuda-arasaac:2369"));
     expect(screen.queryByTestId("muestra-ayuda-arasaac:2248")).toBeNull();
     expect(screen.getByTestId("muestra-ayuda-arasaac:6929")).toBeTruthy();
     expect(screen.getByTestId("contador-ayudas-26")).toHaveTextContent(

@@ -38,8 +38,8 @@ export const CATALOGO_AYUDAS_26: PictogramaAyudaCatalogo26[] = [
   },
   {
     id: "descanso",
-    etiqueta: "Descansar (propio)",
-    origen: "Mi biblioteca",
+    etiqueta: "Descansar",
+    origen: "ARASAAC",
     emoji: "🛋️",
     pictoIdArasaac: 2369,
     claveBasica: "descanso",
@@ -61,7 +61,7 @@ export const CATALOGO_AYUDAS_26: PictogramaAyudaCatalogo26[] = [
   {
     id: "libro",
     etiqueta: "Rincón lectura",
-    origen: "Mi biblioteca",
+    origen: "ARASAAC",
     emoji: "📖",
     pictoIdArasaac: 2450,
   },
@@ -109,6 +109,7 @@ export function ayudaDesdeBiblioteca(p: PictogramaPropio51): AyudaElegida {
     texto: p.palabraClave,
     imagenUrl: p.imagenUrl,
     origen: "biblioteca",
+    ...(p.rutaStorage ? { rutaStorage: p.rutaStorage } : {}),
   };
 }
 
@@ -160,6 +161,9 @@ export function normalizarAyudas(
               texto: elemento.texto,
               imagenUrl: elemento.imagenUrl,
               origen: elemento.origen,
+              ...(typeof elemento.rutaStorage === "string" && elemento.rutaStorage.trim()
+                ? { rutaStorage: elemento.rutaStorage }
+                : {}),
             }
           : undefined;
     if (ayuda && !ayudas.some((a) => a.id === ayuda.id)) ayudas.push({ ...ayuda });
