@@ -21,7 +21,7 @@ describe("AgendaAdultoAlumno - Pantallas 39 y 40 (SCRUM-255)", () => {
     expect(screen.getByText("Agenda de Lucas")).toBeTruthy();
     expect(screen.getByText("Tutor · María Carmen")).toBeTruthy();
     expect(screen.getByText("Personalizar tarea solo para Lucas")).toBeTruthy();
-    expect(screen.getByText("Auto-pendiente (tiempo agotado)")).toBeTruthy();
+    expect(screen.getByText("9:15 · Auto-pendiente (tiempo agotado) · Clase")).toBeTruthy();
 
     // NO debe haber botones duplicados de Progreso e historial ni Nueva tarea en la cabecera
     expect(screen.queryByText(/Progreso e historial/i)).toBeNull();

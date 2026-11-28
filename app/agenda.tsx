@@ -15,6 +15,7 @@
 // HU-16: con ?aviso=prueba la demo mueve las horas para que el aviso de «Reprografía» salga en menos
 // de un minuto; con ?aviso=visual el aviso es solo visual, sin sonido ni vibración (RNF4.3). Se
 // pueden juntar: ?aviso=prueba,visual.
+// HU-22: con ?planb=prueba la demo trae el Plan B activo (pantalla 08c).
 // T-08.6: con ?pendiente=tiempo o ?pendiente=profesor la demo trae una tarea a medias (pantalla 10b).
 import { useEffect, useMemo } from "react";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
@@ -24,17 +25,22 @@ import {
   agendaDemo,
   agendaDemoAviso,
   agendaDemoPendiente,
+  agendaDemoPlanB,
   ESTUDIANTE_DEMO,
   crearRepositorioMemoria,
   hoyISO,
   useModoSinDistracciones,
 } from "../src/componentes/agenda";
 import { AVISO_POR_DEFECTO, type PreferenciasAviso } from "../src/componentes/aviso-anticipado";
+import { useFormatosPermitidos } from "../src/componentes/permisos-alumno";
 import { repositorioAgendaSupabase } from "../src/servicios/agendaService";
 import { TAREAS_VISIBLES, usePreferenciasOpcional } from "../src/preferencias";
 import { useSesionOpcional } from "../src/sesion";
-import { PictogramaInterfaz, Texto, fechaDeHoy, useApariencia } from "../src/ui";
+import { ChipAlumno, PictogramaInterfaz, Texto, fechaDeHoy, useApariencia } from "../src/ui";
 import type { UserRole } from "../src/tipos/auth";
+
+/** Alumno de la demo (sin ?estudiante=), el mismo de los bocetos. */
+const NOMBRE_ALUMNO_DEMO = "Alejandro";
 
 /** Panel al que vuelve cada adulto con «Atrás» si no hay pantalla anterior (p. ej. tras recargar). */
 const PANEL_DE: Partial<Record<UserRole, Href>> = {
@@ -45,10 +51,11 @@ const PANEL_DE: Partial<Record<UserRole, Href>> = {
 };
 
 export default function PantallaAgenda() {
-  const { estudiante, aviso, pendiente } = useLocalSearchParams<{
+  const { estudiante, aviso, pendiente, planb } = useLocalSearchParams<{
     estudiante?: string;
     aviso?: string;
     pendiente?: string;
+    planb?: string;
   }>();
   const opcionesAviso = (aviso ?? "").split(",");
   const avisoPrueba = opcionesAviso.includes("prueba");
@@ -71,10 +78,12 @@ export default function PantallaAgenda() {
         ? agendaDemoPendiente(hoyISO(), "tiempo_agotado")
         : pendiente === "profesor"
           ? agendaDemoPendiente(hoyISO(), "profesor")
-          : agendaDemo(hoyISO());
+          : planb === "prueba"
+            ? agendaDemoPlanB(hoyISO())
+            : agendaDemo(hoyISO());
     const demo = crearRepositorioMemoria(datos);
     return { repo: demo.repo, estudianteId: ESTUDIANTE_DEMO, tutorDemo: demo.tutor };
-  }, [estudiante, avisoPrueba, pendiente]);
+  }, [estudiante, avisoPrueba, pendiente, planb]);
 
   // Demo: desde la consola del navegador se puede hacer de tutor, p. ej. __tutorDemo.bloquear("e3").
   useEffect(() => {
@@ -93,9 +102,20 @@ export default function PantallaAgenda() {
   );
 
   // Permisos según quién mira la agenda (sin sesión de adulto, es el alumno).
-  const rol = useSesionOpcional()?.sesion?.user.role ?? "estudiante";
+  const sesion = useSesionOpcional()?.sesion;
+  const rol = sesion?.user.role ?? "estudiante";
   const esAlumno = rol === "estudiante";
   const soloMirar = rol === "familiar";
+  // Lo que el tutor deja ver al alumno en sus tareas (pantalla 26d). A los adultos, todo.
+  const formatosPermitidos = useFormatosPermitidos(esAlumno ? estudiante : null);
+  // Arriba a la derecha en 08, 08b, 10 y 10b: de quién es la agenda (solo en la del alumno).
+  const nombreAlumno = !esAlumno
+    ? ""
+    : sesion
+      ? sesion.user.fullName.trim().split(/\s+/)[0]
+      : estudiante
+        ? ""
+        : NOMBRE_ALUMNO_DEMO;
 
   return (
     <>
@@ -110,6 +130,7 @@ export default function PantallaAgenda() {
         verReloj={verReloj}
         // El alumno entra directo a su tarea empezada; los adultos ven la agenda entera.
         abrirTareaEnCurso={esAlumno}
+        formatosPermitidos={formatosPermitidos}
         marco={{
           titulo: esAlumno ? "Mi agenda" : "Agenda del alumno",
           simbolo: <PictogramaInterfaz nombre="agenda" etiqueta="agenda" tam={44} />,
@@ -126,6 +147,7 @@ export default function PantallaAgenda() {
                 else router.replace(PANEL_DE[rol] ?? "/");
               },
           conSonido: esAlumno,
+          alumno: nombreAlumno ? <ChipAlumno nombre={nombreAlumno} /> : undefined,
         }}
       />
     </>

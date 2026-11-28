@@ -2,7 +2,7 @@
 // SCRUM-264). A un lado, el círculo ámbar, el dibujo y el nombre; al otro, por qué está pendiente y
 // «Retomar tarea». «Atrás» vuelve a la agenda.
 // Sin scroll: con poco alto se quitan primero la explicación y la etiqueta, nunca el botón.
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import type { EntradaAgenda, MotivoPendiente } from "./tipos";
 import { PictogramaTarea } from "./PictogramaTarea";
@@ -30,6 +30,7 @@ export function PantallaTareaPendiente({
   nota,
   alAtras,
   conSonido = false,
+  derecha,
 }: {
   entrada: EntradaAgenda;
   /** Se recuerda por dónde iba: solo entonces se promete volver a ese paso. */
@@ -40,6 +41,8 @@ export function PantallaTareaPendiente({
   nota?: string;
   alAtras: () => void;
   conSonido?: boolean;
+  /** Arriba a la derecha: el nombre del alumno (como en el boceto 10b). */
+  derecha?: ReactNode;
 }) {
   const { colores, canal, escalaLetra: L } = useApariencia();
   const e = useEstilos(crearEstilos);
@@ -92,6 +95,7 @@ export function PantallaTareaPendiente({
   return (
     <Pantalla
       titulo={`${t.titulo} · Pendiente`}
+      derecha={derecha}
       alAtras={alAtras}
       etiquetaAtras="Atrás: volver a la agenda"
       conSonido={conSonido}
@@ -133,7 +137,7 @@ export function PantallaTareaPendiente({
         <View style={[e.info, { width: anchoInfo }]}>
           {verEtiqueta ? (
             <View style={e.etiqueta} testID="motivo-pendiente">
-              <Texto style={[e.textoEtiqueta, { color: colorCirculo }]}>{etiqueta}</Texto>
+              <Texto style={e.textoEtiqueta}>{etiqueta}</Texto>
             </View>
           ) : null}
           {verTexto ? <Texto style={e.titulo}>{TITULO}</Texto> : null}
@@ -146,7 +150,7 @@ export function PantallaTareaPendiente({
               onPress={onRetomar}
               style={({ pressed }) => [e.boton, pressed && e.pulsado]}
             >
-              <Icono nombre="reproducir" color={colores.textoSobrePrimario} tam={28} />
+              <Icono nombre="retomar" color={colores.textoSobrePrimario} tam={28} />
               {verTexto ? <Texto style={e.textoBoton}>Retomar tarea</Texto> : null}
             </Pressable>
           ) : nota && verTexto ? (
@@ -183,22 +187,26 @@ const crearEstilos = (c: Paleta) =>
     circulo: { backgroundColor: c.aviso, alignItems: "center", justifyContent: "center" },
     nombre: { fontSize: 30, fontWeight: "700", color: c.texto, textAlign: "center" },
     info: { maxWidth: "100%", justifyContent: "center", gap: HUECO },
+    // Píldora amarilla suave del boceto 10b (pill yel): fondo suave, borde ámbar y esquinas redondas.
     etiqueta: {
       alignSelf: "flex-start",
       maxWidth: "100%",
       paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 10,
-      backgroundColor: c.aviso,
+      paddingHorizontal: 14,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: c.resalte,
+      backgroundColor: c.resalteSuave,
     },
-    textoEtiqueta: { fontSize: 18, fontWeight: "700" },
+    textoEtiqueta: { fontSize: 16, fontWeight: "700", color: c.aviso },
     titulo: { fontSize: 28, fontWeight: "700", color: c.texto },
     explicacion: { fontSize: 20, color: c.textoSecundario },
     boton: {
       minHeight: ALTO_BOTON,
       minWidth: ANCHO_BOTON,
       maxWidth: "100%",
-      alignSelf: "flex-start",
+      // A la derecha, como en el boceto 10b.
+      alignSelf: "flex-end",
       paddingHorizontal: 20,
       flexDirection: "row",
       alignItems: "center",

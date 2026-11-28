@@ -2,14 +2,30 @@ import { obtenerProgresoAlumno, repositorioProgresoSupabase } from "../progresoS
 import { supabase } from "../../lib/supabaseClient";
 
 jest.mock("../../lib/supabaseClient", () => ({
-  supabase: { rpc: jest.fn() },
+  supabase: { rpc: jest.fn(), from: jest.fn() },
 }));
 
 const mockRpc = supabase.rpc as jest.Mock;
+const mockFrom = supabase.from as jest.Mock;
+
+/** Consulta encadenada de supabase-js: cada tabla responde con lo que se le diga. */
+function consultas(respuestas: Record<string, { data: unknown; error: unknown }>) {
+  mockFrom.mockImplementation((tabla: string) => {
+    const r = respuestas[tabla] ?? { data: null, error: null };
+    const q: Record<string, unknown> = {};
+    for (const m of ["select", "eq", "gte", "lte", "not", "order"]) q[m] = jest.fn(() => q);
+    q.maybeSingle = jest.fn(async () => r);
+    q.limit = jest.fn(async () => r);
+    return q;
+  });
+}
 const ALUMNO = "11111111-2222-3333-4444-555555555555";
 
 describe("progresoService - SCRUM-146 (pantalla 43, HU-25)", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    consultas({});
+  });
 
   it("llama a progreso_alumno con el alumno y el periodo", async () => {
     const respuesta = {
@@ -38,7 +54,8 @@ describe("progresoService - SCRUM-146 (pantalla 43, HU-25)", () => {
       p_desde: "2026-11-23",
       p_hasta: "2026-11-29",
     });
-    expect(r).toEqual(respuesta);
+    // Sin menú ni observaciones en la base, las tarjetas lo dicen (null).
+    expect(r).toEqual({ ...respuesta, dieta_comedor: null, valoracion: null });
     expect(repositorioProgresoSupabase.obtener).toBe(obtenerProgresoAlumno);
   });
 
@@ -99,6 +116,40 @@ describe("progresoService - SCRUM-146 (pantalla 43, HU-25)", () => {
       avisos: [],
     });
     expect(r.resumen).toMatchObject({ total: 0, hechas: 0, sin_terminar: 0, planes_b: 0 });
+  });
+
+  it("añade el menú del comedor y la última observación del periodo (boceto 43)", async () => {
+    mockRpc.mockResolvedValue({ data: { tareas: [] }, error: null });
+    consultas({
+      alumnos: { data: { dieta_comedor: "sin_gluten" }, error: null },
+      ejecuciones: {
+        data: [
+          { observaciones: "  ", inicio: "2026-11-25T09:00:00Z" },
+          { observaciones: "Trabaja con mucha autonomía", inicio: "2026-11-24T10:00:00Z" },
+        ],
+        error: null,
+      },
+    });
+
+    const r = await obtenerProgresoAlumno(ALUMNO, "2026-11-23", "2026-11-29");
+
+    expect(mockFrom).toHaveBeenCalledWith("alumnos");
+    expect(mockFrom).toHaveBeenCalledWith("ejecuciones");
+    expect(r.dieta_comedor).toBe("sin_gluten");
+    expect(r.valoracion).toEqual({ texto: "Trabaja con mucha autonomía", fecha: "2026-11-24" });
+  });
+
+  it("si no se pueden leer el menú o las observaciones, la pantalla sigue (null)", async () => {
+    mockRpc.mockResolvedValue({ data: { tareas: [] }, error: null });
+    consultas({
+      alumnos: { data: null, error: { message: "sin permiso" } },
+      ejecuciones: { data: null, error: { message: "sin permiso" } },
+    });
+
+    const r = await obtenerProgresoAlumno(ALUMNO, "2026-11-23", "2026-11-29");
+
+    expect(r.dieta_comedor).toBeNull();
+    expect(r.valoracion).toBeNull();
   });
 
   it("traduce los errores a mensajes en Lectura Fácil", async () => {
